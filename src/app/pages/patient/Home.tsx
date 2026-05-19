@@ -50,14 +50,35 @@ export default function PatientHome() {
 
   return (
     <div className="p-6 space-y-8 max-w-2xl mx-auto pb-32">
-      <div className="flex justify-between items-center px-2">
-        <h2 className="text-sm font-bold text-[#414D5B] uppercase tracking-widest">Ready for Action</h2>
-        {isLive && (
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-md">
-            <Signal className="w-3 h-3 text-[#6A994E]" />
-            <span className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider">Live</span>
+      {/* Patient-First Welcome & Story Journey */}
+      <div className="bg-gradient-to-br from-[#E8EEF2] to-white rounded-3xl p-8 border border-[#E8EEF2] shadow-sm mb-2 relative overflow-hidden">
+        {/* Soft decorative accent */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#2D9596]/10 to-transparent rounded-full blur-3xl" />
+        
+        <div className="relative z-10">
+          <div className="flex justify-between items-start mb-5">
+            <h1 className="text-3xl font-bold text-[#0A1128]">
+              Welcome to SleepCare, {summary?.name?.split(' ')[0] || 'Friend'}! 👋
+            </h1>
+            {isLive && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-lg">
+                <Signal className="w-4 h-4 text-[#6A994E]" />
+                <span className="text-xs font-bold text-[#6A994E] uppercase tracking-wider">Connected</span>
+              </div>
+            )}
           </div>
-        )}
+          <div className="space-y-4 text-[#414D5B] leading-relaxed text-lg max-w-3xl">
+            <p>
+              <span className="font-semibold text-[#2D9596]">We are so happy you connected here today.</span> Starting CPAP therapy is the beginning of a powerful journey. It takes courage to take control of your health, and you've already taken the biggest step.
+            </p>
+            <p>
+              Every great journey has an adjustment period. Some nights will feel magical, and other nights you might feel like taking the mask off—and that is completely normal. 
+            </p>
+            <p className="font-semibold text-[#0A1128] bg-[#FAFAFA] p-4 rounded-xl border border-[#E8EEF2]">
+              We've built this guided space specifically for you. Think of it as a quiet, supportive room where we can fine-tune your comfort together, step-by-step, until you find your perfect night's rest. Let's explore your progress.
+            </p>
+          </div>
+        </div>
       </div>
         
       {/* 2-Minute Objective: Action Center */}
