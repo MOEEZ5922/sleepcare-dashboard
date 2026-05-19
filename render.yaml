@@ -2,10 +2,11 @@
 # SleepCare Dashboard Frontend Static Site Deployment
 
 services:
-  - type: static
+  - type: web
     name: sleepcare-dashboard
+    runtime: static
     buildCommand: npm run build
-    publishPath: dist
+    staticPublishPath: dist
     headers:
       - path: /*
         name: Cache-Control
