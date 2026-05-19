@@ -31,7 +31,7 @@ export default function PatientHome() {
   const [showVideoBanner, setShowVideoBanner] = useState(true);
   const [showMicroSurvey, setShowMicroSurvey] = useState(true);
   const [surveyResponse, setSurveyResponse] = useState<string | null>(null);
-  const [showUrgentModal, setShowUrgentModal] = useState(true);
+  const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'video' | null>('welcome');
 
   // Derive data from CPAP trends API
   const usageHistory = cpapTrends?.usageHistory || [];
@@ -50,33 +50,36 @@ export default function PatientHome() {
 
   return (
     <div className="p-6 space-y-8 max-w-2xl mx-auto pb-32">
-      {/* Patient-First Welcome & Story Journey */}
-      <div className="bg-gradient-to-br from-[#E8EEF2] to-white rounded-3xl p-8 border border-[#E8EEF2] shadow-sm mb-2 relative overflow-hidden">
+      {/* Senior-Friendly Patient Welcome & Story */}
+      <div className="bg-white rounded-3xl p-8 border-2 border-[#E8EEF2] shadow-sm mb-4 relative overflow-hidden">
         {/* Soft decorative accent */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#2D9596]/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#2D9596]/5 rounded-full blur-3xl" />
         
         <div className="relative z-10">
-          <div className="flex justify-between items-start mb-5">
-            <h1 className="text-3xl font-bold text-[#0A1128]">
-              Welcome to SleepCare, {summary?.name?.split(' ')[0] || 'Friend'}! 👋
+          <div className="flex justify-between items-start mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#0A1128] leading-tight">
+              Hello, {summary?.name?.split(' ')[0] || 'Friend'}. <br className="hidden sm:block"/> We are so glad you are here.
             </h1>
             {isLive && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-lg">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-lg shrink-0">
                 <Signal className="w-4 h-4 text-[#6A994E]" />
                 <span className="text-xs font-bold text-[#6A994E] uppercase tracking-wider">Connected</span>
               </div>
             )}
           </div>
-          <div className="space-y-4 text-[#414D5B] leading-relaxed text-lg max-w-3xl">
+          <div className="space-y-5 text-[#0A1128] leading-relaxed text-lg sm:text-xl max-w-3xl">
             <p>
-              <span className="font-semibold text-[#2D9596]">We are so happy you connected here today.</span> Starting CPAP therapy is the beginning of a powerful journey. It takes courage to take control of your health, and you've already taken the biggest step.
+              Getting used to a CPAP machine takes time. It is a new habit for your body. 
             </p>
             <p>
-              Every great journey has an adjustment period. Some nights will feel magical, and other nights you might feel like taking the mask off—and that is completely normal. 
+              You might feel frustrated on some nights, and that is completely normal. Remember, every single day you try, you are taking a brave step to protect your health.
             </p>
-            <p className="font-semibold text-[#0A1128] bg-[#FAFAFA] p-4 rounded-xl border border-[#E8EEF2]">
-              We've built this guided space specifically for you. Think of it as a quiet, supportive room where we can fine-tune your comfort together, step-by-step, until you find your perfect night's rest. Let's explore your progress.
-            </p>
+            <div className="bg-[#FAFAFA] p-5 rounded-2xl border-2 border-[#E8EEF2] mt-6">
+              <p className="font-bold text-[#2D9596] mb-2">A Guided Way</p>
+              <p>
+                We made this app to be simple. Think of it as your personal guide. We will help you adjust your mask and get comfortable, step-by-step, until you get a good night's sleep.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -337,10 +340,32 @@ export default function PatientHome() {
         </p>
       </div>
 
-      {/* Reassuring Care Check-In Modal */}
-      {showUrgentModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[2.25rem] p-8 max-w-sm w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300 relative overflow-hidden">
+      {/* Guided Onboarding Step 1: Encouragement Buffer */}
+      {onboardingStep === 'welcome' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/70 backdrop-blur-md animate-in fade-in duration-500">
+          <div className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-500 relative overflow-hidden text-center">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#2D9596]/20 to-[#6A994E]/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="w-12 h-12 text-[#2D9596]" />
+            </div>
+            <h2 className="text-3xl font-bold text-[#0A1128] mb-4">You're doing great!</h2>
+            <p className="text-[#414D5B] text-lg leading-relaxed mb-8 px-2">
+              Adjusting to CPAP therapy takes time, and every night you try is a huge step forward. 
+              We are here to guide you to a perfect night's rest. Let's check today's tip!
+            </p>
+            <button 
+              onClick={() => setOnboardingStep('video')}
+              className="w-full bg-[#0A1128] text-white font-bold py-4 rounded-2xl text-lg hover:bg-[#1E293B] shadow-xl hover:scale-[1.02] transition-all"
+            >
+              Show My Daily Tip
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Guided Onboarding Step 2: Reassuring Care Check-In Modal */}
+      {onboardingStep === 'video' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/70 backdrop-blur-md">
+          <div className="bg-white rounded-[2.25rem] p-8 max-w-sm w-full shadow-2xl border border-[#E8EEF2] animate-in slide-in-from-bottom-8 duration-500 relative overflow-hidden">
             {/* Top decorative clinical seal */}
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#2D9596] to-[#6A994E]" />
             
@@ -379,7 +404,7 @@ export default function PatientHome() {
                 Watch Comfort Tip (1:00)
               </button>
               <button 
-                onClick={() => setShowUrgentModal(false)}
+                onClick={() => setOnboardingStep(null)}
                 className="w-full bg-[#FAFAFA] text-[#5A6B7C] font-semibold py-3.5 rounded-xl border border-[#E8EEF2] hover:bg-[#E8EEF2]/50 transition-colors"
               >
                 Go to Dashboard
