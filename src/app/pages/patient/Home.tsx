@@ -64,28 +64,28 @@ export default function PatientHome() {
       <div className="space-y-4">
         {/* Persistent AI Trigger (Dynamic based on leak) */}
         {cpapTrends && cpapTrends.percentileLeak > 20 && (
-          <div className="bg-[#0A1128] text-white rounded-[2rem] p-8 shadow-2xl relative overflow-hidden border-2 border-white/10 animate-in zoom-in-95 duration-500">
+          <div className="bg-gradient-to-br from-[#0A1128] to-[#1E293B] text-white rounded-[2rem] p-8 shadow-2xl relative overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500">
             <div className="flex items-start gap-6">
-              <div className="w-16 h-16 bg-[#E76F51]/20 rounded-[1.25rem] flex items-center justify-center flex-shrink-0 relative overflow-hidden group cursor-pointer shadow-lg">
+              <div className="w-16 h-16 bg-[#F4A261]/20 rounded-[1.25rem] flex items-center justify-center flex-shrink-0 relative overflow-hidden group cursor-pointer shadow-lg">
                 <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=150" alt="Video thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-all scale-110 group-hover:scale-100" />
-                <div className="absolute inset-0 bg-[#E76F51]/20 group-hover:bg-transparent transition-all" />
+                <div className="absolute inset-0 bg-[#F4A261]/20 group-hover:bg-transparent transition-all" />
                 <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 rounded-full bg-[#E76F51] animate-pulse" />
-                  <span className="text-[#E76F51] font-bold text-xs uppercase tracking-widest">Priority Task: Mask Leak</span>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#F4A261] animate-pulse" />
+                  <span className="text-[#F4A261] font-bold text-xs uppercase tracking-widest">Comfort & Fit Guide</span>
                 </div>
-                <h3 className="text-xl font-bold mb-4 leading-tight">We detected a leak of {cpapTrends.percentileLeak} L/min. Let's fix it now with a 60s guide.</h3>
+                <h3 className="text-xl font-bold mb-4 leading-tight">Your mask had a tiny leak of {cpapTrends.percentileLeak} L/min last night. Let's optimize it for deeper comfort in 60s!</h3>
                 <div className="flex gap-3">
                   <button 
                     onClick={() => navigate(`/patient/${id}/videos`)}
-                    className="bg-[#E76F51] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#d6654b] transition-all shadow-lg active:scale-95"
+                    className="bg-[#2D9596] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#247c7d] transition-all shadow-lg active:scale-95 text-xs"
                   >
-                    Watch Now
+                    View Comfort Tip (1 min)
                   </button>
-                  <button onClick={() => navigate(`/patient/${id}/help`)} className="text-white/60 text-sm hover:text-white transition-colors">
-                    Check Mask Settings →
+                  <button onClick={() => navigate(`/patient/${id}/help`)} className="text-white/60 text-xs hover:text-white transition-colors">
+                    Check Mask Fit →
                   </button>
                 </div>
               </div>
@@ -298,7 +298,7 @@ export default function PatientHome() {
           className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2] hover:shadow-md transition-all text-center"
         >
           <Video className="w-8 h-8 text-[#2D9596] mx-auto mb-2" />
-          <p className="text-sm font-medium text-[#0A1128]">Watch Tutorials</p>
+          <p className="text-sm font-medium text-[#0A1128]">Comfort Tips</p>
         </button>
         <button
           onClick={() => navigate(`/patient/${id}/help`)}
@@ -309,45 +309,59 @@ export default function PatientHome() {
         </button>
       </div>
 
-      {/* Urgent Video Modal */}
+      {/* Reassuring Clinical Trust Footer */}
+      <div className="bg-[#E8EEF2]/30 rounded-3xl p-6 border border-[#E8EEF2]/60 text-center space-y-2">
+        <p className="text-xs text-[#5A6B7C] font-semibold leading-relaxed">
+          🔒 <span className="font-bold text-[#414D5B]">Your Sleep Care is Private:</span> SleepCare uses clinical-grade, HIPAA-compliant encryption. Your medical team actively reviews your CPAP comfort statistics to support your health.
+        </p>
+      </div>
+
+      {/* Reassuring Care Check-In Modal */}
       {showUrgentModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/40 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-[#E76F51]/10 rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
-                <AlertCircle className="w-6 h-6 text-[#E76F51]" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[2.25rem] p-8 max-w-sm w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300 relative overflow-hidden">
+            {/* Top decorative clinical seal */}
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#2D9596] to-[#6A994E]" />
+            
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 bg-[#6A994E]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-6 h-6 text-[#6A994E]" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#0A1128]">Priority Alert</h3>
-                <p className="text-xs text-[#E76F51] font-bold uppercase tracking-wider">Mask Leak Detected</p>
+                <h3 className="text-xl font-bold text-[#0A1128]">Daily Care Check-In</h3>
+                <p className="text-xs text-[#5A6B7C] font-semibold">Supporting your sleep journey</p>
               </div>
             </div>
+
+            <p className="text-sm text-[#414D5B] mb-5 leading-relaxed">
+              Hello <span className="font-bold text-[#0A1128]">{summary?.name || 'there'}</span>! Your SleepCare portal is fully connected.
+            </p>
             
-            <div className="relative w-full h-40 bg-gray-100 rounded-xl mb-6 overflow-hidden group cursor-pointer">
-              <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=400" alt="Video thumbnail" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                  <Play className="w-5 h-5 text-[#E76F51] ml-1" />
+            <div className="relative w-full h-36 bg-gray-100 rounded-2xl mb-5 overflow-hidden group cursor-pointer shadow-sm border border-[#E8EEF2]">
+              <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=400" alt="Video thumbnail" className="w-full h-full object-cover opacity-90 group-hover:scale-102 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-[#0A1128]/10 group-hover:bg-[#0A1128]/5 transition-colors flex items-center justify-center">
+                <div className="w-12 h-12 bg-white/95 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform">
+                  <Play className="w-5 h-5 text-[#2D9596] ml-1" />
                 </div>
               </div>
             </div>
             
-            <p className="text-sm text-[#5A6B7C] mb-8 leading-relaxed">
-              Your care team assigned a 60-second video on adjusting your headgear to resolve recent leak events.
+            <p className="text-xs text-[#5A6B7C] mb-6 leading-relaxed bg-[#FAFAFA] p-3.5 rounded-xl border border-[#E8EEF2]">
+              🛡️ <span className="font-bold text-[#0A1128]">Clinical Tip:</span> To help you sleep deeper tonight, your care team prepared a friendly 60-second comfort guide on fitting your CPAP headgear for a perfect seal. 
             </p>
             
             <div className="flex flex-col gap-3">
               <button 
                 onClick={() => navigate(`/patient/${id}/videos`)}
-                className="w-full bg-[#E76F51] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#E76F51]/20 hover:bg-[#d6654b] transition-all"
+                className="w-full bg-[#2D9596] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#2D9596]/15 hover:bg-[#247c7d] transition-all hover:shadow-xl hover:scale-[1.01]"
               >
-                Watch Now (1:00)
+                Watch Comfort Tip (1:00)
               </button>
               <button 
                 onClick={() => setShowUrgentModal(false)}
-                className="w-full bg-[#FAFAFA] text-[#5A6B7C] font-bold py-3.5 rounded-xl border border-[#E8EEF2] hover:bg-[#E8EEF2] transition-colors"
+                className="w-full bg-[#FAFAFA] text-[#5A6B7C] font-semibold py-3.5 rounded-xl border border-[#E8EEF2] hover:bg-[#E8EEF2]/50 transition-colors"
               >
-                Remind Me Later
+                Go to Dashboard
               </button>
             </div>
           </div>
