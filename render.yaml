@@ -2,13 +2,13 @@
 # SleepCare Dashboard Frontend Static Site Deployment
 
 services:
-  - type: web
+  - type: static
     name: sleepcare-dashboard
-    runtime: static
     buildCommand: npm run build
     publishPath: dist
     headers:
-      - key: Cache-Control
+      - path: /*
+        name: Cache-Control
         value: public, max-age=31536000, immutable
     routes:
       # 1. Forward API requests to Siamak's live Render backend (Bypasses CORS in Production)
@@ -16,7 +16,7 @@ services:
         source: /api/*
         destination: https://cpap-backend-v2.onrender.com/api/*
 
-      # 2. Forward Health check checks to backend
+      # 2. Forward Health checks to backend
       - type: rewrite
         source: /health
         destination: https://cpap-backend-v2.onrender.com/health
