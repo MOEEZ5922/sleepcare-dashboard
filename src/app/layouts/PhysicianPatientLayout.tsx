@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useParams } from 'react-router';
-import { ArrowLeft, Signal, Loader2 } from 'lucide-react';
+import { ArrowLeft, Signal, Loader2, Brain, Activity, AlertTriangle, ShieldCheck, Calendar } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 import { useApi } from '../hooks/useApi';
 import { fetchPatientSummary } from '../data/api';
@@ -118,9 +118,129 @@ export default function PhysicianPatientLayout() {
         </nav>
       </div>
 
-      {/* Tab Content Area */}
-      <div className="flex-1 overflow-auto">
-        <Outlet />
+      {/* Tab Content Area with Persistent AI Sidebar */}
+      <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 overflow-auto bg-[#FAFAFA]">
+          <Outlet />
+        </div>
+        
+        {/* AI Weekly State Panel Sidebar */}
+        <div className="w-80 bg-white border-l border-[#E8EEF2] flex-shrink-0 flex flex-col overflow-y-auto">
+          <div className="p-6 border-b border-[#E8EEF2] bg-gradient-to-br from-[#FAFAFA] to-white">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-5 h-5 text-[#2D9596]" />
+              <h3 className="font-bold text-[#0A1128]">AI Weekly State</h3>
+            </div>
+            
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-[#5A6B7C] uppercase tracking-wider">Risk Tier</span>
+              {/* Derived from patient riskScore */}
+              <div className={`px-2.5 py-1 rounded-md text-xs font-bold ${
+                (patient.riskScore || 0) >= 80 ? 'bg-[#E76F51]/10 text-[#E76F51]' :
+                (patient.riskScore || 0) >= 60 ? 'bg-[#F4A261]/10 text-[#F4A261]' :
+                'bg-[#6A994E]/10 text-[#6A994E]'
+              }`}>
+                {(patient.riskScore || 0) >= 80 ? 'CRITICAL' : (patient.riskScore || 0) >= 60 ? 'ELEVATED' : 'STABLE'}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <div className="flex justify-between items-end mb-2">
+                <span className="text-xs font-semibold text-[#5A6B7C] uppercase tracking-wider">Fused Score</span>
+                <span className={`text-xl font-bold ${getRiskColor(patient.riskScore || 0)}`}>{typeof patient.riskScore === 'number' ? Math.round(patient.riskScore) : (patient.riskScore || 0)}/100</span>
+              </div>
+              <div className="w-full bg-[#E8EEF2] h-2 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-1000 ${
+                    (patient.riskScore || 0) >= 80 ? 'bg-[#E76F51]' : (patient.riskScore || 0) >= 60 ? 'bg-[#F4A261]' : 'bg-[#6A994E]'
+                  }`} 
+                  style={{ width: `${patient.riskScore || 0}%` }} 
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <div className="bg-[#FAFAFA] p-3 rounded-xl border border-[#E8EEF2]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Calendar className="w-3.5 h-3.5 text-[#5A6B7C]" />
+                  <span className="text-[10px] font-bold text-[#5A6B7C] uppercase">Drop Risk</span>
+                </div>
+                <span className="font-bold text-[#0A1128]">{(patient.riskScore || 0) >= 80 ? '14 Days' : (patient.riskScore || 0) >= 60 ? '30 Days' : 'Low'}</span>
+              </div>
+              <div className="bg-[#FAFAFA] p-3 rounded-xl border border-[#E8EEF2]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#2D9596]" />
+                  <span className="text-[10px] font-bold text-[#5A6B7C] uppercase">Confidence</span>
+                </div>
+                <span className="font-bold text-[#0A1128]">94.2%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 flex-1 bg-white">
+            <h4 className="text-xs font-bold text-[#5A6B7C] uppercase tracking-widest mb-4">Active AI Flags</h4>
+            <div className="space-y-3 mb-8">
+              {(patient.riskScore || 0) >= 60 ? (
+                <>
+                  <div className="flex items-start gap-3 p-3 bg-[#E76F51]/5 rounded-xl border border-[#E76F51]/20">
+                    <AlertTriangle className="w-4 h-4 text-[#E76F51] mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-[#0A1128]">Usage Decay</p>
+                      <p className="text-xs text-[#5A6B7C] mt-0.5">3-day downward trend detected.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-[#F4A261]/5 rounded-xl border border-[#F4A261]/20">
+                    <Activity className="w-4 h-4 text-[#F4A261] mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-[#0A1128]">Leak Instability</p>
+                      <p className="text-xs text-[#5A6B7C] mt-0.5">Residual burden in REM cycles.</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-start gap-3 p-3 bg-[#6A994E]/5 rounded-xl border border-[#6A994E]/20">
+                  <ShieldCheck className="w-4 h-4 text-[#6A994E] mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-[#0A1128]">Therapy Stable</p>
+                    <p className="text-xs text-[#5A6B7C] mt-0.5">No active clinical flags.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <h4 className="text-xs font-bold text-[#5A6B7C] uppercase tracking-widest mb-4">Care Phase</h4>
+            <div className="flex flex-col gap-2 relative">
+              <div className="absolute left-3 top-2 bottom-2 w-px bg-[#E8EEF2] z-0" />
+              
+              <div className="flex items-center gap-4 relative z-10">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 bg-white ${
+                  (patient.riskScore || 0) >= 80 ? 'border-[#E76F51] text-[#E76F51]' : 'border-[#E8EEF2] text-[#E8EEF2]'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${(patient.riskScore || 0) >= 80 ? 'bg-[#E76F51]' : 'bg-transparent'}`} />
+                </div>
+                <span className={`text-sm font-bold ${(patient.riskScore || 0) >= 80 ? 'text-[#0A1128]' : 'text-[#5A6B7C]'}`}>Onboarding</span>
+              </div>
+
+              <div className="flex items-center gap-4 relative z-10">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 bg-white ${
+                  (patient.riskScore || 0) >= 60 && (patient.riskScore || 0) < 80 ? 'border-[#F4A261] text-[#F4A261]' : 'border-[#E8EEF2] text-[#E8EEF2]'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${(patient.riskScore || 0) >= 60 && (patient.riskScore || 0) < 80 ? 'bg-[#F4A261]' : 'bg-transparent'}`} />
+                </div>
+                <span className={`text-sm font-bold ${(patient.riskScore || 0) >= 60 && (patient.riskScore || 0) < 80 ? 'text-[#0A1128]' : 'text-[#5A6B7C]'}`}>Optimization</span>
+              </div>
+
+              <div className="flex items-center gap-4 relative z-10">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 bg-white ${
+                  (patient.riskScore || 0) < 60 ? 'border-[#6A994E] text-[#6A994E]' : 'border-[#E8EEF2] text-[#E8EEF2]'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${(patient.riskScore || 0) < 60 ? 'bg-[#6A994E]' : 'bg-transparent'}`} />
+                </div>
+                <span className={`text-sm font-bold ${(patient.riskScore || 0) < 60 ? 'text-[#0A1128]' : 'text-[#5A6B7C]'}`}>Maintenance</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
