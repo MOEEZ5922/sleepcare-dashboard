@@ -9,7 +9,7 @@ export default function ConnectivityStatus() {
     const check = async () => {
       try {
         const health = await checkHealth();
-        if (health && (health.status === 'ok' || health.status === 'UP' || health.message)) {
+        if (health && (health.status === 'ok' || health.status === 'healthy' || health.status === 'UP' || health.message)) {
           setStatus('live');
         } else {
           setStatus('offline');

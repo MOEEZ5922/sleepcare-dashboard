@@ -206,12 +206,12 @@ export default function SummaryContent({
               {interventionsList.slice(0, 3).map((item: any, idx: number) => (
                 <div key={idx} className="flex items-start gap-4 p-3 bg-[#FAFAFA] rounded-xl border border-[#E8EEF2] hover:border-[#2D9596]/30 transition-all group">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    item.type.includes('Educational') ? 'bg-[#2D9596]/10 text-[#2D9596]' :
+                    item.type?.includes('Educational') ? 'bg-[#2D9596]/10 text-[#2D9596]' :
                     item.outcome === 'Success' ? 'bg-[#6A994E]/10 text-[#6A994E]' : 
                     item.outcome === 'Pending' ? 'bg-[#F4A261]/10 text-[#F4A261]' : 
                     'bg-[#E76F51]/10 text-[#E76F51]'
                   }`}>
-                    {item.type.includes('Educational') ? <Video className="w-4 h-4" /> :
+                    {item.type?.includes('Educational') ? <Video className="w-4 h-4" /> :
                      item.outcome === 'Success' ? <CheckCircle className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
                   </div>
                   <div className="flex-1">

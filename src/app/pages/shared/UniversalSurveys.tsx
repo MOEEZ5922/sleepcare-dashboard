@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'react-router';
-import { AlertCircle, ChevronDown, CalendarDays, MessageSquare, ShieldAlert, UserCircle, CheckCircle, ClipboardList, Plus, Signal } from 'lucide-react';
+import { AlertCircle, ChevronDown, CalendarDays, MessageSquare, ShieldAlert, UserCircle, CheckCircle, ClipboardList, Plus, Signal, BarChart3, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { fetchSurveys, submitMonitoringLog } from '../../data/api';
+import { surveyData } from '../../data/mockData';
 
 type SurveyType = 'PSQI' | 'ISI' | 'ESS' | 'FSS' | 'SF-36' | 'BDI';
 
@@ -18,9 +19,9 @@ export default function UniversalSurveys() {
   const isLive = !error && !!liveSurveys;
   
   const [activeSurvey, setActiveSurvey] = useState<SurveyType>('ESS');
-  const [showFormModal, setShowFormModal] = useState(false);
   const [selectedForm, setSelectedForm] = useState('');
   const [formNote, setFormNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const availableForms = [
     { id: 'comfort', name: 'Mask Comfort & Fit Check', type: 'Behavioral' },
@@ -28,8 +29,6 @@ export default function UniversalSurveys() {
     { id: 'cleaning', name: 'Hygiene & Maintenance Review', type: 'Operational' },
     { id: 'env', name: 'Environment & Setup Audit', type: 'Technical' }
   ];
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFormSubmit = async () => {
     setIsSubmitting(true);
@@ -41,7 +40,6 @@ export default function UniversalSurveys() {
       });
       alert(`Monitoring Form Logged & Synced!`);
       refetch();
-      setShowFormModal(false);
       setSelectedForm('');
       setFormNote('');
     } catch (err) {
@@ -51,37 +49,49 @@ export default function UniversalSurveys() {
     }
   };
 
-  // Build survey database from API data when available
+  if (!isLive) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 text-[#E76F51] animate-spin" />
+      </div>
+    );
+  }
+
+  // Build survey database from API data
   const apiPhysicianSurveys = Array.isArray(liveSurveys?.physician) ? liveSurveys.physician : [];
 
-  // Map API survey names to their full display info
-  const surveyMeta: Record<string, { fullName: string; defaultThreshold: number; breakdownTemplate: { label: string; answer: string }[]; clinicalNoteTemplate: string }> = {
-    ESS: { fullName: 'Epworth Sleepiness Scale (ESS)', defaultThreshold: 10, breakdownTemplate: [{ label: 'Daytime Sleepiness Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'ESS score indicates {risk} level of daytime sleepiness. {action}' },
-    PSQI: { fullName: 'Pittsburgh Sleep Quality Index (PSQI)', defaultThreshold: 5, breakdownTemplate: [{ label: 'Sleep Quality Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'PSQI score indicates {risk} sleep quality. {action}' },
-    ISI: { fullName: 'Insomnia Severity Index (ISI)', defaultThreshold: 14, breakdownTemplate: [{ label: 'Insomnia Severity Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'ISI score indicates {risk} insomnia severity. {action}' },
-    FSS: { fullName: 'Fatigue Severity Scale (FSS)', defaultThreshold: 36, breakdownTemplate: [{ label: 'Fatigue Impact Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'FSS score indicates {risk} fatigue levels. {action}' },
-    'SF-36': { fullName: 'Short Form 36 Health Survey (SF-36)', defaultThreshold: 50, breakdownTemplate: [{ label: 'General Health Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'SF-36 score indicates {risk} general health status. {action}' },
-    BDI: { fullName: 'Beck Depression Inventory (BDI)', defaultThreshold: 13, breakdownTemplate: [{ label: 'Depression Screening', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'BDI score indicates {risk} depression levels. {action}' },
+  const surveyMeta: Record<string, { fullName: string; defaultThreshold: number; maxScore: number; breakdownTemplate: { label: string; answer: string }[]; clinicalNoteTemplate: string }> = {
+    ESS: { fullName: 'Epworth Sleepiness Scale (ESS)', defaultThreshold: 10, maxScore: 24, breakdownTemplate: [{ label: 'Daytime Sleepiness Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'ESS score indicates {risk} level of daytime sleepiness. {action}' },
+    PSQI: { fullName: 'Pittsburgh Sleep Quality Index (PSQI)', defaultThreshold: 5, maxScore: 21, breakdownTemplate: [{ label: 'Sleep Quality Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'PSQI score indicates {risk} sleep quality. {action}' },
+    ISI: { fullName: 'Insomnia Severity Index (ISI)', defaultThreshold: 14, maxScore: 28, breakdownTemplate: [{ label: 'Insomnia Severity Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'ISI score indicates {risk} insomnia severity. {action}' },
+    FSS: { fullName: 'Fatigue Severity Scale (FSS)', defaultThreshold: 36, maxScore: 63, breakdownTemplate: [{ label: 'Fatigue Impact Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'FSS score indicates {risk} fatigue levels. {action}' },
+    'SF-36': { fullName: 'Short Form 36 Health Survey (SF-36)', defaultThreshold: 50, maxScore: 100, breakdownTemplate: [{ label: 'General Health Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'SF-36 score indicates {risk} general health status. {action}' },
+    BDI: { fullName: 'Beck Depression Inventory (BDI)', defaultThreshold: 13, maxScore: 63, breakdownTemplate: [{ label: 'Depression Screening', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'BDI score indicates {risk} depression levels. {action}' },
   };
 
   const surveyDatabase: Record<string, any> = {};
-  // First populate from API data
   for (const apiSurvey of apiPhysicianSurveys) {
-    const meta = surveyMeta[apiSurvey.name] || { fullName: apiSurvey.name, defaultThreshold: 0, breakdownTemplate: [{ label: 'Assessment', answer: 'Score-based' }], clinicalNoteTemplate: 'Score indicates {risk} level.' };
+    const shortKey = Object.keys(surveyMeta).find(k => 
+      surveyMeta[k].fullName === apiSurvey.name || apiSurvey.name.includes(k)
+    ) || apiSurvey.name;
+
+    const meta = surveyMeta[shortKey] || { fullName: apiSurvey.name, defaultThreshold: 0, maxScore: 100, breakdownTemplate: [{ label: 'Assessment', answer: 'Score-based' }], clinicalNoteTemplate: 'Score indicates {risk} level.' };
     const threshold = apiSurvey.threshold ?? meta.defaultThreshold;
     const risk = apiSurvey.risk || (apiSurvey.score > threshold ? 'Elevated' : 'Normal');
     const action = apiSurvey.score > threshold ? 'Clinical review recommended.' : 'No immediate action required.';
-    surveyDatabase[apiSurvey.name] = {
+    
+    surveyDatabase[shortKey] = {
       name: meta.fullName,
       date: apiSurvey.dateTaken,
       score: apiSurvey.score,
       threshold: threshold,
+      maxScore: meta.maxScore,
       risk: risk,
       breakdown: meta.breakdownTemplate,
       clinicalNote: meta.clinicalNoteTemplate.replace('{risk}', risk.toLowerCase()).replace('{action}', action)
     };
   }
-  // Fill in any missing survey types with defaults so the selector always works
+
   for (const [key, meta] of Object.entries(surveyMeta)) {
     if (!surveyDatabase[key]) {
       surveyDatabase[key] = {
@@ -89,6 +99,7 @@ export default function UniversalSurveys() {
         date: '—',
         score: 0,
         threshold: meta.defaultThreshold,
+        maxScore: meta.maxScore,
         risk: 'No Data',
         breakdown: [{ label: 'No assessment available', answer: 'Patient has not completed this survey yet' }],
         clinicalNote: 'No data available for this survey. Patient has not completed it yet.'
@@ -101,20 +112,30 @@ export default function UniversalSurveys() {
   const getRiskColor = (risk: string) => {
     if (risk === 'High') return 'text-[#E76F51]';
     if (risk === 'Elevated' || risk === 'Moderate') return 'text-[#F4A261]';
-    return 'text-[#6A994E]';
+    if (risk === 'Normal') return 'text-[#6A994E]';
+    return 'text-[#5A6B7C]';
   };
 
   const getRiskBadge = (risk: string) => {
-    if (risk === 'High') return 'bg-[#E76F51]/10 text-[#E76F51]';
-    if (risk === 'Elevated' || risk === 'Moderate') return 'bg-[#F4A261]/10 text-[#F4A261]';
-    return 'bg-[#6A994E]/10 text-[#6A994E]';
+    if (risk === 'High') return 'bg-[#E76F51]/10 text-[#E76F51] border-[#E76F51]/20';
+    if (risk === 'Elevated' || risk === 'Moderate') return 'bg-[#F4A261]/10 text-[#F4A261] border-[#F4A261]/20';
+    if (risk === 'Normal') return 'bg-[#6A994E]/10 text-[#6A994E] border-[#6A994E]/20';
+    return 'bg-[#E8EEF2]/50 text-[#5A6B7C] border-[#E8EEF2]';
   };
 
+  const scoreHistory = activeContent.history || [];
+
+  const isOverdue = activeContent.isOverdue;
+  const daysOverdue = activeContent.daysOverdue;
+
+  // Mock Calendar Heatmap
+  const calendarMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  
   return (
-    <div className="p-8 max-w-5xl space-y-8 pb-20">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-8 pb-20">
       
       {/* Role-Specific Action Banner */}
-      <div className={`p-6 rounded-2xl border-2 flex items-center justify-between ${isTechnician ? 'bg-[#F4A261]/5 border-[#F4A261]/30' : 'bg-[#6A994E]/5 border-[#6A994E]/30'}`}>
+      <div className={`p-6 rounded-2xl border-2 flex items-center justify-between shadow-sm ${isTechnician ? 'bg-[#F4A261]/5 border-[#F4A261]/30' : 'bg-[#6A994E]/5 border-[#6A994E]/30'}`}>
          <div className="flex items-center gap-4">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isTechnician ? 'bg-[#F4A261] text-white' : 'bg-[#6A994E] text-white'}`}>
                {isTechnician ? <ClipboardList /> : <UserCircle />}
@@ -136,199 +157,220 @@ export default function UniversalSurveys() {
                </p>
             </div>
          </div>
-         
-         {isTechnician && (
-            <button 
-               className="bg-[#F4A261] text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-[#e39350] transition-all flex items-center gap-2"
-               onClick={() => setShowFormModal(true)}
-            >
-               <Plus className="w-5 h-5" /> Start New Observation
-            </button>
-         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-[#E8EEF2] shadow-sm overflow-hidden">
-        {/* Survey Selector Menu */}
-        <div className="p-6 border-b border-[#E8EEF2] bg-[#FAFAFA]">
-          <div className="flex items-center justify-between mb-4">
-             <label className="text-sm font-bold text-[#0A1128] uppercase tracking-widest">
-                Select Standardized Milestone
-             </label>
-             <span className="text-[10px] bg-[#6A994E] text-white px-2 py-0.5 rounded font-bold uppercase">Clinical Gateway</span>
-          </div>
-          <div className="relative">
-            <select 
-              value={activeSurvey}
-              onChange={(e) => setActiveSurvey(e.target.value as SurveyType)}
-              className="w-full appearance-none bg-white border-2 border-[#E8EEF2] text-[#0A1128] font-bold py-4 px-5 rounded-xl focus:outline-none focus:border-[#2D9596] cursor-pointer transition-all shadow-sm"
-            >
-              <option value="ESS">Epworth Sleepiness Scale (ESS)</option>
-              <option value="PSQI">Pittsburgh Sleep Quality Index (PSQI)</option>
-              <option value="ISI">Insomnia Severity Index (ISI)</option>
-              <option value="FSS">Fatigue Severity Scale (FSS)</option>
-              <option value="SF-36">SF-36 Health Survey (SF-36)</option>
-              <option value="BDI">Beck Depression Inventory (BDI)</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#5A6B7C]">
-              <ChevronDown className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        {/* Dynamic Active Survey Area */}
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {/* Active Survey Header */}
-          <div className="p-8 border-b border-[#E8EEF2]">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-[#0A1128]">{activeContent.name}</h3>
-              {activeContent.score > activeContent.threshold && (
-                <span className="flex items-center gap-1.5 text-xs font-bold text-[#E76F51] bg-[#E76F51]/10 px-4 py-2 rounded-full uppercase tracking-widest border border-[#E76F51]/20">
-                  <AlertCircle className="w-4 h-4" /> Threshold Breach
-                </span>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="bg-[#FAFAFA] p-4 rounded-xl border border-[#E8EEF2]">
-                <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-widest mb-1">Assessment Date</p>
-                <p className="text-lg font-bold text-[#0A1128] flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4 text-[#2D9596]" />
-                  {new Date(activeContent.date).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="bg-[#FAFAFA] p-4 rounded-xl border border-[#E8EEF2]">
-                <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-widest mb-1">Total Score</p>
-                <p className={`text-2xl font-bold ${getRiskColor(activeContent.risk)}`}>{activeContent.score}</p>
-              </div>
-              <div className="bg-[#FAFAFA] p-4 rounded-xl border border-[#E8EEF2]">
-                <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-widest mb-1">Status</p>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest inline-block mt-1 ${getRiskBadge(activeContent.risk)}`}>
-                  {activeContent.risk} Risk
-                </span>
-              </div>
-              <div className="bg-[#2D9596]/5 p-4 rounded-xl border border-[#2D9596]/10 flex flex-col justify-center">
-                <p className="text-[8px] text-[#2D9596] uppercase font-bold tracking-widest mb-1">AI Automation</p>
-                <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#2D9596]">
-                  <CheckCircle className="w-3 h-3" /> Auto Follow-up Active
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Active Survey Breakdown */}
-          <div className="p-8 pb-10">
-            <h4 className="text-xs font-bold text-[#5A6B7C] uppercase tracking-widest mb-4">Itemized Patient Responses</h4>
-            <div className="divide-y divide-[#E8EEF2] bg-[#FAFAFA] rounded-2xl border border-[#E8EEF2] overflow-hidden mb-8">
-              {activeContent.breakdown.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center p-5 hover:bg-white transition-colors">
-                  <span className="text-[#5A6B7C] font-semibold text-sm">{item.label}</span>
-                  <span className="text-[#0A1128] font-bold text-sm bg-white border border-[#E8EEF2] px-4 py-1.5 rounded-lg shadow-sm">{item.answer}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-[#F4A261]/10 border-l-4 border-[#F4A261] rounded-r-2xl p-6 shadow-sm">
-              <h4 className="text-sm font-bold text-[#0A1128] mb-2 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-[#F4A261]" /> Interpretive Clinical Note
-              </h4>
-              <p className="text-sm text-[#0A1128] leading-relaxed italic">
-                "{activeContent.clinicalNote}"
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Technician Monitoring & Operational Logs (Universal Section) */}
-      <div className="bg-[#0A1128] rounded-2xl border border-[#0A1128] shadow-xl overflow-hidden mt-8">
-        <div className="p-6 text-white flex items-center justify-between border-b border-white/10">
-           <div className="flex items-center gap-3">
-              <ShieldAlert className="w-6 h-6 text-[#F4A261]" />
-              <div>
-                 <h3 className="text-xl font-bold">Technician Field Connectivity</h3>
-                 <p className="text-xs text-white/50 uppercase tracking-widest font-bold">Operational Monitoring History</p>
-              </div>
-           </div>
-           <span className="text-[10px] font-bold bg-white/10 px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">Universal Truth Layer</span>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
-        <div className="p-8 space-y-6 bg-white/5">
-           {Array.isArray(liveSurveys?.technician) && liveSurveys.technician.length > 0 ? (
-             liveSurveys.technician.map((log: any, idx: number) => (
-             <div key={idx} className="bg-white p-6 rounded-2xl shadow-lg border border-transparent hover:border-[#F4A261]/30 transition-all group">
-                <div className="flex items-start justify-between mb-4">
-                   <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[#FAFAFA] rounded-full flex items-center justify-center border border-[#E8EEF2]">
-                         <UserCircle className="w-7 h-7 text-[#5A6B7C]" />
-                      </div>
-                      <div>
-                         <p className="text-md font-bold text-[#0A1128] group-hover:text-[#F4A261] transition-colors">{log.name || 'Monitoring Log'}</p>
-                         <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-widest mt-0.5">{log.type || 'Operational'}: {log.author || 'TECH-001'}</p>
-                      </div>
+        {/* LEFT COLUMN: Evidence & History Stream */}
+        <div className="lg:col-span-2 space-y-8">
+
+           {/* Overdue Warning & Legacy Indicator */}
+           {isOverdue && activeContent.date !== '—' && (
+             <div className="bg-gradient-to-r from-[#E76F51]/10 to-transparent border-l-4 border-[#E76F51] rounded-r-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-left-2">
+                <div className="flex items-center gap-4">
+                   <div className="w-10 h-10 bg-[#E76F51]/20 text-[#E76F51] rounded-full flex items-center justify-center">
+                      <AlertTriangle className="w-5 h-5" />
                    </div>
-                   <span className="text-[10px] font-mono font-bold bg-[#FAFAFA] px-2 py-1 rounded text-[#5A6B7C] border border-[#E8EEF2]">{log.lastCompleted}</span>
+                   <div>
+                      <h3 className="text-sm font-bold text-[#0A1128]">Survey Overdue Warning</h3>
+                      <p className="text-xs text-[#5A6B7C] mt-1">Patient is <span className="font-bold text-[#E76F51]">{daysOverdue} days late</span> submitting the latest {activeSurvey} questionnaire.</p>
+                   </div>
                 </div>
-                
-                <div className="bg-[#F4A261]/5 border-2 border-dashed border-[#F4A261]/20 p-5 rounded-2xl flex items-center gap-4 group-hover:bg-[#F4A261]/10 transition-colors">
-                   <MessageSquare className="w-5 h-5 text-[#F4A261]" />
-                   <p className="text-sm font-bold text-[#0A1128] leading-relaxed">
-                     <span className="text-[#F4A261] uppercase text-[10px] font-black mr-2">Field Observation:</span> 
-                     Data successfully synced from field unit via {log.name}.
-                   </p>
+                <div className="bg-white px-3 py-2 rounded-lg border border-[#E8EEF2] flex items-center gap-2 shadow-sm shrink-0">
+                   <Clock className="w-4 h-4 text-[#5A6B7C]" />
+                   <span className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Using previous survey from: <span className="text-[#0A1128]">{activeContent.date}</span></span>
                 </div>
-             </div>
-           ))) : (
-             <div className="text-center py-20">
-                <ClipboardList className="w-16 h-16 text-white/10 mx-auto mb-4" />
-                <p className="text-white/40 font-bold uppercase tracking-widest text-xs">No technician-logged monitoring forms available.</p>
              </div>
            )}
+
+           <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                   <h3 className="text-xl font-bold text-[#0A1128] flex items-center gap-2">
+                     <BarChart3 className="w-6 h-6 text-[#2D9596]" /> {activeSurvey} Score History
+                   </h3>
+                   <p className="text-sm text-[#5A6B7C] mt-1">6-Month Trajectory Analysis</p>
+                </div>
+                <div className="flex items-center gap-4 text-xs font-bold text-[#5A6B7C]">
+                  <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#E8EEF2]"></span> Normal</span>
+                  <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#E76F51]"></span> Elevated</span>
+                </div>
+              </div>
+
+              {/* Score History CSS Bar Chart */}
+              <div className="h-64 flex items-end justify-between gap-2 border-b-2 border-l-2 border-[#E8EEF2] pb-2 pl-2 pr-6 relative">
+                 {/* Threshold Line */}
+                 <div className="absolute w-full border-t-2 border-dashed border-[#F4A261] left-0 z-0 flex items-center" style={{ bottom: `${(activeContent.threshold / activeContent.maxScore) * 100}%` }}>
+                    <span className="absolute -left-12 text-[10px] font-bold text-[#F4A261]">Thresh {activeContent.threshold}</span>
+                 </div>
+
+                 {scoreHistory.length > 0 ? scoreHistory.map((data: any, idx: number) => {
+                    const heightPercent = (data.score / activeContent.maxScore) * 100;
+                    const isBreach = data.score > activeContent.threshold;
+                    return (
+                       <div key={idx} className="flex-1 flex flex-col items-center gap-2 z-10 group">
+                          <span className="text-xs font-bold text-[#0A1128] opacity-0 group-hover:opacity-100 transition-opacity">{data.score}</span>
+                          <div className={`w-full max-w-[40px] rounded-t-md transition-all duration-500 ease-out group-hover:opacity-80 ${isBreach ? 'bg-[#E76F51]' : 'bg-[#2D9596]'}`} style={{ height: `${heightPercent}%` }}></div>
+                          <span className="text-[10px] font-bold text-[#5A6B7C] uppercase absolute -bottom-6">{data.month}</span>
+                       </div>
+                    );
+                 }) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-[#5A6B7C] text-sm">No historical data available</div>
+                 )}
+              </div>
+           </div>
+
+           {/* Survey Completion Calendar (Heatmap Style) */}
+           <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
+              <h3 className="text-lg font-bold text-[#0A1128] mb-6 flex items-center gap-2">
+                 <CalendarDays className="w-5 h-5 text-[#6A994E]" /> Cross-Survey Completion Calendar
+              </h3>
+              <div className="grid grid-cols-6 gap-2 mb-2">
+                 {calendarMonths.map(m => <div key={m} className="text-[10px] font-bold text-[#5A6B7C] uppercase text-center">{m}</div>)}
+              </div>
+              <div className="grid grid-cols-6 gap-2">
+                 {(liveSurveys?.calendar || surveyData.calendar).map((weekData: any[], col: number) => (
+                    <div key={col} className="grid grid-rows-4 gap-2">
+                       {weekData.map((data: any, row: number) => {
+                          let colorClass = 'bg-[#E8EEF2]/50';
+                          if (data.count === 1) colorClass = 'bg-[#6A994E]/40';
+                          else if (data.count === 2) colorClass = 'bg-[#6A994E]/70';
+                          else if (data.count >= 3) colorClass = 'bg-[#6A994E]';
+                          
+                          const isSelected = data.surveys && data.surveys.includes(activeSurvey);
+                          const highlightClass = isSelected ? 'ring-2 ring-offset-1 ring-[#F4A261] z-10' : '';
+
+                          const tooltip = data.count > 0 
+                             ? `${data.count} survey(s) completed:\n${data.surveys.join(', ')}` 
+                             : 'No Activity';
+
+                          return (
+                             <div 
+                                key={row} 
+                                className={`w-full pt-[100%] rounded-md transition-all hover:scale-110 hover:shadow-md cursor-help ${colorClass} ${highlightClass}`}
+                                title={tooltip}
+                             ></div>
+                          );
+                       })}
+                    </div>
+                 ))}
+              </div>
+              <div className="flex items-center justify-between mt-4">
+                 <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-sm ring-2 ring-offset-1 ring-[#F4A261]"></div>
+                    <span className="text-[10px] font-bold text-[#5A6B7C] uppercase">Selected Form Match</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-[#5A6B7C] uppercase mr-1">Activity Volume</span>
+                    <div className="w-3 h-3 rounded-sm bg-[#E8EEF2]/50" title="0 surveys"></div>
+                    <div className="w-3 h-3 rounded-sm bg-[#6A994E]/40" title="1 survey"></div>
+                    <div className="w-3 h-3 rounded-sm bg-[#6A994E]/70" title="2 surveys"></div>
+                    <div className="w-3 h-3 rounded-sm bg-[#6A994E]" title="3+ surveys"></div>
+                 </div>
+              </div>
+              <p className="text-[10px] text-[#5A6B7C] mt-6 text-center">Patient adherence tracking across all medical survey requirements.</p>
+           </div>
+        </div>
+
+        {/* RIGHT COLUMN: Command Center & Details */}
+        <div className="lg:col-span-1 space-y-6 sticky top-8">
+           
+           {/* Survey Selector */}
+           <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-6">
+              <label className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-2 block">
+                 Clinical Form Selector
+              </label>
+              <div className="relative">
+                <select 
+                  value={activeSurvey}
+                  onChange={(e) => setActiveSurvey(e.target.value as SurveyType)}
+                  className="w-full appearance-none bg-[#FAFAFA] border-2 border-[#E8EEF2] text-[#0A1128] font-bold py-3 px-4 rounded-xl focus:outline-none focus:border-[#2D9596] cursor-pointer transition-all shadow-sm text-sm"
+                >
+                  {Object.entries(surveyMeta).map(([key, meta]) => (
+                     <option key={key} value={key}>{meta.fullName}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#5A6B7C]">
+                  <ChevronDown className="w-5 h-5" />
+                </div>
+              </div>
+           </div>
+
+           {/* Active Survey Breakdown Card */}
+           <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300">
+              <div className={`p-6 border-b border-[#E8EEF2] flex items-center justify-between ${getRiskBadge(activeContent.risk)} border-x-0 border-t-0`}>
+                 <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Total Score</p>
+                    <h2 className="text-4xl font-black">{activeContent.score}<span className="text-lg opacity-50 font-medium">/{activeContent.maxScore}</span></h2>
+                 </div>
+                 <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Status</p>
+                    <span className="px-3 py-1 bg-white/50 backdrop-blur-sm rounded-lg font-bold text-sm shadow-sm inline-block">{activeContent.risk} Risk</span>
+                 </div>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                 <div>
+                    <h4 className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-3">Itemized Responses</h4>
+                    <div className="space-y-2">
+                      {activeContent.breakdown.map((item: any, idx: number) => (
+                        <div key={idx} className="bg-[#FAFAFA] border border-[#E8EEF2] p-3 rounded-lg text-sm">
+                          <span className="block text-[#5A6B7C] font-semibold text-xs mb-1">{item.label}</span>
+                          <span className="block text-[#0A1128] font-bold">{item.answer}</span>
+                        </div>
+                      ))}
+                    </div>
+                 </div>
+
+                 <div className="bg-[#0A1128]/5 rounded-xl p-4 border-l-4 border-[#0A1128]">
+                    <h4 className="text-[10px] font-bold text-[#0A1128] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                       <ShieldAlert className="w-3 h-3" /> Interpretive Note
+                    </h4>
+                    <p className="text-xs text-[#0A1128] leading-relaxed italic">
+                       "{activeContent.clinicalNote}"
+                    </p>
+                 </div>
+              </div>
+           </div>
+
+           {/* Technician Inline Logging */}
+           {isTechnician && (
+              <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-6">
+                 <div className="flex items-center gap-3 mb-4 border-b border-[#E8EEF2] pb-4">
+                    <div className="w-8 h-8 bg-[#F4A261]/10 rounded-lg flex items-center justify-center">
+                       <Plus className="w-4 h-4 text-[#F4A261]" />
+                    </div>
+                    <div>
+                       <h3 className="font-bold text-[#0A1128] text-sm">Log Operational Form</h3>
+                       <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-tighter">Field Sync</p>
+                    </div>
+                 </div>
+                 <select 
+                    value={selectedForm}
+                    onChange={(e) => setSelectedForm(e.target.value)}
+                    className="w-full bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-3 text-xs font-bold text-[#0A1128] focus:border-[#F4A261] outline-none mb-3"
+                  >
+                    <option value="">Select monitoring form...</option>
+                    {availableForms.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+                 </select>
+                 <textarea 
+                    value={formNote}
+                    onChange={(e) => setFormNote(e.target.value)}
+                    placeholder="Field observations..."
+                    className="w-full h-20 bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-3 text-xs focus:border-[#F4A261] outline-none mb-4 resize-none"
+                 />
+                 <button 
+                    onClick={handleFormSubmit} 
+                    disabled={!selectedForm || !formNote || isSubmitting} 
+                    className="w-full py-3 bg-[#F4A261] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#F4A261]/20 disabled:opacity-40 active:scale-95 transition-transform flex justify-center items-center gap-2"
+                 >
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Log & Sync
+                 </button>
+              </div>
+           )}
+
         </div>
       </div>
-
-      {/* Form Modal (Technician Only) */}
-      {showFormModal && (
-        <div className="fixed inset-0 bg-[#0A1128]/60 flex items-center justify-center z-50 animate-in fade-in duration-200 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-xl w-full animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-[#F4A261]/10 rounded-lg flex items-center justify-center">
-                <Plus className="w-6 h-6 text-[#F4A261]" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-[#0A1128]">New Monitoring Form</h3>
-                <p className="text-xs text-[#5A6B7C] uppercase font-bold tracking-tighter">Operational Field Log</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 mb-8">
-              <label className="block text-xs font-bold text-[#5A6B7C] uppercase tracking-widest">Select Form Type</label>
-              <select 
-                value={selectedForm}
-                onChange={(e) => setSelectedForm(e.target.value)}
-                className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl p-4 text-sm font-bold text-[#0A1128] focus:border-[#F4A261] outline-none"
-              >
-                <option value="">Choose a monitoring form...</option>
-                {availableForms.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
-              </select>
-
-              <label className="block text-xs font-bold text-[#5A6B7C] uppercase tracking-widest mt-6">Observations / Patient Feedback</label>
-              <textarea 
-                value={formNote}
-                onChange={(e) => setFormNote(e.target.value)}
-                placeholder="Log the patient's specific feedback or technical observations..."
-                className="w-full h-32 bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl p-4 text-sm focus:border-[#F4A261] outline-none"
-              />
-            </div>
-
-            <div className="flex gap-4">
-              <button onClick={() => setShowFormModal(false)} className="flex-1 py-4 bg-[#E8EEF2] text-[#5A6B7C] font-bold rounded-xl active:scale-95 transition-transform">Cancel</button>
-              <button onClick={handleFormSubmit} disabled={!selectedForm || !formNote} className="flex-2 py-4 bg-[#F4A261] text-white font-bold rounded-xl shadow-lg shadow-[#F4A261]/20 disabled:opacity-40 active:scale-95 transition-transform">
-                Log Form & Sync
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

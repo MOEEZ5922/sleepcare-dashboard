@@ -33,3 +33,16 @@ dist-ssr
 # Build artifacts
 build_log.txt
 dist.zip
+
+# Documentation (Internal use)
+*.md
+!README.md
+
+# Temporary or Extracted Files
+/docx1.txt
+/docx2.txt
+/pdf_text.txt
+/extract.cjs
+
+# Coverage
+coverage/

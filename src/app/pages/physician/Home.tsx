@@ -1,4 +1,4 @@
-import { AlertTriangle, Calendar, ChevronRight, Activity, Search, Filter, Signal, Loader2 } from 'lucide-react';
+import { AlertTriangle, Calendar, ChevronRight, Activity, Search, Filter, Signal, Loader2, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router';
 import { useState, useEffect, useMemo } from 'react';
 import SummaryContent from '../../components/SummaryContent';
@@ -14,10 +14,19 @@ export default function PhysicianHome() {
   const isLive = !error && !!queue;
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
 
-  // Set initial selected patient when queue loads
+  // Set initial selected patient and tab when queue loads
   useEffect(() => {
     if (queue && !selectedPatientId) {
-      setSelectedPatientId(queue.urgent?.[0]?.id || queue.annualReviews?.[0]?.id || null);
+      const firstUrgent = queue.urgent?.[0];
+      const firstAnnual = queue.annualReviews?.[0];
+      
+      if (firstUrgent) {
+        setSelectedPatientId(firstUrgent.id);
+        setActiveTab('urgent');
+      } else if (firstAnnual) {
+        setSelectedPatientId(firstAnnual.id);
+        setActiveTab('annual');
+      }
     }
   }, [queue, selectedPatientId]);
 
@@ -95,62 +104,78 @@ export default function PhysicianHome() {
         <div className="flex-1 overflow-auto">
           {activeTab === 'urgent' ? (
             <div className="divide-y divide-[#E8EEF2]">
-              {queue.urgent.map((patient) => (
-                <div
-                  key={patient.id}
-                  onClick={() => setSelectedPatientId(patient.id)}
-                  className={`p-5 cursor-pointer transition-all border-l-4 ${
-                    selectedPatientId === patient.id 
-                      ? 'bg-[#E8EEF2]/30 border-[#E76F51]' 
-                      : 'border-transparent hover:bg-[#FAFAFA]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-bold text-[#0A1128]">{patient.patientName}</h3>
-                    <span className={`text-xs font-bold ${getRiskColor(patient.riskScore, patient.category)}`}>
-                      {patient.riskScore}/100
-                    </span>
+              {urgentCount > 0 ? (
+                queue.urgent.map((patient) => (
+                  <div
+                    key={patient.id}
+                    onClick={() => setSelectedPatientId(patient.id)}
+                    className={`p-5 cursor-pointer transition-all border-l-4 ${
+                      selectedPatientId === patient.id 
+                        ? 'bg-[#E8EEF2]/30 border-[#E76F51]' 
+                        : 'border-transparent hover:bg-[#FAFAFA]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-bold text-[#0A1128]">{patient.patientName}</h3>
+                      <span className={`text-xs font-bold ${getRiskColor(patient.riskScore, patient.category)}`}>
+                        {typeof patient.riskScore === 'number' ? Math.round(patient.riskScore) : patient.riskScore}/100
+                      </span>
+                    </div>
+                    <p className={`text-xs font-medium mb-2 line-clamp-1 ${patient.category === 'Tech Escalation' ? 'text-[#9b59b6]' : 'text-[#E76F51]'}`}>
+                      {patient.reason}
+                    </p>
+                    <div className="flex items-center justify-between text-[10px] text-[#5A6B7C]">
+                      <span>Escalated {patient.daysActive}d ago</span>
+                      <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-tight ${
+                        patient.category === 'Tech Escalation' ? 'bg-[#9b59b6]/10 text-[#9b59b6]' : 'bg-[#E8EEF2]'
+                      }`}>
+                        {patient.category}
+                      </span>
+                    </div>
                   </div>
-                  <p className={`text-xs font-medium mb-2 line-clamp-1 ${patient.category === 'Tech Escalation' ? 'text-[#9b59b6]' : 'text-[#E76F51]'}`}>
-                    {patient.reason}
-                  </p>
-                  <div className="flex items-center justify-between text-[10px] text-[#5A6B7C]">
-                    <span>Escalated {patient.daysActive}d ago</span>
-                    <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-tight ${
-                      patient.category === 'Tech Escalation' ? 'bg-[#9b59b6]/10 text-[#9b59b6]' : 'bg-[#E8EEF2]'
-                    }`}>
-                      {patient.category}
-                    </span>
-                  </div>
+                ))
+              ) : (
+                <div className="p-12 text-center">
+                  <CheckCircle className="w-12 h-12 text-[#6A994E] mx-auto mb-4 opacity-20" />
+                  <h4 className="text-sm font-bold text-[#0A1128] mb-1">Queue Clear</h4>
+                  <p className="text-[11px] text-[#5A6B7C] leading-relaxed">No urgent clinical exceptions requiring immediate intervention.</p>
                 </div>
-              ))}
+              )}
             </div>
           ) : (
             <div className="divide-y divide-[#E8EEF2]">
-               {queue.annualReviews.map((patient) => (
-                <div
-                  key={patient.id}
-                  onClick={() => setSelectedPatientId(patient.id)}
-                  className={`p-5 cursor-pointer transition-all border-l-4 ${
-                    selectedPatientId === patient.id 
-                      ? 'bg-[#E8EEF2]/30 border-[#2D9596]' 
-                      : 'border-transparent hover:bg-[#FAFAFA]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-bold text-[#0A1128]">{patient.patientName}</h3>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                      patient.status === 'Overdue' ? 'bg-[#E76F51] text-white' : 'bg-[#F4A261] text-white'
-                    }`}>
-                      {patient.status}
-                    </span>
+               {annualCount > 0 ? (
+                 queue.annualReviews.map((patient) => (
+                  <div
+                    key={patient.id}
+                    onClick={() => setSelectedPatientId(patient.id)}
+                    className={`p-5 cursor-pointer transition-all border-l-4 ${
+                      selectedPatientId === patient.id 
+                        ? 'bg-[#E8EEF2]/30 border-[#2D9596]' 
+                        : 'border-transparent hover:bg-[#FAFAFA]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-bold text-[#0A1128]">{patient.patientName}</h3>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        patient.status === 'Overdue' ? 'bg-[#E76F51] text-white' : 'bg-[#F4A261] text-white'
+                      }`}>
+                        {patient.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#5A6B7C]">
+                      <span>Due in {patient.daysUntilDue}d</span>
+                      <span className="font-medium">Risk: {patient.riskScore}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-[10px] text-[#5A6B7C]">
-                    <span>Due in {patient.daysUntilDue}d</span>
-                    <span className="font-medium">Risk: {patient.riskScore}</span>
-                  </div>
+                ))
+               ) : (
+                <div className="p-12 text-center">
+                  <Calendar className="w-12 h-12 text-[#2D9596] mx-auto mb-4 opacity-20" />
+                  <h4 className="text-sm font-bold text-[#0A1128] mb-1">No Reviews Due</h4>
+                  <p className="text-[11px] text-[#5A6B7C] leading-relaxed">All annual therapy reviews are currently up to date.</p>
                 </div>
-              ))}
+               )}
             </div>
           )}
         </div>

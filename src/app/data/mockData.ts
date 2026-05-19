@@ -240,13 +240,13 @@ export const cpapData = {
     current: 10.5,
   },
   usageHistory: [
-    { date: "2026-04-08", hours: 7.2, ahi: 3.8 },
-    { date: "2026-04-09", hours: 6.5, ahi: 4.1 },
-    { date: "2026-04-10", hours: 7.8, ahi: 3.2 },
-    { date: "2026-04-11", hours: 5.2, ahi: 5.8 },
-    { date: "2026-04-12", hours: 7.5, ahi: 3.9 },
-    { date: "2026-04-13", hours: 6.9, ahi: 4.2 },
-    { date: "2026-04-14", hours: 7.1, ahi: 3.6 },
+    { date: "2026-04-08", hours: 7.2, ahi: 3.8, leakRate: 14.2 },
+    { date: "2026-04-09", hours: 6.5, ahi: 4.1, leakRate: 19.8 },
+    { date: "2026-04-10", hours: 7.8, ahi: 3.2, leakRate: 12.4 },
+    { date: "2026-04-11", hours: 5.2, ahi: 5.8, leakRate: 28.4 },
+    { date: "2026-04-12", hours: 7.5, ahi: 3.9, leakRate: 15.6 },
+    { date: "2026-04-13", hours: 6.9, ahi: 4.2, leakRate: 22.1 },
+    { date: "2026-04-14", hours: 7.1, ahi: 3.6, leakRate: 18.5 },
   ],
   thirtyDayTrend: Array.from({ length: 30 }, (_, i) => ({
     day: i + 1,
@@ -343,23 +343,61 @@ export const surveyData = {
       score: 8,
       threshold: 5,
       risk: "Elevated",
+      isOverdue: false,
+      daysOverdue: 0,
+      history: [
+        { month: 'Oct', score: 6 },
+        { month: 'Nov', score: 5 },
+        { month: 'Dec', score: 7 },
+        { month: 'Jan', score: 8 },
+        { month: 'Feb', score: 9 },
+        { month: 'Mar', score: 8 },
+      ]
     },
     {
       id: 2,
       name: "Epworth Sleepiness Scale (ESS)",
-      dateTaken: "2026-04-01",
+      dateTaken: "2026-01-15",
       score: 12,
       threshold: 10,
       risk: "Moderate",
+      isOverdue: true,
+      daysOverdue: 75,
+      history: [
+        { month: 'Oct', score: 14 },
+        { month: 'Nov', score: 15 },
+        { month: 'Dec', score: 13 },
+        { month: 'Jan', score: 12 },
+        { month: 'Feb', score: 12 },
+        { month: 'Mar', score: 12 },
+      ]
     },
     {
       id: 3,
-      name: "STOP-BANG Questionnaire",
-      dateTaken: "2026-03-15",
-      score: 6,
-      threshold: 3,
+      name: "Short Form 36 Health Survey (SF-36)",
+      dateTaken: "2026-03-20",
+      score: 45,
+      threshold: 50,
       risk: "High",
+      isOverdue: false,
+      daysOverdue: 0,
+      history: [
+        { month: 'Oct', score: 60 },
+        { month: 'Nov', score: 55 },
+        { month: 'Dec', score: 52 },
+        { month: 'Jan', score: 48 },
+        { month: 'Feb', score: 46 },
+        { month: 'Mar', score: 45 },
+      ]
     },
+  ],
+  calendar: [
+    [ { count: 0, surveys: [] }, { count: 1, surveys: ['ESS'] }, { count: 0, surveys: [] }, { count: 2, surveys: ['PSQI', 'ISI'] } ],
+    [ { count: 1, surveys: ['FSS'] }, { count: 0, surveys: [] }, { count: 1, surveys: ['BDI'] }, { count: 0, surveys: [] } ],
+    [ { count: 0, surveys: [] }, { count: 0, surveys: [] }, { count: 1, surveys: ['ESS'] }, { count: 0, surveys: [] } ],
+    [ { count: 3, surveys: ['ESS', 'PSQI', 'SF-36'] }, { count: 0, surveys: [] }, { count: 1, surveys: ['ISI'] }, { count: 0, surveys: [] } ],
+    [ { count: 0, surveys: [] }, { count: 1, surveys: ['FSS'] }, { count: 0, surveys: [] }, { count: 0, surveys: [] } ],
+    [ { count: 1, surveys: ['ESS'] }, { count: 1, surveys: ['PSQI'] }, { count: 0, surveys: [] }, { count: 0, surveys: [] } ]
   ],
   technician: [
     {
@@ -564,16 +602,16 @@ export const aiWeeklyState = {
   ],
 
   riskFactorBreakdown: [
-    { factor: "Usage Decay",         contribution: 32, direction: "worsening" },
+    { factor: "Usage Decay", contribution: 32, direction: "worsening" },
     { factor: "Mask Leak Instability", contribution: 28, direction: "worsening" },
-    { factor: "Residual AHI Burden",  contribution: 22, direction: "worsening" },
-    { factor: "ESS Score (12/24)",    contribution: 10, direction: "stable"    },
-    { factor: "PSQI Score (8/21)",    contribution: 8,  direction: "stable"    },
+    { factor: "Residual AHI Burden", contribution: 22, direction: "worsening" },
+    { factor: "ESS Score (12/24)", contribution: 10, direction: "stable" },
+    { factor: "PSQI Score (8/21)", contribution: 8, direction: "stable" },
   ],
 
   activeFlags: [
-    { label: "Leak Instability",    severity: "high"   },
-    { label: "Usage Decay",         severity: "high"   },
+    { label: "Leak Instability", severity: "high" },
+    { label: "Usage Decay", severity: "high" },
     { label: "Residual AHI Burden", severity: "medium" },
   ],
 

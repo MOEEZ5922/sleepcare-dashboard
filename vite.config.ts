@@ -50,5 +50,17 @@ export default defineConfig({
       }
     },
     chunkSizeWarningLimit: 1000,
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://cpap-backend-v2.onrender.com',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'https://cpap-backend-v2.onrender.com',
+        changeOrigin: true,
+      }
+    }
   }
 })

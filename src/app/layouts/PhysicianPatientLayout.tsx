@@ -89,7 +89,7 @@ export default function PhysicianPatientLayout() {
             <div>
               <p className="text-xs text-[#5A6B7C] mb-1">Risk Score</p>
               <p className={`font-semibold ${getRiskColor(patient.riskScore || 0)}`}>
-                {patient.riskScore || 0}/100
+                {typeof patient.riskScore === 'number' ? Math.round(patient.riskScore) : (patient.riskScore || 0)}/100
               </p>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { useParams } from 'react-router';
-import { Moon, Flame, Signal, Loader2 } from 'lucide-react';
+import { Moon, Flame, Signal, Loader2, AlertTriangle, Activity, Wind } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { fetchCpapTrends } from '../../data/api';
 
@@ -31,6 +31,8 @@ export default function PatientCPAP() {
   const lastNight = usageHistory.length > 0 ? usageHistory[usageHistory.length - 1]?.hours || 0 : 0;
   const percentComplete = Math.min((lastNight / 8) * 100, 100);
   const streak = cpapData.streak || 0;
+  
+  const hasDataGap = usageHistory.some((d: any) => d.hours === 0) || usageHistory.length < 7;
 
   return (
     <div className="p-6 space-y-6 max-w-2xl mx-auto pb-32">
@@ -43,6 +45,19 @@ export default function PatientCPAP() {
           </div>
         )}
       </div>
+
+      {/* Data Gap Alert */}
+      {hasDataGap && (
+        <div className="bg-[#E76F51]/10 border border-[#E76F51]/20 rounded-2xl p-4 flex items-center gap-4 text-[#E76F51]">
+          <div className="bg-[#E76F51] p-2 rounded-lg">
+            <AlertTriangle className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="font-bold text-sm">Connection Check</p>
+            <p className="text-xs opacity-80">We haven't received your sleep data for a few nights. Please check that your machine is plugged in and has a signal.</p>
+          </div>
+        </div>
+      )}
 
       {/* Sleep Ring */}
       <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-[#E8EEF2]">
@@ -113,9 +128,9 @@ export default function PatientCPAP() {
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
         <h3 className="text-lg text-[#0A1128] mb-6 font-semibold">Weekly Usage (Last 7 Days)</h3>
         <div className="space-y-5">
-          {usageHistory.slice(-7).map((day: any, index: number) => {
+          {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
             const date = new Date(day.date);
-            const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             const progress = (day.hours / 8) * 100;
 
             return (
@@ -143,11 +158,83 @@ export default function PatientCPAP() {
           Clinical Insight
         </h4>
         <p className="text-[#5A6B7C] text-sm leading-relaxed">
-          Your average usage is <span className="font-bold text-[#0A1128]">{cpapData.averageHours?.toFixed(1) || '—'} hours/night</span>. 
-          {(cpapData.averageHours || 0) >= 4 
+          Your average usage is <span className="font-bold text-[#0A1128]">{cpapData.averageHours?.toFixed(1) || '—'} hours/night</span>.
+          {(cpapData.averageHours || 0) >= 4
             ? ' You are meeting the clinical adherence threshold of 4+ hours. Keep it up!'
             : ' The clinical threshold is 4+ hours per night. Small increases make a big difference.'}
         </p>
+      </div>
+
+      {/* Sleep Events (AHI) */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-[#E76F51]" />
+            <h3 className="font-bold text-[#0A1128]">Sleep Events</h3>
+          </div>
+          <span className="text-xs font-bold text-[#E76F51]">Goal: &lt;5 /hr</span>
+        </div>
+        <p className="text-xs text-[#5A6B7C] mb-6">Fewer events mean deeper, more restful sleep.</p>
+        
+        <div className="space-y-4">
+          {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
+            const date = new Date(day.date);
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const isGood = day.ahi < 5;
+            const progress = Math.min((day.ahi / 15) * 100, 100); 
+            
+            return (
+              <div key={index} className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#5A6B7C] w-24">{dayName}</span>
+                <div className="flex-1 mx-4 h-1.5 bg-[#E8EEF2] rounded-full overflow-hidden flex items-center">
+                   <div 
+                     className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-[#6A994E]' : 'bg-[#E76F51]'}`} 
+                     style={{ width: `${Math.max(progress, 2)}%` }} 
+                   />
+                </div>
+                <span className={`text-xs font-bold w-12 text-right ${isGood ? 'text-[#6A994E]' : 'text-[#E76F51]'}`}>
+                  {day.ahi?.toFixed(1) || '0.0'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mask Seal Quality (Leak) */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Wind className="w-5 h-5 text-[#F4A261]" />
+            <h3 className="font-bold text-[#0A1128]">Mask Seal Quality</h3>
+          </div>
+        </div>
+        <p className="text-xs text-[#5A6B7C] mb-6">A steady seal ensures you get the right air pressure.</p>
+        
+        <div className="space-y-4">
+          {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
+            const date = new Date(day.date);
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const leak = day.leakRate || 0;
+            const isGood = leak < 24; 
+            const progress = Math.min((leak / 40) * 100, 100);
+            
+            return (
+              <div key={index} className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#5A6B7C] w-24">{dayName}</span>
+                <div className="flex-1 mx-4 h-1.5 bg-[#E8EEF2] rounded-full overflow-hidden flex items-center">
+                   <div 
+                     className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-[#F4A261]' : 'bg-[#E76F51]'}`} 
+                     style={{ width: `${Math.max(progress, 2)}%` }} 
+                   />
+                </div>
+                <span className={`text-xs font-bold w-16 text-right ${isGood ? 'text-[#F4A261]' : 'text-[#E76F51]'}`}>
+                  {leak.toFixed(1)} L/m
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,27 @@
+# Render Infrastructure as Code (IaC) Blueprint
+# SleepCare Dashboard Frontend Static Site Deployment
+
+services:
+  - type: web
+    name: sleepcare-dashboard
+    runtime: static
+    buildCommand: npm run build
+    publishPath: dist
+    headers:
+      - key: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      # 1. Forward API requests to Siamak's live Render backend (Bypasses CORS in Production)
+      - type: rewrite
+        source: /api/*
+        destination: https://cpap-backend-v2.onrender.com/api/*
+
+      # 2. Forward Health check checks to backend
+      - type: rewrite
+        source: /health
+        destination: https://cpap-backend-v2.onrender.com/health
+
+      # 3. SPA Routing Fallback: Redirect all page routes back to index.html for client-side routing
+      - type: rewrite
+        source: /*
+        destination: /index.html
