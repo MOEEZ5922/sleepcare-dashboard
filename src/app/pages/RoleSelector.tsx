@@ -15,24 +15,24 @@ export default function RoleSelector() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Physician Card */}
+          {/* Patient Card */}
           <Link
-            to="/physician"
+            to="/patient"
             className="group relative bg-white rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:shadow-2xl"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-[#2D9596]/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#6A994E]/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative">
-              <div className="w-16 h-16 bg-[#2D9596]/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#2D9596] transition-colors">
-                <Stethoscope className="w-8 h-8 text-[#2D9596] group-hover:text-white transition-colors" />
+              <div className="w-16 h-16 bg-[#6A994E]/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#6A994E] transition-colors">
+                <User className="w-8 h-8 text-[#6A994E] group-hover:text-white transition-colors" />
               </div>
               <h2 className="text-2xl mb-3 text-[#0A1128]">
-                Physician Portal
+                Patient App
               </h2>
               <p className="text-[#5A6B7C] leading-relaxed">
-                Comprehensive clinical dashboard for diagnosis, treatment planning, and patient monitoring
+                Your personal sleep therapy companion for tracking progress and staying motivated
               </p>
-              <div className="mt-6 text-[#2D9596] group-hover:translate-x-2 transition-transform inline-flex items-center gap-2">
-                Enter Portal
+              <div className="mt-6 text-[#6A994E] group-hover:translate-x-2 transition-transform inline-flex items-center gap-2">
+                Enter App
                 <span>→</span>
               </div>
             </div>
@@ -61,24 +61,24 @@ export default function RoleSelector() {
             </div>
           </Link>
 
-          {/* Patient Card */}
+          {/* Physician Card */}
           <Link
-            to="/patient"
+            to="/physician"
             className="group relative bg-white rounded-2xl p-8 hover:scale-105 transition-all duration-300 hover:shadow-2xl"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-[#6A994E]/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#2D9596]/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative">
-              <div className="w-16 h-16 bg-[#6A994E]/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#6A994E] transition-colors">
-                <User className="w-8 h-8 text-[#6A994E] group-hover:text-white transition-colors" />
+              <div className="w-16 h-16 bg-[#2D9596]/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#2D9596] transition-colors">
+                <Stethoscope className="w-8 h-8 text-[#2D9596] group-hover:text-white transition-colors" />
               </div>
               <h2 className="text-2xl mb-3 text-[#0A1128]">
-                Patient App
+                Physician Portal
               </h2>
               <p className="text-[#5A6B7C] leading-relaxed">
-                Your personal sleep therapy companion for tracking progress and staying motivated
+                Comprehensive clinical dashboard for diagnosis, treatment planning, and patient monitoring
               </p>
-              <div className="mt-6 text-[#6A994E] group-hover:translate-x-2 transition-transform inline-flex items-center gap-2">
-                Enter App
+              <div className="mt-6 text-[#2D9596] group-hover:translate-x-2 transition-transform inline-flex items-center gap-2">
+                Enter Portal
                 <span>→</span>
               </div>
             </div>
