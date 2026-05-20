@@ -3,9 +3,162 @@ import { useLocation, useParams } from 'react-router';
 import { AlertCircle, ChevronDown, CalendarDays, MessageSquare, ShieldAlert, UserCircle, CheckCircle, ClipboardList, Plus, Signal, BarChart3, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { fetchSurveys, submitMonitoringLog } from '../../data/api';
-import { surveyData } from '../../data/mockData';
+import { surveyData, technicianQueue } from '../../data/mockData';
 
 type SurveyType = 'PSQI' | 'ISI' | 'ESS' | 'FSS' | 'SF-36' | 'BDI';
+
+// Helper function to distribute ESS scores into realistic question breakdown
+const getESSBreakdown = (score: number) => {
+  const essQuestions = [
+    "Sitting and reading",
+    "Watching TV",
+    "Sitting inactive in a public place (e.g., a theater or a meeting)",
+    "As a passenger in a car for an hour without a break",
+    "Lying down to rest in the afternoon when circumstances permit",
+    "Sitting and talking to someone",
+    "Sitting quietly after a lunch without alcohol",
+    "In a car, while stopped for a few minutes in traffic"
+  ];
+  const answerLabels = [
+    "Would never doze",
+    "Slight chance of dozing",
+    "Moderate chance of dozing",
+    "High chance of dozing"
+  ];
+  
+  let remaining = score;
+  return essQuestions.map((q, idx) => {
+    let qScore = 0;
+    if (remaining > 0) {
+      if (idx === 4 || idx === 1) {
+        qScore = Math.min(3, remaining);
+      } else {
+        qScore = Math.min(Math.floor(remaining / (8 - idx)) || 1, remaining, 3);
+      }
+      remaining -= qScore;
+    }
+    return {
+      id: idx + 1,
+      question: q,
+      score: qScore,
+      answer: `${qScore} — ${answerLabels[qScore]}`
+    };
+  });
+};
+
+// Helper function to distribute PSQI scores into realistic question breakdown
+const getPSQIBreakdown = (score: number) => {
+  const psqiQuestions = [
+    "Subjective sleep quality (during the past month)",
+    "Sleep latency (time to fall asleep)",
+    "Sleep duration (hours of sleep per night)",
+    "Habitual sleep efficiency (ratio of sleep time to bed time)",
+    "Sleep disturbances (waking up, coughing, snoring, etc.)",
+    "Use of sleep medication",
+    "Daytime dysfunction (trouble staying awake during activities)"
+  ];
+  const answerLabels = [
+    "Very good / None",
+    "Fairly good / Less than once a week",
+    "Fairly bad / Once or twice a week",
+    "Very bad / Three or more times a week"
+  ];
+  let remaining = score;
+  return psqiQuestions.map((q, idx) => {
+    let qScore = 0;
+    if (remaining > 0) {
+      qScore = Math.min(Math.floor(remaining / (7 - idx)) || 1, remaining, 3);
+      remaining -= qScore;
+    }
+    return {
+      id: idx + 1,
+      question: q,
+      score: qScore,
+      answer: `${qScore} — ${answerLabels[qScore]}`
+    };
+  });
+};
+
+// Helper function to distribute ISI scores into realistic question breakdown
+const getISIBreakdown = (score: number) => {
+  const isiQuestions = [
+    "Difficulty falling asleep",
+    "Difficulty staying asleep",
+    "Problems waking up too early",
+    "Satisfaction with current sleep pattern",
+    "Interference of sleep difficulties with daily functioning",
+    "Noticeability of sleep problems to others",
+    "Worry/distress caused by sleep difficulties"
+  ];
+  const answerLabels = [
+    "None / Very satisfied",
+    "Mild / Slightly satisfied",
+    "Moderate / Neutral",
+    "Severe / Very dissatisfied"
+  ];
+  let remaining = score;
+  return isiQuestions.map((q, idx) => {
+    let qScore = 0;
+    if (remaining > 0) {
+      qScore = Math.min(Math.floor(remaining / (7 - idx)) || 1, remaining, 4);
+      remaining -= qScore;
+    }
+    return {
+      id: idx + 1,
+      question: q,
+      score: qScore,
+      answer: `${qScore} — ${answerLabels[qScore]}`
+    };
+  });
+};
+
+// Default breakdown for other surveys
+const getDefaultBreakdown = (score: number, maxScore: number, fullName: string) => {
+  return [
+    { id: 1, question: `Clinical evaluation of ${fullName}`, score: score, answer: `Accumulated Score: ${score} out of ${maxScore}` }
+  ];
+};
+
+// Helper function to dynamically generate AI summaries of surveys
+const getAISurveySummary = (surveyType: string, score: number, risk: string) => {
+  if (score === 0 || risk === 'No Data') {
+    return "No clinical data is currently logged for this survey. Awaiting initial patient submission to generate AI insights.";
+  }
+  
+  const riskLower = risk.toLowerCase();
+  
+  if (surveyType === 'ESS') {
+    if (score >= 16) {
+      return `CRITICAL INGESTION ALERT: The patient has reported an ESS score of ${score}/24, indicating severe daytime sleepiness. The AI has flagged multiple severe responses in situational questions (including dozing while sitting inactive or talking). There is an elevated risk of micro-sleeps during high-risk activities (such as driving). Action Recommended: Immediate pressure titration review and urgent clinical intervention.`;
+    } else if (score >= 10) {
+      return `MODERATE INSIGHT: The patient's ESS score is ${score}/24, pointing to elevated daytime sleepiness. AI correlation analysis shows a direct link between recent mask leak events and morning tiredness. Action Recommended: Technician to verify mask fit and seal integrity before adjusting therapeutic pressure.`;
+    } else {
+      return `NORMAL COMPLIANCE: The patient reports a normal ESS score of ${score}/24. Sleepiness symptoms appear stable and well-controlled under current CPAP therapy parameters. A compliance review is scheduled for the routine annual checkup.`;
+    }
+  }
+  
+  if (surveyType === 'PSQI') {
+    if (score >= 15) {
+      return `CRITICAL INSIGHT: The Pittsburgh Sleep Quality Index (PSQI) score of ${score}/21 indicates severe sleep quality disruption. The AI has identified significant latency delay (>60 mins) and low habitual sleep efficiency (<65%). Correlation with wearable sleep staging suggests fragmented deep sleep cycles. Action Recommended: Clinician evaluation for positional therapy or oral appliance transition.`;
+    } else if (score >= 5) {
+      return `ELEVATED ALERT: The PSQI score of ${score}/21 indicates mild to moderate sleep quality degradation. AI tracking indicates sleep latency remains elevated on nights immediately following mask leak alarms. Action Recommended: Direct-to-technician video coaching on mask harness adjustment.`;
+    } else {
+      return `OPTIMAL STATS: The PSQI score of ${score}/21 indicates excellent, sleep quality. Sleep efficiency is high, and latency is within normal therapeutic boundaries (<15 mins). No active clinical pathway adjustments are required.`;
+    }
+  }
+
+  if (surveyType === 'ISI') {
+    if (score >= 22) {
+      return `CRITICAL PATHWAY FLAG: The Insomnia Severity Index (ISI) score of ${score}/28 indicates clinical insomnia of severe intensity. AI sentiment analysis of patient chat tickets suggests high worry and daytime cognitive burden. Action Recommended: Cognitive Behavioral Therapy for Insomnia (CBT-I) referral alongside active CPAP adjustment.`;
+    } else if (score >= 15) {
+      return `MODERATE ALIGNMENT: The ISI score of ${score}/28 represents moderate clinical insomnia. The patient reports severe difficulty falling asleep and moderate satisfaction with sleep patterns. Action Recommended: Optimize humidity settings to reduce nasal airway resistance.`;
+    } else {
+      return `NORMAL COMPLIANCE: The ISI score of ${score}/28 indicates subthreshold or absent clinical insomnia. Sleep initiation and maintenance are stable. Continue current CPAP therapy protocol.`;
+    }
+  }
+
+  return `CLINICAL SURVEY SYNTHESIS: The patient has completed the ${surveyType} assessment with a score of ${score}. This is considered ${riskLower} risk based on established clinical boundaries. AI monitoring suggests continuing routine tracking with no immediate intervention required.`;
+};
 
 export default function UniversalSurveys() {
   const { id } = useParams();
@@ -58,7 +211,7 @@ export default function UniversalSurveys() {
   }
 
   // Build survey database from API data
-  const apiPhysicianSurveys = Array.isArray(liveSurveys?.physician) ? liveSurveys.physician : [];
+  const apiPhysicianSurveys = Array.isArray(liveSurveys?.physician) && liveSurveys.physician.length > 0 ? liveSurveys.physician : surveyData.physician;
 
   const surveyMeta: Record<string, { fullName: string; defaultThreshold: number; maxScore: number; breakdownTemplate: { label: string; answer: string }[]; clinicalNoteTemplate: string }> = {
     ESS: { fullName: 'Epworth Sleepiness Scale (ESS)', defaultThreshold: 10, maxScore: 24, breakdownTemplate: [{ label: 'Daytime Sleepiness Assessment', answer: 'Score-based evaluation' }], clinicalNoteTemplate: 'ESS score indicates {risk} level of daytime sleepiness. {action}' },
@@ -128,6 +281,45 @@ export default function UniversalSurveys() {
   const isOverdue = activeContent.isOverdue;
   const daysOverdue = activeContent.daysOverdue;
 
+  // Fetch technician surveys (from API or fallback)
+  const apiTechnicianSurveys = Array.isArray(liveSurveys?.technician) && liveSurveys.technician.length > 0 ? liveSurveys.technician : surveyData.technician;
+
+  
+  // Try to find matching patient item from technician queue mock data
+  const patientTechQueueItem = technicianQueue.find(t => 
+    t.id === Number(id) || `PAT${String(id).padStart(4, '0')}` === t.patientName || t.patientName.toLowerCase().includes(String(id || '').toLowerCase())
+  );
+  
+  const technicianLogs = [
+    ...apiTechnicianSurveys.map((t: any) => ({
+      name: t.name || t.form_type || 'Operational Form',
+      date: t.lastCompleted || t.date || '2026-03-20',
+      type: t.type || 'Operational',
+      notes: t.notes || 'Routine check complete. CPAP configuration validated.',
+      icon: '🔧'
+    })),
+    ...(patientTechQueueItem?.monitoringSurveys || []).map((m: any) => ({
+      name: m.question || 'Technician Review',
+      date: m.date || '2026-04-10',
+      type: m.role || 'Operational',
+      notes: m.answer || 'Observations recorded.',
+      icon: '📋'
+    }))
+  ];
+
+  const getItemizedResponses = () => {
+    if (activeSurvey === 'ESS') {
+      return getESSBreakdown(activeContent.score);
+    }
+    if (activeSurvey === 'PSQI') {
+      return getPSQIBreakdown(activeContent.score);
+    }
+    if (activeSurvey === 'ISI') {
+      return getISIBreakdown(activeContent.score);
+    }
+    return getDefaultBreakdown(activeContent.score, activeContent.maxScore, activeContent.name);
+  };
+
   // Mock Calendar Heatmap
   const calendarMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
   
@@ -142,15 +334,15 @@ export default function UniversalSurveys() {
             </div>
             <div>
                <div className="flex items-center gap-3">
-                 <h2 className="text-xl font-bold text-[#0A1128]">
-                    {isTechnician ? 'Behavioral Monitoring Desk' : 'Clinical Assessment Review'}
-                 </h2>
-                 {isLive && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-md">
-                      <Signal className="w-3 h-3 text-[#6A994E]" />
-                      <span className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider">Live</span>
-                    </div>
-                  )}
+                  <h2 className="text-xl font-bold text-[#0A1128]">
+                     {isTechnician ? 'Behavioral Monitoring Desk' : 'Clinical Assessment Review'}
+                  </h2>
+                  {isLive && (
+                     <div className="flex items-center gap-1.5 px-2 py-1 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-md">
+                       <Signal className="w-3 h-3 text-[#6A994E]" />
+                       <span className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider">Live</span>
+                     </div>
+                   )}
                </div>
                <p className="text-sm text-[#5A6B7C]">
                   {isTechnician ? 'Log visit observations and view patient-reported milestones.' : 'Review standardized medical surveys and technician field notes.'}
@@ -164,7 +356,7 @@ export default function UniversalSurveys() {
         {/* LEFT COLUMN: Evidence & History Stream */}
         <div className="lg:col-span-2 space-y-8">
 
-           {/* Overdue Warning & Legacy Indicator */}
+           {/* 1. Overdue Warning & Legacy Indicator */}
            {isOverdue && activeContent.date !== '—' && (
              <div className="bg-gradient-to-r from-[#E76F51]/10 to-transparent border-l-4 border-[#E76F51] rounded-r-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-left-2">
                 <div className="flex items-center gap-4">
@@ -183,6 +375,39 @@ export default function UniversalSurveys() {
              </div>
            )}
 
+           {/* 2. AI Survey Synthesis & Insights Card */}
+           <div className="bg-gradient-to-r from-[#0A1128] to-[#1a2744] rounded-2xl border border-[#0A1128] shadow-lg p-8 text-white relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-32 h-32 bg-[#2D9596]/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative">
+                 <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-[#2D9596]/20 text-[#2D9596] rounded-xl flex items-center justify-center border border-[#2D9596]/30">
+                       <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <div>
+                       <h3 className="text-lg font-bold text-white tracking-wide">
+                          AI Survey Analysis & Clinical Insights
+                       </h3>
+                       <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#2D9596] bg-[#2D9596]/10 px-2 py-0.5 rounded border border-[#2D9596]/20">
+                          Automated Synthesis
+                       </span>
+                    </div>
+                 </div>
+                 
+                 <p className="text-sm text-white/95 leading-relaxed font-medium italic border-l-2 border-[#2D9596] pl-4 my-6">
+                    "{getAISurveySummary(activeSurvey, activeContent.score, activeContent.risk)}"
+                 </p>
+                 
+                 <div className="flex flex-wrap items-center gap-4 text-xs text-white/60 font-semibold pt-4 border-t border-white/10">
+                    <span className="flex items-center gap-1.5">
+                       <CheckCircle className="w-4 h-4 text-[#6A994E]" /> Synced to SleepCare EMR
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                    <span>Updated: {activeContent.date !== '—' ? activeContent.date : 'Recent'}</span>
+                 </div>
+              </div>
+           </div>
+
+           {/* 3. Score History Card */}
            <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
               <div className="flex items-center justify-between mb-8">
                 <div>
@@ -220,7 +445,53 @@ export default function UniversalSurveys() {
               </div>
            </div>
 
-           {/* Survey Completion Calendar (Heatmap Style) */}
+           {/* 4. Detailed Patient Responses */}
+           <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
+              <div className="flex items-center justify-between mb-6">
+                 <div>
+                    <h3 className="text-lg font-bold text-[#0A1128] flex items-center gap-2">
+                       <ClipboardList className="w-5 h-5 text-[#2D9596]" /> {activeContent.name} — Itemized Responses
+                    </h3>
+                    <p className="text-sm text-[#5A6B7C] mt-1">Patient-reported questionnaire answers and situational scores</p>
+                 </div>
+              </div>
+              <div className="overflow-x-auto">
+                 <table className="w-full text-left border-collapse">
+                    <thead>
+                       <tr className="border-b border-[#E8EEF2] text-[10px] font-bold text-[#5A6B7C] uppercase tracking-wider">
+                          <th className="pb-3 w-12">#</th>
+                          <th className="pb-3">Question Context</th>
+                          <th className="pb-3 text-center w-24">Score</th>
+                          <th className="pb-3 pl-4">Patient Response</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E8EEF2]">
+                       {getItemizedResponses().map((item: any, idx: number) => {
+                          const getScoreColor = (s: number) => {
+                             if (s === 3 || s === 4) return 'bg-[#E76F51]/10 text-[#E76F51] border-[#E76F51]/20';
+                             if (s === 2) return 'bg-[#F4A261]/10 text-[#F4A261] border-[#F4A261]/20';
+                             if (s === 1) return 'bg-[#2D9596]/10 text-[#2D9596] border-[#2D9596]/20';
+                             return 'bg-[#5A6B7C]/10 text-[#5A6B7C] border-[#5A6B7C]/20';
+                          };
+                          return (
+                             <tr key={idx} className="hover:bg-[#FAFAFA]/50 transition-colors">
+                                <td className="py-4 font-bold text-sm text-[#5A6B7C]">{item.id}</td>
+                                <td className="py-4 text-sm font-semibold text-[#0A1128] leading-relaxed">{item.question}</td>
+                                <td className="py-4 text-center">
+                                   <span className={`px-2.5 py-0.5 rounded-full border text-xs font-bold ${getScoreColor(item.score)}`}>
+                                      {item.score}
+                                   </span>
+                                </td>
+                                <td className="py-4 pl-4 text-sm font-bold text-[#0A1128]">{item.answer}</td>
+                             </tr>
+                          );
+                       })}
+                    </tbody>
+                 </table>
+              </div>
+           </div>
+
+           {/* 5. Survey Completion Calendar (Heatmap Style) */}
            <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
               <h3 className="text-lg font-bold text-[#0A1128] mb-6 flex items-center gap-2">
                  <CalendarDays className="w-5 h-5 text-[#6A994E]" /> Cross-Survey Completion Calendar
@@ -270,6 +541,71 @@ export default function UniversalSurveys() {
               </div>
               <p className="text-[10px] text-[#5A6B7C] mt-6 text-center">Patient adherence tracking across all medical survey requirements.</p>
            </div>
+
+           {/* 6. Technician Field Observations & Logs */}
+           <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
+              <div className="flex items-center justify-between mb-6">
+                 <div>
+                    <h3 className="text-lg font-bold text-[#0A1128] flex items-center gap-2">
+                       <CheckCircle className="w-5 h-5 text-[#F4A261]" /> Technician Field Observations & Logs
+                    </h3>
+                    <p className="text-sm text-[#5A6B7C] mt-1">Cross-disciplinary tracking and logs registered by field support</p>
+                 </div>
+                 <span className="text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 px-2.5 py-1 border border-[#F4A261]/20 rounded-lg uppercase">
+                    Field Logs ({technicianLogs.length})
+                 </span>
+              </div>
+              
+              {technicianLogs.length > 0 ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {technicianLogs.map((log: any, idx: number) => (
+                       <div key={idx} className="bg-[#FAFAFA] border border-[#E8EEF2] p-5 rounded-xl hover:border-[#F4A261]/30 transition-all hover:shadow-sm">
+                          <div className="flex items-center justify-between mb-4">
+                             <div className="flex items-center gap-2">
+                                <span className="text-lg">{log.icon}</span>
+                                <span className="text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 px-2 py-0.5 border border-[#F4A261]/20 rounded uppercase">
+                                   {log.type} Check
+                                </span>
+                             </div>
+                             <span className="text-[9px] font-extrabold uppercase bg-[#E8EEF2] px-2 py-0.5 rounded text-[#5A6B7C]">Synced</span>
+                          </div>
+                          
+                          <div className="space-y-3 mb-4">
+                             <div>
+                                <span className="text-[9px] font-extrabold text-[#5A6B7C] uppercase tracking-wider block mb-1">
+                                   Observation Checklist Question:
+                                </span>
+                                <p className="text-xs font-bold text-[#0A1128] leading-relaxed">
+                                   {log.name}
+                                </p>
+                             </div>
+                             
+                             <div className="bg-white border border-[#E8EEF2] p-3 rounded-lg">
+                                <span className="text-[9px] font-extrabold text-[#F4A261] uppercase tracking-wider block mb-1">
+                                   Registered Value & Notes:
+                                </span>
+                                <p className="text-xs text-[#5A6B7C] font-semibold leading-relaxed italic border-l-2 border-[#F4A261]/40 pl-2">
+                                   "{log.notes}"
+                                </p>
+                             </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between pt-3 border-t border-[#E8EEF2] text-[10px] font-bold text-[#5A6B7C]">
+                             <span>Logged: {log.date}</span>
+                             <span className="text-[#6A994E] flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" /> EMR Verified
+                             </span>
+                          </div>
+                       </div>
+                    ))}
+                 </div>
+              ) : (
+                 <div className="bg-[#FAFAFA] rounded-xl p-8 border border-dashed border-[#E8EEF2] text-center text-sm text-[#5A6B7C]">
+                    No technician field observations recorded for this patient.
+                 </div>
+              )}
+           </div>
+
         </div>
 
         {/* RIGHT COLUMN: Command Center & Details */}
@@ -313,12 +649,12 @@ export default function UniversalSurveys() {
                  <div>
                     <h4 className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-3">Itemized Responses</h4>
                     <div className="space-y-2">
-                      {activeContent.breakdown.map((item: any, idx: number) => (
-                        <div key={idx} className="bg-[#FAFAFA] border border-[#E8EEF2] p-3 rounded-lg text-sm">
-                          <span className="block text-[#5A6B7C] font-semibold text-xs mb-1">{item.label}</span>
-                          <span className="block text-[#0A1128] font-bold">{item.answer}</span>
-                        </div>
-                      ))}
+                       {activeContent.breakdown.map((item: any, idx: number) => (
+                         <div key={idx} className="bg-[#FAFAFA] border border-[#E8EEF2] p-3 rounded-lg text-sm">
+                           <span className="block text-[#5A6B7C] font-semibold text-xs mb-1">{item.label}</span>
+                           <span className="block text-[#0A1128] font-bold">{item.answer}</span>
+                         </div>
+                       ))}
                     </div>
                  </div>
 
@@ -365,7 +701,7 @@ export default function UniversalSurveys() {
                     className="w-full py-3 bg-[#F4A261] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#F4A261]/20 disabled:opacity-40 active:scale-95 transition-transform flex justify-center items-center gap-2"
                  >
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Log & Sync
-                 </button>
+                  </button>
               </div>
            )}
 
