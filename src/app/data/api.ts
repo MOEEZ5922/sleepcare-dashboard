@@ -1,6 +1,6 @@
 import * as mock from './mockData';
 
-const BASE_URL = '';
+const BASE_URL = 'https://cpap-backend-v2.onrender.com';
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 export interface PatientSummary {

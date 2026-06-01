@@ -63,9 +63,11 @@ export default function VisitPrepCard({ patient }: VisitPrepCardProps) {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${patient.dropoutRisk > 70 ? 'bg-[#E76F51] text-white' : 'bg-[#6A994E] text-white'
-                }`}>
-                Dropout Risk: {patient.dropoutRisk}%
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${patient.dropoutRisk > 70 ? 'bg-[#E76F51] text-white' : 'bg-[#F4A261] text-white'}`}>
+                {patient.dropoutRisk > 80 ? 'Tier 1: Critical' : patient.dropoutRisk > 60 ? 'Tier 2: High' : 'Tier 3: Moderate'} Risk
+              </span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${patient.dropoutRisk > 70 ? 'bg-[#E76F51]/10 text-[#E76F51]' : 'bg-[#6A994E]/10 text-[#6A994E]'}`}>
+                Dropout Probability: {patient.dropoutRisk}%
               </span>
               <span className="text-[10px] font-bold text-[#2D9596] uppercase tracking-widest">{patient.phase || 'Titration Phase'}</span>
             </div>
