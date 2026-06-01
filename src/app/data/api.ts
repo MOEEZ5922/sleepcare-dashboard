@@ -26,13 +26,25 @@ export interface PatientSummary {
 export interface WeeklyAnalysis {
   weekOf: string;
   compositeRiskScore: number;
+  previousRiskScore: number;
+  riskTier: string;
+  daysToPredictedDropout: number;
+  confidenceLevel: number;
+  phaseLabel: string;
+  activeFlags: { label: string; severity: string }[];
   clusterAssignment: {
     current: string;
     description: string;
+    previous: string;
+    changedThisWeek: boolean;
   };
+  sevenDayRolling: { day: string; usageHours: number; ahi: number }[];
+  riskFactorBreakdown: { factor: string; direction: string; contribution: number }[];
   nextBestAction: {
     type: string;
     rationale: string;
+    deliveryMode: string;
+    reassessmentWindow: string;
   };
 }
 

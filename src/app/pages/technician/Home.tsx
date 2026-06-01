@@ -291,9 +291,12 @@ export default function TechnicianHome() {
                       <span>Avg: {patient.usageHours}h</span>
                       <span>{patient.postalCode}</span>
                     </div>
-                    <div className="mt-3 flex gap-1">
+                    <div className="mt-3 flex flex-wrap gap-1">
                       <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-tighter ${clusterColors[patient.behavioralCluster as keyof typeof clusterColors] || 'bg-[#FAFAFA] text-[#5A6B7C]'}`}>
                         {patient.behavioralCluster}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-tighter bg-[#0A1128] text-white flex items-center gap-1 shadow-sm">
+                        <Wrench className="w-2.5 h-2.5 text-[#F4A261]" /> Action: {patient.dropoutRisk > 80 ? 'O7 - Home Visit' : 'O2 - Remote Fix'}
                       </span>
                     </div>
                   </div>
@@ -304,9 +307,8 @@ export default function TechnicianHome() {
             {/* Detail View (Queue) */}
             <div className="flex-1 overflow-auto bg-[#FAFAFA] p-10">
               {selectedQueuePatient ? (
-                <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-right-4 duration-500">
                   <VisitPrepCard patient={selectedQueuePatient} />
-                  <SummaryContent patientId={selectedQueuePatient.id.toString()} role="technician" showActions={false} />
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center opacity-40">

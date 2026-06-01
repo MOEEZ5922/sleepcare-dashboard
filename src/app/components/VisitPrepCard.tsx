@@ -36,6 +36,9 @@ export default function VisitPrepCard({ patient }: VisitPrepCardProps) {
   const [showEscalationModal, setShowEscalationModal] = useState(false);
   const [newLog, setNewLog] = useState({ symptom: '', note: '' });
   const [escalationNote, setEscalationNote] = useState('');
+  const [gateStatus, setGateStatus] = useState<'pending' | 'accepted' | 'rejected'>('pending');
+  const [showRejectMenu, setShowRejectMenu] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
   if (!patient) return null;
 
@@ -84,6 +87,104 @@ export default function VisitPrepCard({ patient }: VisitPrepCardProps) {
               <ExternalLink className="w-3.5 h-3.5 text-[#2D9596] group-hover:scale-110 transition-transform" />
               Full Clinical View
             </Link>
+          </div>
+        </div>
+
+        {/* Action Recommendation Prominent Header */}
+        <div className="mt-8 bg-[#0A1128] text-white rounded-xl p-6 border-l-8 border-[#F4A261] shadow-xl relative overflow-hidden">
+          {gateStatus === 'accepted' && <div className="absolute inset-0 bg-[#6A994E]/10 pointer-events-none" />}
+          {gateStatus === 'rejected' && <div className="absolute inset-0 bg-[#E76F51]/10 pointer-events-none" />}
+          
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4 text-[#F4A261]" />
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#F4A261]">Action Recommendation</h3>
+              </div>
+              <p className="text-xl font-bold">⚠️ Severe Leakage Trend Detected (O2/O4/O7)</p>
+              <p className="text-white/70 text-sm mt-1 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-[#2D9596]" /> Action: Deploy Remote Shipping or Schedule Home Visit.
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-white/10 pt-4">
+            {gateStatus === 'pending' ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+                  <h4 className="text-[10px] uppercase tracking-widest font-bold text-[#F4A261] whitespace-nowrap">Technical Gate</h4>
+                  <div className="flex gap-3 w-full">
+                    <button 
+                      onClick={() => setGateStatus('accepted')}
+                      className="flex-1 bg-[#6A994E] hover:bg-[#56803d] text-white py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Accept & Dispatch
+                    </button>
+                    <button 
+                      onClick={() => alert("Opening modify action dialog...")}
+                      className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Wrench className="w-4 h-4" /> Modify
+                    </button>
+                    <button 
+                      onClick={() => setShowRejectMenu(!showRejectMenu)}
+                      className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 border ${showRejectMenu ? 'bg-[#E76F51]/20 border-[#E76F51]/50 text-[#E76F51]' : 'bg-transparent border-[#E76F51]/30 text-[#E76F51] hover:bg-[#E76F51]/10'}`}
+                    >
+                      <Trash2 className="w-4 h-4" /> Reject
+                    </button>
+                  </div>
+                </div>
+
+                {showRejectMenu && (
+                  <div className="p-4 bg-black/30 rounded-xl border border-[#E76F51]/30 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-[10px] font-bold text-[#E76F51] uppercase tracking-widest mb-2 block">Required: Reject Reason Code</label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select 
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        className="flex-1 bg-[#1a233a] border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-[#E76F51] outline-none transition-colors"
+                      >
+                        <option value="">Select reason...</option>
+                        <option value="PT_UNREACHABLE">Patient Unreachable</option>
+                        <option value="PT_REFUSED">Patient Refused Service</option>
+                        <option value="ALREADY_RESOLVED">Issue Already Resolved</option>
+                        <option value="EQUIPMENT_UNAVAILABLE">Equipment Out of Stock</option>
+                        <option value="OTHER">Other (Add Note)</option>
+                      </select>
+                      <button 
+                        onClick={() => setGateStatus('rejected')}
+                        disabled={!rejectReason}
+                        className="bg-[#E76F51] hover:bg-[#d45e41] disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shrink-0"
+                      >
+                        Confirm Reject
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${gateStatus === 'accepted' ? 'bg-[#6A994E]/20 text-[#6A994E]' : 'bg-[#E76F51]/20 text-[#E76F51]'}`}>
+                    {gateStatus === 'accepted' ? <CheckCircle className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-bold ${gateStatus === 'accepted' ? 'text-[#6A994E]' : 'text-[#E76F51]'}`}>
+                      {gateStatus === 'accepted' ? 'Action Accepted & Dispatched' : 'Action Rejected'}
+                    </p>
+                    <p className="text-xs text-white/50">
+                      {gateStatus === 'accepted' ? 'Logistics team notified.' : `Recommendation rejected with code: ${rejectReason || 'Unknown'}`}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { setGateStatus('pending'); setShowRejectMenu(false); setRejectReason(''); }}
+                  className="text-[10px] uppercase tracking-widest font-bold text-white/50 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-lg"
+                >
+                  Reset Gate
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

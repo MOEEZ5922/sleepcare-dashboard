@@ -46,3 +46,8 @@ dist.zip
 
 # Coverage
 coverage/
+
+# Playwright MCP artifacts and screenshots
+.playwright-mcp/
+*.png
+
