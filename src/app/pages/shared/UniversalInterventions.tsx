@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'react-router';
-import { FileSignature, AlertCircle, Activity, Plus, Package, Phone, Home, Settings, Signal, Loader2 } from 'lucide-react';
+import { FileSignature, AlertCircle, Activity, Plus, Package, Phone, Home, Settings, Signal, Loader2, PlaySquare, Star, Clock, CheckCircle } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { fetchInterventions, createIntervention, fetchAuthorizations, createAuthorization } from '../../data/api';
 
@@ -29,6 +29,7 @@ export default function UniversalInterventions() {
   const [techActionType, setTechActionType] = useState('');
   const [techActionNote, setTechActionNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'clinical_log' | 'coaching_videos'>('clinical_log');
 
   if (!isLive) {
     return (
@@ -171,8 +172,108 @@ export default function UniversalInterventions() {
          </div>
       </div>
 
-      {/* Grid Layout: 2/3 Evidence Stream, 1/3 Command Center */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      {/* Sub-Tab Switcher */}
+      <div className="flex gap-4 border-b border-[#E8EEF2] pb-px">
+        <button
+          onClick={() => setActiveTab('clinical_log')}
+          className={`pb-4 px-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'clinical_log' ? 'border-[#0A1128] text-[#0A1128]' : 'border-transparent text-[#5A6B7C] hover:text-[#0A1128]'}`}
+        >
+          Clinical Action Log
+        </button>
+        <button
+          onClick={() => setActiveTab('coaching_videos')}
+          className={`pb-4 px-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'coaching_videos' ? 'border-[#0A1128] text-[#0A1128]' : 'border-transparent text-[#5A6B7C] hover:text-[#0A1128]'}`}
+        >
+          Coaching Videos (Digital Interventions)
+        </button>
+      </div>
+
+      {activeTab === 'coaching_videos' ? (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+           <div className="bg-white rounded-xl border border-[#E8EEF2] shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-[#E8EEF2] bg-gradient-to-br from-[#FAFAFA] to-white flex justify-between items-center">
+                 <div>
+                    <h3 className="text-xl text-[#0A1128] font-semibold flex items-center gap-2"><PlaySquare className="w-5 h-5 text-[#2D9596]" /> Digital Intervention Analytics</h3>
+                    <p className="text-[#5A6B7C] text-sm mt-1">Track automated video dispatches, patient engagement, and feedback ratings.</p>
+                 </div>
+                 <div className="flex items-center gap-6 text-sm">
+                    <div className="text-center">
+                       <p className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Avg Watch Rate</p>
+                       <p className="text-xl font-bold text-[#2D9596]">82%</p>
+                    </div>
+                    <div className="w-px h-10 bg-[#E8EEF2]" />
+                    <div className="text-center">
+                       <p className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Avg Rating</p>
+                       <p className="text-xl font-bold text-[#F4A261] flex items-center justify-center gap-1">4.5 <Star className="w-4 h-4 fill-[#F4A261]" /></p>
+                    </div>
+                 </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                 <table className="w-full text-left border-collapse">
+                    <thead>
+                       <tr className="bg-[#FAFAFA] border-b border-[#E8EEF2]">
+                          <th className="p-4 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Video Title</th>
+                          <th className="p-4 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Trigger Category</th>
+                          <th className="p-4 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Delivery Time</th>
+                          <th className="p-4 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Status</th>
+                          <th className="p-4 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest min-w-[150px]">Watch Rate</th>
+                          <th className="p-4 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest text-right">Rating</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E8EEF2]">
+                       {[
+                         { id: 1, title: 'Resolving Mask Leakage', trigger: 'AI Flag: High Leak', time: '< 2 mins', status: 'Watched', watch: 100, rating: 5, date: 'May 10' },
+                         { id: 2, title: 'Understanding REM Rebound', trigger: 'Usage Drop > 2hrs', time: '< 5 mins', status: 'Ignored', watch: 0, rating: null, date: 'May 18' },
+                         { id: 3, title: 'Cleaning Your ResMed', trigger: 'Maintenance Cycle', time: 'Automated', status: 'Watched', watch: 85, rating: 4, date: 'May 20' }
+                       ].map(v => (
+                         <tr key={v.id} className="hover:bg-[#FAFAFA]/50 transition-colors">
+                            <td className="p-4">
+                               <p className="font-bold text-[#0A1128] text-sm">{v.title}</p>
+                               <p className="text-[10px] text-[#5A6B7C] font-bold uppercase">{v.date}</p>
+                            </td>
+                            <td className="p-4">
+                               <span className="bg-[#0A1128]/5 text-[#0A1128] border border-[#0A1128]/10 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">{v.trigger}</span>
+                            </td>
+                            <td className="p-4">
+                               <span className="flex items-center gap-1.5 text-xs font-semibold text-[#5A6B7C]"><Clock className="w-3.5 h-3.5" /> {v.time}</span>
+                            </td>
+                            <td className="p-4">
+                               <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest ${v.status === 'Watched' ? 'text-[#6A994E]' : 'text-[#E76F51]'}`}>
+                                  {v.status === 'Watched' ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                                  {v.status}
+                               </span>
+                            </td>
+                            <td className="p-4">
+                               <div className="flex items-center gap-3">
+                                  <div className="flex-1 h-2 bg-[#E8EEF2] rounded-full overflow-hidden">
+                                     <div className={`h-full rounded-full transition-all duration-1000 ${v.watch === 100 ? 'bg-[#6A994E]' : v.watch === 0 ? 'bg-[#E76F51]' : 'bg-[#F4A261]'}`} style={{ width: `${v.watch}%` }} />
+                                  </div>
+                                  <span className="text-xs font-bold text-[#0A1128] w-8 text-right">{v.watch}%</span>
+                               </div>
+                            </td>
+                            <td className="p-4 text-right">
+                               {v.rating ? (
+                                  <div className="flex items-center justify-end gap-1">
+                                    {[...Array(5)].map((_, i) => (
+                                       <Star key={i} className={`w-3.5 h-3.5 ${i < v.rating! ? 'fill-[#F4A261] text-[#F4A261]' : 'fill-transparent text-[#E8EEF2]'}`} />
+                                    ))}
+                                  </div>
+                               ) : (
+                                  <span className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Unrated</span>
+                               )}
+                            </td>
+                         </tr>
+                       ))}
+                    </tbody>
+                 </table>
+              </div>
+           </div>
+        </div>
+      ) : (
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Grid Layout: 2/3 Evidence Stream, 1/3 Command Center */}
         
         {/* Left Column: Evidence Stream */}
         <div className="lg:col-span-2 space-y-8">
@@ -446,6 +547,7 @@ export default function UniversalInterventions() {
            )}
         </div>
       </div>
+      )}
     </div>
   );
 }
