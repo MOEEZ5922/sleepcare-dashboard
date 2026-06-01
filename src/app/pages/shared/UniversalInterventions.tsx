@@ -302,7 +302,7 @@ export default function UniversalInterventions() {
               {/* Sequence Chain Display */}
               {recentChain.length > 0 && (
                 <div className="mb-8 bg-[#FAFAFA] p-6 rounded-2xl border border-[#E8EEF2]">
-                  <h4 className="text-xs font-bold text-[#5A6B7C] uppercase tracking-widest mb-6">Recent Intervention Sequence</h4>
+                  <h4 className="text-xs font-bold text-[#5A6B7C] uppercase tracking-widest mb-6">Clinical Escalation Timeline</h4>
                   <div className="flex items-center w-full">
                     {recentChain.map((node: any, idx: number) => (
                       <div key={idx} className="flex items-center flex-1 last:flex-none">
@@ -457,24 +457,8 @@ export default function UniversalInterventions() {
            ) : (
               /* Inline Physician Action Forms */
               <div className="bg-white rounded-xl border border-[#E8EEF2] shadow-sm overflow-hidden">
-                 <div className="bg-[#E8EEF2] p-1.5 flex m-4 rounded-xl">
-                    <button 
-                      onClick={() => setActivePathway('app_iah')}
-                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activePathway === 'app_iah' ? 'bg-white shadow-sm text-[#0A1128]' : 'text-[#5A6B7C] hover:text-[#0A1128]'}`}
-                    >
-                      Complex AHI
-                    </button>
-                    <button 
-                      onClick={() => setActivePathway('alt_therapy')}
-                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activePathway === 'alt_therapy' ? 'bg-white shadow-sm text-[#0A1128]' : 'text-[#5A6B7C] hover:text-[#0A1128]'}`}
-                    >
-                      MAD/HNS Auth
-                    </button>
-                 </div>
-
-                 <div className="p-6 pt-2">
-                   {activePathway === 'app_iah' ? (
-                     <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
+                 <div className="p-6">
+                     <div className="space-y-6 animate-in fade-in duration-300">
                          <div className="bg-[#2D9596]/5 border border-[#2D9596]/30 rounded-xl p-4">
                            <div className="flex justify-between items-center mb-4">
                                <h3 className="text-sm text-[#0A1128] font-bold flex items-center gap-2"><Activity className="w-4 h-4 text-[#2D9596]"/> Escalation Source</h3>
@@ -493,7 +477,7 @@ export default function UniversalInterventions() {
                          <label className="block text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-2">Issue Clinical Order</label>
                          <textarea 
                              className="w-full h-24 p-3 bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl focus:ring-2 focus:ring-[#2D9596] outline-none mb-4 resize-none text-sm transition-all"
-                             placeholder="e.g. 'Redirect to Sleep Clinic for MAD titration'..."
+                             placeholder="e.g. 'Increase pressure to 12 cmH2O due to residual AHI'..."
                              value={appIahNotes}
                              onChange={(e) => setAppIahNotes(e.target.value)}
                          />
@@ -507,41 +491,6 @@ export default function UniversalInterventions() {
                              <span className="font-bold uppercase tracking-widest text-xs">Sign Order</span>
                          </button>
                      </div>
-                   ) : (
-                     <div className="space-y-6 animate-in fade-in slide-in-from-left-2 duration-300">
-                       <div className="space-y-3">
-                         <label className="block text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-2">
-                           Transition Path
-                         </label>
-                         {['MAD', 'HNS'].map(therapy => (
-                           <label key={therapy} className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${selectedTherapy === therapy ? 'border-[#2D9596] bg-[#2D9596]/5' : 'border-[#E8EEF2] hover:border-[#2D9596]/50'}`}>
-                             <input type="radio" value={therapy} checked={selectedTherapy === therapy} onChange={(e) => setSelectedTherapy(e.target.value)} className="w-4 h-4 mt-0.5 text-[#2D9596]" />
-                             <div>
-                               <span className="text-sm text-[#0A1128] font-bold block">{therapy === 'MAD' ? 'Mandibular Advancement' : 'Hypoglossal Stim'}</span>
-                             </div>
-                           </label>
-                         ))}
-                       </div>
-
-                       <div className="space-y-2">
-                         <label className="block text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-2">
-                           Authorization Rationale
-                         </label>
-                         <textarea value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} placeholder="Justify abandoning CPAP..." className="w-full h-24 p-3 rounded-xl border border-[#E8EEF2] focus:border-[#2D9596] transition-all resize-none text-sm bg-[#FAFAFA]" />
-                       </div>
-
-                       <button 
-                         onClick={handleAuthorize} 
-                         disabled={!selectedTherapy || !clinicalNotes || isSubmitting} 
-                         className="w-full bg-[#2D9596] text-white px-4 py-4 rounded-xl hover:bg-[#247a7a] disabled:bg-[#E8EEF2] disabled:text-[#5A6B7C] transition-all flex items-center justify-center gap-2 shadow-lg"
-                       >
-                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
-                         <span className="font-bold uppercase tracking-widest text-xs">
-                           {isSubmitting ? 'Processing...' : 'Authorize'}
-                         </span>
-                       </button>
-                     </div>
-                   )}
                  </div>
               </div>
            )}

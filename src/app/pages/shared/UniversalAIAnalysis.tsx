@@ -242,6 +242,66 @@ export default function UniversalAIAnalysis() {
           {ai.nextBestAction.rationale}
         </p>
       </div>
+
+      {/* AI Recommendation & Override History Log */}
+      <div className="bg-white rounded-xl border border-[#E8EEF2] shadow-sm overflow-hidden mt-8">
+        <div className="p-6 border-b border-[#E8EEF2] bg-[#FAFAFA]">
+          <h3 className="text-sm font-semibold text-[#0A1128] uppercase tracking-wider">
+            AI Recommendation & Override History
+          </h3>
+          <p className="text-xs text-[#5A6B7C] mt-1">
+            Historical log tracking AI suggestions and human clinician responses.
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-white border-b border-[#E8EEF2] text-[#5A6B7C] text-[10px] uppercase tracking-widest">
+              <tr>
+                <th className="p-4 font-bold">Date</th>
+                <th className="p-4 font-bold">AI Recommendation</th>
+                <th className="p-4 font-bold">Human Outcome</th>
+                <th className="p-4 font-bold">Override Reason</th>
+                <th className="p-4 font-bold">Clinician</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E8EEF2]">
+              <tr className="hover:bg-[#FAFAFA] transition-colors">
+                <td className="p-4 text-[#5A6B7C] font-mono text-xs">2026-04-20</td>
+                <td className="p-4 font-semibold text-[#0A1128]">Increase Pressure (EPR)</td>
+                <td className="p-4">
+                  <span className="inline-block px-2 py-1 bg-[#E76F51]/10 text-[#E76F51] text-xs font-bold rounded-md">
+                    REJECTED
+                  </span>
+                </td>
+                <td className="p-4 text-[#5A6B7C] text-xs italic">PT_REFUSED</td>
+                <td className="p-4 text-[#5A6B7C] text-xs font-medium">Dr. Sarah</td>
+              </tr>
+              <tr className="hover:bg-[#FAFAFA] transition-colors">
+                <td className="p-4 text-[#5A6B7C] font-mono text-xs">2026-04-05</td>
+                <td className="p-4 font-semibold text-[#0A1128]">Dispatch Educational Video</td>
+                <td className="p-4">
+                  <span className="inline-block px-2 py-1 bg-[#6A994E]/10 text-[#6A994E] text-xs font-bold rounded-md">
+                    ACCEPTED
+                  </span>
+                </td>
+                <td className="p-4 text-[#5A6B7C] text-xs italic">Standard Protocol</td>
+                <td className="p-4 text-[#5A6B7C] text-xs font-medium">Auto-Gate</td>
+              </tr>
+              <tr className="hover:bg-[#FAFAFA] transition-colors">
+                <td className="p-4 text-[#5A6B7C] font-mono text-xs">2026-03-22</td>
+                <td className="p-4 font-semibold text-[#0A1128]">Schedule Mask Refit</td>
+                <td className="p-4">
+                  <span className="inline-block px-2 py-1 bg-[#F4A261]/10 text-[#F4A261] text-xs font-bold rounded-md">
+                    MODIFIED
+                  </span>
+                </td>
+                <td className="p-4 text-[#5A6B7C] text-xs italic">Sent Chinstrap Instead</td>
+                <td className="p-4 text-[#5A6B7C] text-xs font-medium">J. Mitchell</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

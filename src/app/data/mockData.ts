@@ -89,10 +89,11 @@ export const technicianQueue = [
     leakProfile: { p50: 12.4, p95: 28.5, max: 42.1 },
     assetTracking: { serial: "LND-7742-XP", assetTag: "TAG-991" },
     interventionHistory: [
-      { date: "2026-04-18", type: "MAD/HNS Transition Consult", result: "Pending", tech: "Dr. Sarah", code: "SL-REF" },
-      { date: "2026-04-15", type: "Educational Video: Mask Fitting", result: "Success", tech: "Auto-Trigger", code: "ED-VID" },
+      { date: "2026-04-19", type: "Escalated to MD Review", result: "Pending", tech: "System-Triage", code: "ESC-MD" },
+      { date: "2026-04-18", type: "Tech Consult: Leak Issue", result: "Failed", tech: "J. Mitchell", code: "TC-FAIL" },
+      { date: "2026-04-15", type: "Educational Video: Mask Fitting", result: "Failed", tech: "Auto-Trigger", code: "ED-VID" },
       { date: "2026-04-12", type: "Remote Pressure Calibration", result: "Success", tech: "AI-System", code: "VK-AUTO" },
-      { date: "2026-03-15", type: "Dispatch: AirFit N20 Mask (Nasal)", result: "Failed - Irritation", tech: "J. Mitchell", code: "EX-DISP" },
+      { date: "2026-03-15", type: "Dispatch: AirFit N20 Mask", result: "Resolved", tech: "J. Mitchell", code: "EX-DISP" },
     ],
     monitoringSurveys: [
       { id: "M1", question: "Mask Comfort (AirFit N20)", answer: "4 (Hurts nose bridge)" },
@@ -288,10 +289,10 @@ export const biomarkerData = {
 export const interventionData = {
   physician: {
     availableTherapies: [
-      "Mandibular Advancement Device",
-      "Hypoglossal Nerve Stimulation",
+      "CPAP Pressure Titration",
+      "BiPAP Transition",
       "Positional Therapy",
-      "Oral Appliance Therapy",
+      "Clinical Mask Refit",
     ],
   },
   technician: {
@@ -481,7 +482,7 @@ export const videoData = {
     },
     {
       id: 3,
-      title: "Therapy Transition (MAD/HNS) Overview",
+      title: "CPAP Pressure Acclimation",
       duration: "12:40",
       category: "Treatment Options",
       thumbnail: "clinical",
