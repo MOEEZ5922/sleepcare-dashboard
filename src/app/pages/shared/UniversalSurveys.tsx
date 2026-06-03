@@ -240,6 +240,9 @@ export default function UniversalSurveys() {
       threshold: threshold,
       maxScore: meta.maxScore,
       risk: risk,
+      isOverdue: apiSurvey.isOverdue,
+      daysOverdue: apiSurvey.daysOverdue,
+      history: apiSurvey.history,
       breakdown: meta.breakdownTemplate,
       clinicalNote: meta.clinicalNoteTemplate.replace('{risk}', risk.toLowerCase()).replace('{action}', action)
     };
@@ -254,6 +257,9 @@ export default function UniversalSurveys() {
         threshold: meta.defaultThreshold,
         maxScore: meta.maxScore,
         risk: 'No Data',
+        isOverdue: false,
+        daysOverdue: 0,
+        history: [],
         breakdown: [{ label: 'No assessment available', answer: 'Patient has not completed this survey yet' }],
         clinicalNote: 'No data available for this survey. Patient has not completed it yet.'
       };
@@ -433,7 +439,7 @@ export default function UniversalSurveys() {
                     const heightPercent = (data.score / activeContent.maxScore) * 100;
                     const isBreach = data.score > activeContent.threshold;
                     return (
-                       <div key={idx} className="flex-1 flex flex-col items-center gap-2 z-10 group">
+                       <div key={idx} className="flex-1 h-full flex flex-col justify-end items-center gap-2 z-10 group">
                           <span className="text-xs font-bold text-[#0A1128] opacity-0 group-hover:opacity-100 transition-opacity">{data.score}</span>
                           <div className={`w-full max-w-[40px] rounded-t-md transition-all duration-500 ease-out group-hover:opacity-80 ${isBreach ? 'bg-[#E76F51]' : 'bg-[#2D9596]'}`} style={{ height: `${heightPercent}%` }}></div>
                           <span className="text-[10px] font-bold text-[#5A6B7C] uppercase absolute -bottom-6">{data.month}</span>

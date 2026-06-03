@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
 import { Play, Star, CheckCircle, Clock, BookOpen, Wrench, Lightbulb, Plane, ChevronRight, Signal, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
@@ -35,15 +35,35 @@ export default function PatientVideos() {
   });
 
   const isLive = !error && !!liveVideos;
-  const rawVideos = (liveVideos as any)?.patient || liveVideos || [];
-  const videos = Array.isArray(rawVideos) ? rawVideos : [];
+  const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
+  const videos = useMemo(() => {
+    const list = Array.isArray(rawVideos) ? rawVideos : [];
+    return list.map((v: any) => {
+      // Normalize duration
+      let duration = v.duration;
+      if (!duration && typeof v.duration_s === 'number') {
+        const minutes = Math.floor(v.duration_s / 60);
+        const seconds = v.duration_s % 60;
+        duration = `${minutes}:${String(seconds).padStart(2, '0')}`;
+      }
+
+      // Normalize triggerReason
+      const triggerReason = v.triggerReason || v.trigger_reason || 'General';
+
+      return {
+        ...v,
+        duration: duration || '3:00',
+        triggerReason,
+      };
+    });
+  }, [rawVideos]);
 
   const [activeFilter, setActiveFilter] = useState<string>('All');
-  const [watchedMap, setWatchedMap] = useState<{ [id: number]: boolean }>({});
-  const [ratingMap, setRatingMap] = useState<{ [id: number]: number | null }>({});
+  const [watchedMap, setWatchedMap] = useState<{ [id: string | number]: boolean }>({});
+  const [ratingMap, setRatingMap] = useState<{ [id: string | number]: number | null }>({});
 
   useEffect(() => {
-    if (Array.isArray(videos) && videos.length > 0) {
+    if (videos.length > 0) {
       setWatchedMap(Object.fromEntries(videos.map((v: any) => [v.id, v.watched])));
       setRatingMap(Object.fromEntries(videos.map((v: any) => [v.id, v.rating])));
     }
@@ -65,7 +85,7 @@ export default function PatientVideos() {
     ? videos
     : videos.filter((v: any) => v.category === activeFilter);
 
-  const handleWatch = async (videoId: number) => {
+  const handleWatch = async (videoId: string | number) => {
     setWatchedMap(prev => ({ ...prev, [videoId]: true }));
     if (isLive) {
       try {
@@ -79,7 +99,7 @@ export default function PatientVideos() {
     }
   };
 
-  const handleRating = async (videoId: number, stars: number) => {
+  const handleRating = async (videoId: string | number, stars: number) => {
     setRatingMap(prev => ({ ...prev, [videoId]: stars }));
     if (isLive) {
       try {
@@ -175,11 +195,10 @@ export default function PatientVideos() {
             <button
               key={cat}
               onClick={() => setActiveFilter(cat)}
-              className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                activeFilter === cat
-                  ? 'bg-[#0A1128] text-white shadow-lg'
-                  : 'bg-white border border-[#E8EEF2] text-[#5A6B7C] hover:border-[#2D9596]/50'
-              }`}
+              className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activeFilter === cat
+                ? 'bg-[#0A1128] text-white shadow-lg'
+                : 'bg-white border border-[#E8EEF2] text-[#5A6B7C] hover:border-[#2D9596]/50'
+                }`}
             >
               {cat}
             </button>
@@ -192,9 +211,8 @@ export default function PatientVideos() {
         {filtered.map((video: any) => (
           <div
             key={video.id}
-            className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
-              watchedMap[video.id] ? 'border-[#6A994E]/30' : 'border-[#E8EEF2]'
-            }`}
+            className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${watchedMap[video.id] ? 'border-[#6A994E]/30' : 'border-[#E8EEF2]'
+              }`}
           >
             <div className="flex gap-4 p-4">
               {/* Thumbnail */}
@@ -226,8 +244,8 @@ export default function PatientVideos() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map(star => (
-                          <button 
-                            key={star} 
+                          <button
+                            key={star}
                             onClick={() => handleRating(video.id, star)}
                             className="hover:scale-110 transition-transform"
                           >

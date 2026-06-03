@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useParams } from 'react-router';
-import { Home, Activity, Package, FileText, HelpCircle, Video, Signal } from 'lucide-react';
+import { Home, Activity, Package, FileText, HelpCircle, Video, Signal, TrendingUp } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 import { useApi } from '../hooks/useApi';
 import { fetchPatientSummary } from '../data/api';
@@ -18,6 +18,7 @@ export default function PatientLayout() {
   const navigation = [
     { name: 'Home', href: `/patient/${id}/home`, icon: Home },
     { name: 'Sleep', href: `/patient/${id}/cpap`, icon: Activity },
+    { name: 'Progress', href: `/patient/${id}/reporting`, icon: TrendingUp },
     { name: 'Equipment', href: `/patient/${id}/interventions`, icon: Package },
     { name: 'Surveys', href: `/patient/${id}/surveys`, icon: FileText },
     { name: 'Videos', href: `/patient/${id}/videos`, icon: Video },

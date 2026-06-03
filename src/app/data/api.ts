@@ -458,7 +458,7 @@ export async function createAuthorization(patientId: string, data: {
 }
 
 /** Patient marks a video as watched and/or rates it */
-export async function submitVideoInteraction(patientId: string, videoId: number, data: {
+export async function submitVideoInteraction(patientId: string, videoId: string | number, data: {
   watched: boolean;
   rating?: number;
   watch_duration_seconds: number;

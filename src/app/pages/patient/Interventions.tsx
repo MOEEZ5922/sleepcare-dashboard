@@ -14,7 +14,7 @@ export default function PatientInterventions() {
   });
 
   const isLive = !intError && !!liveInterventions;
-  const delivery = liveInterventions?.patient?.upcomingDelivery || liveInterventions?.upcomingDelivery || null;
+  const delivery = (liveInterventions as any)?.patient?.upcomingDelivery || (liveInterventions as any)?.upcomingDelivery || null;
   const devices = Array.isArray(liveDevices) ? liveDevices : [];
 
   if ((isLoadingInt || isLoadingDev) && !liveInterventions) {

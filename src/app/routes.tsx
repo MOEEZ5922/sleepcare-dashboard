@@ -14,6 +14,7 @@ import PhysicianSummary from "./pages/physician/Summary";
 import PhysicianHelp from "./pages/physician/Help";
 import PhysicianDirectory from "./pages/physician/Directory";
 import UniversalAIAnalysis from "./pages/shared/UniversalAIAnalysis";
+import UniversalReporting from "./pages/shared/UniversalReporting";
 import TechnicianHome from "./pages/technician/Home";
 import TechnicianSummary from "./pages/technician/Summary";
 import TechnicianCPAP from "./pages/technician/CPAP";
@@ -28,6 +29,7 @@ import PatientSurveys from "./pages/patient/Surveys";
 import PatientVideos from "./pages/patient/Videos";
 import PatientHelp from "./pages/patient/Help";
 import PatientInterventions from "./pages/patient/Interventions";
+import PatientReporting from "./pages/patient/Reporting";
 
 export const router = createBrowserRouter([
   {
@@ -51,6 +53,7 @@ export const router = createBrowserRouter([
           { path: "interventions", Component: UniversalInterventions },
           { path: "surveys", Component: UniversalSurveys },
           { path: "ai-analysis", Component: UniversalAIAnalysis },
+          { path: "reporting", Component: UniversalReporting },
         ],
       },
     ],
@@ -90,6 +93,7 @@ export const router = createBrowserRouter([
       { path: "surveys", Component: PatientSurveys },
       { path: "videos", Component: PatientVideos },
       { path: "help", Component: PatientHelp },
+      { path: "reporting", Component: PatientReporting },
     ],
   },
   {

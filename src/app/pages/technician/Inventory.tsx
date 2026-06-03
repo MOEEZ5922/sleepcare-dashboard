@@ -3,9 +3,9 @@ import { useApi } from '../../hooks/useApi';
 import { fetchInventory } from '../../data/api';
 
 export default function TechnicianInventory() {
-  const { data: inventory, isLoading, error } = useApi(fetchInventory);
+  const { data: inventory, isLoading, error } = useApi<any>(fetchInventory);
 
-  const stock = Array.isArray(inventory) ? inventory : (inventory?.items || inventory?.inventory || []);
+  const stock: any[] = Array.isArray(inventory) ? inventory : ((inventory as any)?.items || (inventory as any)?.inventory || []);
   const isLive = !error && !!inventory;
 
   if (isLoading && !inventory) {
@@ -51,13 +51,13 @@ export default function TechnicianInventory() {
         <div className="bg-white p-6 rounded-xl border border-[#E8EEF2] shadow-sm border-l-4 border-l-[#E76F51]">
           <p className="text-xs text-[#E76F51] uppercase font-bold tracking-wider mb-2">Out of Stock</p>
           <p className="text-3xl font-semibold text-[#0A1128]">
-            {stock.filter(i => i.stock === 0).length}
+            {stock.filter((i: any) => i.stock === 0).length}
           </p>
         </div>
         <div className="bg-white p-6 rounded-xl border border-[#E8EEF2] shadow-sm border-l-4 border-l-[#F4A261]">
           <p className="text-xs text-[#F4A261] uppercase font-bold tracking-wider mb-2">Low Stock</p>
           <p className="text-3xl font-semibold text-[#0A1128]">
-            {stock.filter(i => i.stock > 0 && i.stock <= i.minStock).length}
+            {stock.filter((i: any) => i.stock > 0 && i.stock <= i.minStock).length}
           </p>
         </div>
         <div className="bg-[#E8EEF2] p-6 rounded-xl">
@@ -85,7 +85,7 @@ export default function TechnicianInventory() {
                 </td>
               </tr>
             ) : (
-              stock.map((item) => (
+              stock.map((item: any) => (
                 <tr key={item.id} className="hover:bg-[#FAFAFA] transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">

@@ -27,6 +27,7 @@ export default function PhysicianPatientLayout() {
     { name: 'Interventions', href: `/physician/patient/${id}/interventions` },
     { name: 'Surveys', href: `/physician/patient/${id}/surveys` },
     { name: 'AI Analysis', href: `/physician/patient/${id}/ai-analysis` },
+    { name: 'Reporting', href: `/physician/patient/${id}/reporting` },
   ];
 
   if (isLoading && !summary) {
