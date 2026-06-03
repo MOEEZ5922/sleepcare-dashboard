@@ -195,6 +195,15 @@ export default function SummaryContent({
                   ESCALATED {ai?.weekOf || 'ACTIVE'}
                 </div>
                 <div className="text-2xl font-bold text-[#E76F51]">Risk: {ai?.compositeRiskScore || 0}</div>
+                {ai?.confidenceLevel !== undefined && ai.confidenceLevel < 85 && (
+                  <Link
+                    to={`/${role}/patient/${id}/ai-analysis`}
+                    className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 border border-[#F4A261]/30 px-2 py-0.5 rounded uppercase hover:bg-[#F4A261]/20 transition-all"
+                  >
+                    <AlertTriangle className="w-3 h-3 animate-pulse" />
+                    Evidence Incomplete
+                  </Link>
+                )}
               </div>
             )}
           </div>

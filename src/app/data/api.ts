@@ -490,3 +490,11 @@ export async function createSupportTicket(patientId: string, data: {
     body: JSON.stringify({ ...data, timestamp: new Date().toISOString() }),
   });
 }
+
+/** Clinician requests active patient sensing/surveys (PROM) due to low confidence */
+export async function requestPatientSensing(patientId: string, streams: string[]) {
+  return apiFetch(`/api/surveys/${formatPatientId(patientId)}/request-sensing`, {
+    method: 'POST',
+    body: JSON.stringify({ streams, timestamp: new Date().toISOString() }),
+  });
+}

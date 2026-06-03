@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Brain, ArrowRight, Signal, Loader2 } from 'lucide-react';
+import {
+  TrendingUp, TrendingDown, Minus, AlertTriangle, Brain, ArrowRight, Signal, Loader2,
+  Send, CheckCircle, WifiOff, Calendar, AlertCircle
+} from 'lucide-react';
 import { useParams } from 'react-router';
 import { useApi } from '../../hooks/useApi';
-import { fetchWeeklyAnalysis } from '../../data/api';
+import { fetchWeeklyAnalysis, fetchDevices, fetchSurveys, requestPatientSensing } from '../../data/api';
 
 const riskTierColors: Record<string, string> = {
   Critical: 'bg-[#E76F51] text-white',
@@ -28,6 +32,16 @@ export default function UniversalAIAnalysis() {
     dependencies: [id]
   });
 
+  const { data: devices } = useApi(() => fetchDevices(id || '1'), {
+    dependencies: [id]
+  });
+
+  const { data: surveys } = useApi(() => fetchSurveys(id || '1'), {
+    dependencies: [id]
+  });
+
+  const [sensingStatus, setSensingStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+
   const isLive = !error && !!ai;
 
   if (isLoading && !ai) {
@@ -49,6 +63,44 @@ export default function UniversalAIAnalysis() {
   const scoreDelta = (ai.compositeRiskScore - ai.previousRiskScore).toFixed(1);
   const scoreWorsened = ai.compositeRiskScore > ai.previousRiskScore;
 
+  // Identify offline/disconnected devices
+  const offlineDevices = (devices || [])
+    .filter((device: any) => device.status === 'Offline' || device.status === 'Disconnected')
+    .map((device: any) => device.name || device.type);
+
+  // Calculate days since last survey
+  let daysSinceLastSurvey = 'No history';
+  const surveyHistory = surveys?.patient?.history || [];
+  if (surveyHistory.length > 0) {
+    const latestSurvey = surveyHistory.reduce((latest: any, current: any) => {
+      if (!current.completed) return latest;
+      if (!latest || new Date(current.completed).getTime() > new Date(latest.completed).getTime()) {
+        return current;
+      }
+      return latest;
+    }, null);
+
+    if (latestSurvey && latestSurvey.completed) {
+      const completedDate = new Date(latestSurvey.completed);
+      const today = new Date('2026-06-02'); // June 2, 2026
+      const diffTime = Math.abs(today.getTime() - completedDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      daysSinceLastSurvey = `${diffDays} days ago (${latestSurvey.name || 'Initial Assessment'})`;
+    }
+  }
+
+  // Handle PROM Request
+  const handleRequestSensing = async () => {
+    setSensingStatus('loading');
+    try {
+      await requestPatientSensing(id || '1', offlineDevices);
+      setSensingStatus('success');
+      setTimeout(() => setSensingStatus('idle'), 5000);
+    } catch (err) {
+      alert('Failed to request patient sensing.');
+      setSensingStatus('idle');
+    }
+  };
 
   return (
     <div className="p-8 space-y-8 max-w-5xl">
@@ -83,6 +135,84 @@ export default function UniversalAIAnalysis() {
           This tab explains why this patient was escalated. It is for clinical transparency — not required to take action.
         </p>
       </div>
+
+      {/* Evidence-Insufficient Alert */}
+      {ai.confidenceLevel < 85 && (
+        <div className="bg-[#F4A261]/5 border-2 border-[#F4A261]/30 rounded-3xl p-6 relative overflow-hidden group shadow-sm animate-in slide-in-from-top-4 duration-300">
+          <div className="absolute top-[-20px] right-[-20px] opacity-5 group-hover:scale-110 transition-transform pointer-events-none">
+            <AlertCircle className="w-32 h-32 text-[#F4A261]" />
+          </div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-[#F4A261] animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-widest text-[#F4A261]">
+                  Evidence Insufficient (AI Confidence: {ai.confidenceLevel}%)
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-[#0A1128]">
+                Predictive accuracy is compromised by missing clinical data streams.
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                {/* Offline Streams */}
+                <div className="bg-white/80 p-3.5 rounded-xl border border-[#E8EEF2] flex items-start gap-2.5">
+                  <WifiOff className="w-4 h-4 text-[#E76F51] mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-wider block">Offline Sensor Streams</span>
+                    <span className="text-xs font-bold text-[#0A1128]">
+                      {offlineDevices.length > 0 ? offlineDevices.join(', ') : 'None detected (All devices syncing)'}
+                    </span>
+                  </div>
+                </div>
+                {/* Survey Recency */}
+                <div className="bg-white/80 p-3.5 rounded-xl border border-[#E8EEF2] flex items-start gap-2.5">
+                  <Calendar className="w-4 h-4 text-[#2D9596] mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-wider block">Patient-Reported Measures</span>
+                    <span className="text-xs font-bold text-[#0A1128]">
+                      Last survey: {daysSinceLastSurvey}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0">
+              <button
+                onClick={handleRequestSensing}
+                disabled={sensingStatus !== 'idle'}
+                className={`w-full md:w-auto px-6 py-4 rounded-2xl font-bold text-xs shadow-lg uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 ${
+                  sensingStatus === 'loading'
+                    ? 'bg-[#414D5B] text-white cursor-not-allowed'
+                    : sensingStatus === 'success'
+                    ? 'bg-[#6A994E] text-white shadow-[#6A994E]/20 scale-102 ring-4 ring-[#6A994E]/10'
+                    : 'bg-[#0A1128] hover:bg-black text-white shadow-[#0A1128]/20 hover:scale-[1.02]'
+                }`}
+              >
+                {sensingStatus === 'loading' && (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Transmitting Request...
+                  </>
+                )}
+                {sensingStatus === 'success' && (
+                  <>
+                    <CheckCircle className="w-4 h-4 animate-bounce" />
+                    PROM Request Active
+                  </>
+                )}
+                {sensingStatus === 'idle' && (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Request Patient Sensing
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top Summary Row */}
       <div className="grid grid-cols-4 gap-4">
