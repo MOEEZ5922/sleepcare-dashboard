@@ -221,19 +221,28 @@ export default function PatientVideos() {
 
                 {/* Star Rating — shown after watched */}
                 {watchedMap[video.id] ? (
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <button key={star} onClick={() => handleRating(video.id, star)}>
-                        <Star
-                          className="w-3.5 h-3.5 transition-colors"
-                          fill={ratingMap[video.id] !== null && ratingMap[video.id]! >= star ? '#F4A261' : 'none'}
-                          stroke={ratingMap[video.id] !== null && ratingMap[video.id]! >= star ? '#F4A261' : '#CBD5E1'}
-                        />
-                      </button>
-                    ))}
-                    <span className="text-[10px] font-bold text-[#5A6B7C] ml-1 uppercase tracking-tighter">
-                      {ratingMap[video.id] ? 'Rated' : 'Rate it'}
-                    </span>
+                  <div className="mt-3 p-3 bg-[#6A994E]/5 border border-[#6A994E]/15 rounded-xl space-y-1.5 animate-in fade-in duration-300">
+                    <p className="text-[11px] font-bold text-[#0A1128]">Was this video helpful?</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <button 
+                            key={star} 
+                            onClick={() => handleRating(video.id, star)}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            <Star
+                              className="w-3.5 h-3.5 transition-colors"
+                              fill={ratingMap[video.id] !== null && ratingMap[video.id]! >= star ? '#F4A261' : 'none'}
+                              stroke={ratingMap[video.id] !== null && ratingMap[video.id]! >= star ? '#F4A261' : '#CBD5E1'}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                      <span className="text-[9px] font-extrabold text-[#6A994E] uppercase tracking-wider">
+                        {ratingMap[video.id] ? '✓ Response Logged' : 'Tap to rate'}
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <button
