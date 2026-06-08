@@ -1,6 +1,6 @@
 import * as mock from './mockData';
 
-const BASE_URL = 'https://cpap-backend-v2.onrender.com';
+const BASE_URL = 'https://cpap-backend-v3.onrender.com';
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 export interface PatientSummary {
@@ -365,7 +365,30 @@ export async function fetchInterventions(patientId: string): Promise<any[]> {
 
 /** Get survey data for a patient */
 export async function fetchSurveys(patientId: string): Promise<SurveyResponse> {
-  return apiFetch<SurveyResponse>(`/api/surveys/${formatPatientId(patientId)}/monitoring`);
+  const patientIdFormatted = formatPatientId(patientId);
+  try {
+    const [monitoringData, medicalData] = await Promise.all([
+      apiFetch<any>(`/api/surveys/${patientIdFormatted}/monitoring`),
+      apiFetch<any>(`/api/surveys/${patientIdFormatted}/medical`).catch(() => ({ physician: [] }))
+    ]);
+
+    return {
+      physician: medicalData?.physician || (Array.isArray(medicalData) ? medicalData : []),
+      technician: monitoringData?.technician || (Array.isArray(monitoringData) ? monitoringData : []),
+      calendar: monitoringData?.calendar || medicalData?.calendar || [],
+      patient: monitoringData?.patient || medicalData?.patient || {
+        next: {
+          name: 'Health Survey',
+          dueDate: new Date().toISOString(),
+          questions: 8,
+          persistence: { status: 'pending' }
+        },
+        history: []
+      }
+    };
+  } catch (err) {
+    return apiFetch<SurveyResponse>(`/api/surveys/${patientIdFormatted}/monitoring`);
+  }
 }
 
 /** Get AI weekly analysis for a patient */
