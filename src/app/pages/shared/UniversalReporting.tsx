@@ -83,8 +83,8 @@ export default function UniversalReporting() {
       let valB = 0;
 
       if (sortColumn === 'riskTier') {
-        valA = TIER_CONFIGS[a.riskTier].sortValue;
-        valB = TIER_CONFIGS[b.riskTier].sortValue;
+        valA = TIER_CONFIGS[a.riskTier as RiskTier].sortValue;
+        valB = TIER_CONFIGS[b.riskTier as RiskTier].sortValue;
         if (valA === valB) {
           valA = a.dropoutRisk;
           valB = b.dropoutRisk;
