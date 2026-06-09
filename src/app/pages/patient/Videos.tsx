@@ -31,7 +31,8 @@ const thumbnailGradients: { [key: string]: string } = {
 export default function PatientVideos() {
   const { id } = useParams();
   const { data: liveVideos, isLoading, error } = useApi(() => fetchVideos(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `videos-${id || '1'}`
   });
 
   const isLive = !error && !!liveVideos;

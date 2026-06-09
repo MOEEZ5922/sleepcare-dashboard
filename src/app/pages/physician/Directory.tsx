@@ -8,7 +8,9 @@ export default function PhysicianDirectory() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { data: patients, isLoading, error } = useApi<DirectoryResponse>(fetchPatients);
+  const { data: patients, isLoading, error } = useApi<DirectoryResponse>(fetchPatients, {
+    cacheKey: 'physician-directory'
+  });
 
   const isLive = !error && !!patients;
 

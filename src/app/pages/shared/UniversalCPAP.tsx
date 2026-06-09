@@ -14,7 +14,8 @@ export default function UniversalCPAP({ role = 'physician' }: { role?: 'physicia
   const [chartPeriod, setChartPeriod] = useState<'7' | '30' | '90'>('7');
 
   const { data: cpap, isLoading, error } = useApi(() => fetchCpapTrends(id || '1', Number(chartPeriod)), {
-    dependencies: [id, chartPeriod]
+    dependencies: [id, chartPeriod],
+    cacheKey: `cpap-trends-${chartPeriod}-${id || '1'}`
   });
 
   const isLive = !error && !!cpap;

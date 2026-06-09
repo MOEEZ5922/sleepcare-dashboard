@@ -36,11 +36,17 @@ export default function UniversalReporting() {
 
   // Fetch current patient's clinical summary and trend data
   const { data: summary, isLoading: loadingSummary } = useApi(
-    () => fetchPatientSummary(patientId), { dependencies: [patientId] }
+    () => fetchPatientSummary(patientId), {
+      dependencies: [patientId],
+      cacheKey: `patient-summary-${patientId}`
+    }
   );
 
   const { data: cpapTrends, isLoading: loadingTrends } = useApi(
-    () => fetchCpapTrends(patientId, 90), { dependencies: [patientId] }
+    () => fetchCpapTrends(patientId, 90), {
+      dependencies: [patientId],
+      cacheKey: `cpap-trends-90-${patientId}`
+    }
   );
 
   // Sorting & Filtering State for the Similar Peers table
@@ -50,7 +56,10 @@ export default function UniversalReporting() {
   const [tierFilter, setTierFilter] = useState('all');
 
   const { data: peerCohort = [], isLoading: loadingCohort } = useApi(
-    () => fetchClinicianCohort(patientId), { dependencies: [patientId] }
+    () => fetchClinicianCohort(patientId), {
+      dependencies: [patientId],
+      cacheKey: `clinician-cohort-${patientId}`
+    }
   );
 
   const isLoading = loadingSummary || loadingTrends || loadingCohort;

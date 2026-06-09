@@ -27,15 +27,24 @@ export default function PatientReporting() {
 
   // Fetch patient summary & trends
   const { data: summary, isLoading: loadingSummary } = useApi(
-    () => fetchPatientSummary(patientId), { dependencies: [patientId] }
+    () => fetchPatientSummary(patientId), {
+      dependencies: [patientId],
+      cacheKey: `patient-summary-${patientId}`
+    }
   );
 
   const { data: cpapTrends, isLoading: loadingTrends } = useApi(
-    () => fetchCpapTrends(patientId, 90), { dependencies: [patientId] }
+    () => fetchCpapTrends(patientId, 90), {
+      dependencies: [patientId],
+      cacheKey: `cpap-trends-90-${patientId}`
+    }
   );
 
   const { data: peerCohort = [], isLoading: loadingCohort } = useApi(
-    () => fetchPatientCohort(patientId), { dependencies: [patientId] }
+    () => fetchPatientCohort(patientId), {
+      dependencies: [patientId],
+      cacheKey: `patient-cohort-${patientId}`
+    }
   );
 
   const isLoading = loadingSummary || loadingTrends || loadingCohort;

@@ -10,11 +10,13 @@ export default function UniversalInterventions() {
   const isTechnician = location.pathname.includes('/technician');
   
   const { data: liveInterventions, error: intError, refetch: refetchInt } = useApi(() => fetchInterventions(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `interventions-${id || '1'}`
   });
 
   const { data: liveAuths, error: authError, refetch: refetchAuth } = useApi(() => fetchAuthorizations(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `authorizations-${id || '1'}`
   });
 
   const isLive = (!intError && !!liveInterventions) || (!authError && !!liveAuths);

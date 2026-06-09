@@ -17,13 +17,16 @@ export default function PatientHome() {
   const navigate = useNavigate();
   
   const { data: summary, error: summaryError } = useApi<PatientSummary>(() => fetchPatientSummary(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `patient-summary-${id || '1'}`
   });
   const { data: cpapTrends, error: cpapError } = useApi<CpapTrends>(() => fetchCpapTrends(id || '1', 7), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `cpap-trends-7-${id || '1'}`
   });
   const { data: surveyData, error: surveyError } = useApi<SurveyResponse>(() => fetchSurveys(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `surveys-${id || '1'}`
   });
 
   const isLive = !summaryError && !!summary;

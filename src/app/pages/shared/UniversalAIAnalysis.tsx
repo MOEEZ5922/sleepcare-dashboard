@@ -29,15 +29,18 @@ export default function UniversalAIAnalysis() {
   const { id } = useParams();
   
   const { data: ai, isLoading, error } = useApi(() => fetchWeeklyAnalysis(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `weekly-analysis-${id || '1'}`
   });
 
   const { data: devices } = useApi(() => fetchDevices(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `devices-${id || '1'}`
   });
 
   const { data: surveys } = useApi(() => fetchSurveys(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `surveys-${id || '1'}`
   });
 
   const [sensingStatus, setSensingStatus] = useState<'idle' | 'loading' | 'success'>('idle');

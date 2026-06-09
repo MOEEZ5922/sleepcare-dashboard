@@ -3,7 +3,9 @@ import { useApi } from '../../hooks/useApi';
 import { fetchInventory } from '../../data/api';
 
 export default function TechnicianInventory() {
-  const { data: inventory, isLoading, error } = useApi<any>(fetchInventory);
+  const { data: inventory, isLoading, error } = useApi<any>(fetchInventory, {
+    cacheKey: 'technician-inventory'
+  });
 
   const stock: any[] = Array.isArray(inventory) ? inventory : ((inventory as any)?.items || (inventory as any)?.inventory || []);
   const isLive = !error && !!inventory;

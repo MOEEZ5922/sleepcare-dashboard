@@ -7,7 +7,8 @@ export default function TechnicianDevices() {
   const { id } = useParams();
   
   const { data: devices, isLoading, error } = useApi(() => fetchDevices(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `devices-${id || '1'}`
   });
 
   const isLive = !error && !!devices;

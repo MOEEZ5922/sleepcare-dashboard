@@ -9,7 +9,9 @@ export default function PhysicianHome() {
   const [activeTab, setActiveTab] = useState<'urgent' | 'annual'>('urgent');
   
   // Use the scalable useApi hook
-  const { data: queue, isLoading, error } = useApi<PhysicianQueue>(fetchPhysicianQueue);
+  const { data: queue, isLoading, error } = useApi<PhysicianQueue>(fetchPhysicianQueue, {
+    cacheKey: 'physician-queue'
+  });
 
   const isLive = !error && !!queue;
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);

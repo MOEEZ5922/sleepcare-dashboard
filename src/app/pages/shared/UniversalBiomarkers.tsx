@@ -89,19 +89,34 @@ export default function UniversalBiomarkers() {
 
   // Fetch all data sources in parallel
   const { data: overview, isLoading: loadingOverview } = useApi(
-    () => fetchBiomarkerOverview(patientId), { dependencies: [patientId] }
+    () => fetchBiomarkerOverview(patientId), {
+      dependencies: [patientId],
+      cacheKey: `biomarker-overview-${patientId}`
+    }
   );
   const { data: withingsData, isLoading: loadingWithings } = useApi(
-    () => fetchWithingsData(patientId), { dependencies: [patientId] }
+    () => fetchWithingsData(patientId), {
+      dependencies: [patientId],
+      cacheKey: `withings-data-${patientId}`
+    }
   );
   const { data: masimoData, isLoading: loadingMasimo } = useApi(
-    () => fetchMasimoData(patientId), { dependencies: [patientId] }
+    () => fetchMasimoData(patientId), {
+      dependencies: [patientId],
+      cacheKey: `masimo-data-${patientId}`
+    }
   );
   const { data: sleepData, isLoading: loadingSleep } = useApi(
-    () => fetchSleepData(patientId), { dependencies: [patientId] }
+    () => fetchSleepData(patientId), {
+      dependencies: [patientId],
+      cacheKey: `sleep-data-${patientId}`
+    }
   );
   const { data: devices, isLoading: loadingDevices } = useApi(
-    () => fetchDevices(patientId), { dependencies: [patientId] }
+    () => fetchDevices(patientId), {
+      dependencies: [patientId],
+      cacheKey: `devices-${patientId}`
+    }
   );
 
   const isLoading = loadingOverview || loadingWithings || loadingMasimo || loadingSleep || loadingDevices;

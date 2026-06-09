@@ -9,7 +9,8 @@ export default function TechnicianPatientLayout() {
   const { id } = useParams();
 
   const { data: summary, isLoading, error } = useApi(() => fetchPatientSummary(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `patient-summary-${id || '1'}`
   });
 
   const isLive = !error && !!summary;

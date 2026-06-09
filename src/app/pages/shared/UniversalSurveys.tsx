@@ -166,7 +166,8 @@ export default function UniversalSurveys() {
   const isTechnician = location.pathname.includes('/technician');
   
   const { data: liveSurveys, error, refetch } = useApi(() => fetchSurveys(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `surveys-${id || '1'}`
   });
 
   const isLive = !error && !!liveSurveys;

@@ -6,11 +6,13 @@ import { fetchInterventions, fetchDevices } from '../../data/api';
 export default function PatientInterventions() {
   const { id } = useParams();
   const { data: liveInterventions, isLoading: isLoadingInt, error: intError } = useApi(() => fetchInterventions(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `interventions-${id || '1'}`
   });
 
   const { data: liveDevices, isLoading: isLoadingDev, error: devError } = useApi(() => fetchDevices(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `devices-${id || '1'}`
   });
 
   const isLive = !intError && !!liveInterventions;

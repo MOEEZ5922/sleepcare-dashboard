@@ -58,7 +58,8 @@ const surveyQuestions = [
 export default function PatientSurveys() {
   const { id } = useParams();
   const { data: liveSurveys, isLoading, error } = useApi<SurveyResponse>(() => fetchSurveys(id || '1'), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `surveys-${id || '1'}`
   });
 
   const isLive = !error && !!liveSurveys;

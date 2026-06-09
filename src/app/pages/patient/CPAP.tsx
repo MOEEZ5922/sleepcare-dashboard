@@ -6,7 +6,8 @@ import { fetchCpapTrends } from '../../data/api';
 export default function PatientCPAP() {
   const { id } = useParams();
   const { data: cpapData, isLoading, error } = useApi(() => fetchCpapTrends(id || '1', 7), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `cpap-trends-7-${id || '1'}`
   });
 
   const isLive = !error && !!cpapData;

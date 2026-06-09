@@ -55,19 +55,23 @@ export default function SummaryContent({
   const id = propPatientId || urlId || '1';
 
   const { data: summary, isLoading: isSumLoading, error: sumError } = useApi<PatientSummary>(() => fetchPatientSummary(id), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `patient-summary-${id}`
   });
 
   const { data: ai, isLoading: isAiLoading, error: aiError } = useApi<WeeklyAnalysis>(() => fetchWeeklyAnalysis(id), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `weekly-analysis-${id}`
   });
 
   const { data: trends, isLoading: isTrendsLoading } = useApi<CpapTrends>(() => fetchCpapTrends(id, 7), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `cpap-trends-7-${id}`
   });
 
   const { data: interventionsData, isLoading: isIntLoading, refetch: refetchInt } = useApi<any[]>(() => fetchInterventions(id), {
-    dependencies: [id]
+    dependencies: [id],
+    cacheKey: `interventions-${id}`
   });
 
   const isLive = !sumError && !!summary;

@@ -48,8 +48,12 @@ const clusterColors: Record<string, string> = {
 export default function TechnicianHome() {
   const [activeTab, setActiveTab] = useState<'events' | 'queue'>('events');
   
-  const { data: eventsData, isLoading: isLoadingEvents, error: eventError, refetch: refetchEvents } = useApi<any>(() => fetchTechnicianEvents());
-  const { data: queueData, isLoading: isLoadingQueue, error: queueError } = useApi<any>(() => fetchTechnicianQueue());
+  const { data: eventsData, isLoading: isLoadingEvents, error: eventError, refetch: refetchEvents } = useApi<any>(() => fetchTechnicianEvents(), {
+    cacheKey: 'technician-events'
+  });
+  const { data: queueData, isLoading: isLoadingQueue, error: queueError } = useApi<any>(() => fetchTechnicianQueue(), {
+    cacheKey: 'technician-queue'
+  });
 
   const events: any[] = Array.isArray(eventsData) ? eventsData : ((eventsData as any)?.events || []);
   const rawQueue: any[] = Array.isArray(queueData) ? queueData : ((queueData as any)?.patients || (queueData as any)?.queue || []);
