@@ -8,7 +8,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchPatientSummary, fetchCpapTrends } from '../../data/api';
+import { fetchPatientSummary, fetchCpapTrends, fetchPatientCohort, PatientCohortMember } from '../../data/api';
 
 type RiskTier = 'CRITICAL' | 'HIGH' | 'ELEVATED' | 'STABLE' | 'LOW';
 
@@ -34,22 +34,11 @@ export default function PatientReporting() {
     () => fetchCpapTrends(patientId, 90), { dependencies: [patientId] }
   );
 
-  const isLoading = loadingSummary || loadingTrends;
+  const { data: peerCohort = [], isLoading: loadingCohort } = useApi(
+    () => fetchPatientCohort(patientId), { dependencies: [patientId] }
+  );
 
-  // Anonymized Similar Sleepers Cohort matching the patient profile
-  const peerCohort = useMemo(() => {
-    const baseAge = 55;
-    const baseMask = summary?.maskType?.split(' ')[0] || 'AirFit';
-    
-    return [
-      { id: 'Sleeper #8742', age: baseAge - 2, mask: baseMask, complianceScore: 42, riskTier: 'CRITICAL' as RiskTier, phase: 'Titration' },
-      { id: 'Sleeper #1102', age: baseAge + 5, mask: baseMask, complianceScore: 58, riskTier: 'HIGH' as RiskTier, phase: 'Acclimation' },
-      { id: 'Sleeper #4491', age: baseAge - 8, mask: baseMask, complianceScore: 68, riskTier: 'ELEVATED' as RiskTier, phase: 'Acclimation' },
-      { id: 'Sleeper #8832', age: baseAge + 1, mask: baseMask, complianceScore: 84, riskTier: 'STABLE' as RiskTier, phase: 'Maintenance' },
-      { id: 'Sleeper #9910', age: baseAge + 3, mask: baseMask, complianceScore: 92, riskTier: 'LOW' as RiskTier, phase: 'Maintenance' },
-      { id: 'Sleeper #2201', age: baseAge - 4, mask: baseMask, complianceScore: 96, riskTier: 'LOW' as RiskTier, phase: 'Maintenance' },
-    ];
-  }, [summary]);
+  const isLoading = loadingSummary || loadingTrends || loadingCohort;
 
   // Generate comparative 30/60/90 Days Adherence Data
   const complianceChartData = useMemo(() => {
@@ -150,7 +139,7 @@ export default function PatientReporting() {
 
         <div className="divide-y divide-[#E8EEF2]">
           {peerCohort.map((p, idx) => {
-            const tc = TIER_CONFIGS[p.riskTier];
+            const tc = TIER_CONFIGS[p.riskTier as RiskTier] || TIER_CONFIGS.LOW;
             return (
               <div key={idx} className="py-4 flex justify-between items-center first:pt-0 last:pb-0">
                 <div>

@@ -14,7 +14,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchPatientSummary, fetchCpapTrends } from '../../data/api';
+import { fetchPatientSummary, fetchCpapTrends, fetchClinicianCohort, ClinicianCohortMember } from '../../data/api';
 
 // ─── Peer Cohort Types & Configs ──────────────────────────────────────────────
 
@@ -49,23 +49,11 @@ export default function UniversalReporting() {
   const [searchTerm, setSearchTerm] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
 
-  const isLoading = loadingSummary || loadingTrends;
+  const { data: peerCohort = [], isLoading: loadingCohort } = useApi(
+    () => fetchClinicianCohort(patientId), { dependencies: [patientId] }
+  );
 
-  // Generate Anonymized Similar Peers Cohort
-  // Represents a static clinical peer comparison group matched on demographic/baseline profile
-  const peerCohort = useMemo(() => {
-    const baseAge = 55;
-    const baseMask = summary?.maskType?.split(' ')[0] || 'AirFit';
-    
-    return [
-      { id: 'Peer Sleeper #8742', age: baseAge - 2, mask: baseMask, dropoutRisk: 85, complianceScore: 42, riskTier: 'CRITICAL' as RiskTier, phase: 'Titration', latestAction: 'Needs Mask Fit adjustment' },
-      { id: 'Peer Sleeper #1102', age: baseAge + 5, mask: baseMask, dropoutRisk: 72, complianceScore: 58, riskTier: 'HIGH' as RiskTier, phase: 'Acclimation', latestAction: 'Tuned mask straps' },
-      { id: 'Peer Sleeper #4491', age: baseAge - 8, mask: baseMask, dropoutRisk: 64, complianceScore: 68, riskTier: 'ELEVATED' as RiskTier, phase: 'Acclimation', latestAction: 'Swapped standard cushion' },
-      { id: 'Peer Sleeper #8832', age: baseAge + 1, mask: baseMask, dropoutRisk: 38, complianceScore: 84, riskTier: 'STABLE' as RiskTier, phase: 'Maintenance', latestAction: 'Began humidification' },
-      { id: 'Peer Sleeper #9910', age: baseAge + 3, mask: baseMask, dropoutRisk: 12, complianceScore: 92, riskTier: 'LOW' as RiskTier, phase: 'Maintenance', latestAction: 'Adherent on therapy' },
-      { id: 'Peer Sleeper #2201', age: baseAge - 4, mask: baseMask, dropoutRisk: 8, complianceScore: 96, riskTier: 'LOW' as RiskTier, phase: 'Maintenance', latestAction: 'Routine filters swap' },
-    ];
-  }, [summary]);
+  const isLoading = loadingSummary || loadingTrends || loadingCohort;
 
   // Handle Cohort Table sorting
   const handleSort = (column: 'riskTier' | 'dropoutRisk') => {
@@ -372,7 +360,7 @@ export default function UniversalReporting() {
                 </tr>
               ) : (
                 processedPeers.map((p) => {
-                  const tc = TIER_CONFIGS[p.riskTier] || TIER_CONFIGS.LOW;
+                  const tc = TIER_CONFIGS[p.riskTier as RiskTier] || TIER_CONFIGS.LOW;
                   
                   return (
                     <tr key={p.id} className="hover:bg-[#FAFAFA]/50 transition-colors">

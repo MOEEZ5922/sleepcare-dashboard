@@ -188,6 +188,26 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     console.warn(`Falling back to mock data for: ${endpoint}`, error);
 
     // Map endpoints to mock data
+    if (endpoint.includes('/cohort') && endpoint.includes('/reporting')) {
+      return [
+        { id: 'Sleeper #8742', mask: 'AirFit', complianceScore: 42, riskTier: 'CRITICAL', phase: 'Titration' },
+        { id: 'Sleeper #1102', mask: 'AirFit', complianceScore: 58, riskTier: 'HIGH', phase: 'Acclimation' },
+        { id: 'Sleeper #4491', mask: 'AirFit', complianceScore: 68, riskTier: 'ELEVATED', phase: 'Acclimation' },
+        { id: 'Sleeper #8832', mask: 'AirFit', complianceScore: 84, riskTier: 'STABLE', phase: 'Maintenance' },
+        { id: 'Sleeper #9910', mask: 'AirFit', complianceScore: 92, riskTier: 'LOW', phase: 'Maintenance' },
+        { id: 'Sleeper #2201', mask: 'AirFit', complianceScore: 96, riskTier: 'LOW', phase: 'Maintenance' },
+      ] as any;
+    }
+    if (endpoint.includes('/cohort')) {
+      return [
+        { id: 'Peer Sleeper #8742', age: 53, mask: 'AirFit', dropoutRisk: 85, complianceScore: 42, riskTier: 'CRITICAL', phase: 'Titration', latestAction: 'Needs Mask Fit adjustment' },
+        { id: 'Peer Sleeper #1102', age: 60, mask: 'AirFit', dropoutRisk: 72, complianceScore: 58, riskTier: 'HIGH', phase: 'Acclimation', latestAction: 'Tuned mask straps' },
+        { id: 'Peer Sleeper #4491', age: 47, mask: 'AirFit', dropoutRisk: 64, complianceScore: 68, riskTier: 'ELEVATED', phase: 'Acclimation', latestAction: 'Swapped standard cushion' },
+        { id: 'Peer Sleeper #8832', age: 56, mask: 'AirFit', dropoutRisk: 38, complianceScore: 84, riskTier: 'STABLE', phase: 'Maintenance', latestAction: 'Began humidification' },
+        { id: 'Peer Sleeper #9910', age: 58, mask: 'AirFit', dropoutRisk: 12, complianceScore: 92, riskTier: 'LOW', phase: 'Maintenance', latestAction: 'Adherent on therapy' },
+        { id: 'Peer Sleeper #2201', age: 51, mask: 'AirFit', dropoutRisk: 8, complianceScore: 96, riskTier: 'LOW', phase: 'Maintenance', latestAction: 'Routine filters swap' },
+      ] as any;
+    }
     if (endpoint.includes('/api/patients')) return {
       count: 2,
       patients: [
@@ -521,3 +541,33 @@ export async function requestPatientSensing(patientId: string, streams: string[]
     body: JSON.stringify({ streams, timestamp: new Date().toISOString() }),
   });
 }
+
+// ─── Peer Cohort Types & Fetch Helpers ──────────────────────────────────────
+
+export interface ClinicianCohortMember {
+  id: string;
+  age: number;
+  mask: string;
+  riskTier: string;
+  dropoutRisk: number;
+  complianceScore: number;
+  phase: string;
+  latestAction: string;
+}
+
+export interface PatientCohortMember {
+  id: string;
+  mask: string;
+  riskTier: string;
+  complianceScore: number;
+  phase: string;
+}
+
+export async function fetchClinicianCohort(patientId: string): Promise<ClinicianCohortMember[]> {
+  return apiFetch<ClinicianCohortMember[]>(`/api/patients/${formatPatientId(patientId)}/cohort`);
+}
+
+export async function fetchPatientCohort(patientId: string): Promise<PatientCohortMember[]> {
+  return apiFetch<PatientCohortMember[]>(`/api/dashboard/patient/${formatPatientId(patientId)}/reporting/cohort`);
+}
+
