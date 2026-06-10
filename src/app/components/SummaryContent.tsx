@@ -35,6 +35,9 @@ import {
   WeeklyAnalysis,
   CpapTrends
 } from '../data/api';
+import ClinicalOrderModal from './ClinicalOrderModal';
+import AuthorizationModal from './AuthorizationModal';
+import RecommendationBanner from './RecommendationBanner';
 
 interface SummaryContentProps {
   patientId?: string;
@@ -158,155 +161,36 @@ export default function SummaryContent({
   return (
     <div className={`space-y-6 ${isCompact ? 'p-0' : 'p-8 max-w-6xl mx-auto'} animate-in fade-in duration-500`}>
 
-      {/* 1. Universal Evidence Workspace: AI Core / Action Recommendation */}
       {!hideHeader && (
-        <div className="bg-[#0A1128] text-white rounded-2xl p-6 shadow-xl border-l-8 border-[#E76F51] relative overflow-hidden">
-          {gateStatus === 'accepted' && <div className="absolute inset-0 bg-[#6A994E]/10 pointer-events-none" />}
-          {gateStatus === 'rejected' && <div className="absolute inset-0 bg-[#E76F51]/10 pointer-events-none" />}
-
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex gap-4">
-              <div className="bg-[#E76F51]/20 p-2 rounded-xl h-fit">
-                <AlertTriangle className={`w-8 h-8 ${gateStatus === 'rejected' ? 'text-[#E76F51]' : 'text-[#F4A261]'}`} />
-              </div>
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-xl font-bold">Action Recommendation: {nextAction.type}</h2>
-                  {isLive && (
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#6A994E]/20 border border-[#6A994E]/30 rounded text-[9px] font-bold uppercase tracking-widest text-[#6A994E]">
-                      <Signal className="w-2.5 h-2.5" /> Live
-                    </div>
-                  )}
-                  {gateStatus === 'accepted' && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-[#6A994E] bg-[#6A994E]/10 px-2 py-0.5 rounded border border-[#6A994E]/30 uppercase tracking-widest">
-                      <CheckCircle className="w-3 h-3" /> Approved
-                    </span>
-                  )}
-                  {gateStatus === 'rejected' && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-[#E76F51] bg-[#E76F51]/10 px-2 py-0.5 rounded border border-[#E76F51]/30 uppercase tracking-widest">
-                      <XCircle className="w-3 h-3" /> Rejected
-                    </span>
-                  )}
-                </div>
-                <p className="text-white/70 text-sm max-w-2xl leading-relaxed mt-1 border-l-2 border-[#F4A261] pl-3 italic">
-                  Rationale: {nextAction.rationale}
-                </p>
-              </div>
-            </div>
-            {!isCompact && (
-              <div className="text-right whitespace-nowrap">
-                <div className="bg-white/10 px-3 py-1 rounded-lg text-xs font-semibold mb-2">
-                  ESCALATED {ai?.weekOf || 'ACTIVE'}
-                </div>
-                <div className="text-2xl font-bold text-[#E76F51]">Risk: {ai?.compositeRiskScore || 0}</div>
-                {ai?.confidenceLevel !== undefined && ai.confidenceLevel < 85 && (
-                  <Link
-                    to={`/${role}/patient/${id}/ai-analysis`}
-                    className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 border border-[#F4A261]/30 px-2 py-0.5 rounded uppercase hover:bg-[#F4A261]/20 transition-all"
-                  >
-                    <AlertTriangle className="w-3 h-3 animate-pulse" />
-                    Evidence Incomplete
-                  </Link>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div>
-              <p className="text-[10px] text-white/50 mb-1 uppercase tracking-widest">Delivery Mode</p>
-              <p className="font-semibold text-sm">{nextAction.deliveryMode || 'Digital Workflow'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-white/50 mb-1 uppercase tracking-widest">Reassessment Window</p>
-              <p className="font-semibold text-sm">{nextAction.reassessmentWindow || 'Immediate'}</p>
-            </div>
-          </div>
-
-          {/* Clinician Gate Action Area */}
-          {gateStatus === 'pending' && (
-            <div className="pt-6 border-t border-white/10">
-              <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-3">
-                {role === 'physician' ? 'Clinician Gate' : 'Visit Prep / Technical Gate'}
-              </h4>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={handleAcceptRecommendation}
-                  className="bg-[#6A994E] hover:bg-[#56803d] text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 shadow-lg shadow-[#6A994E]/20 hover:scale-[1.02] active:scale-[0.98] duration-200"
-                >
-                  <CheckCircle className="w-4 h-4" /> Accept & Auto-Draft
-                </button>
-                <button
-                  onClick={() => alert("Opening modify action dialog...")}
-                  className="bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-2"
-                >
-                  <Settings2 className="w-4 h-4" /> Modify
-                </button>
-                <button
-                  onClick={() => setShowRejectMenu(!showRejectMenu)}
-                  className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 border ${showRejectMenu ? 'bg-[#E76F51]/20 border-[#E76F51]/50 text-[#E76F51]' : 'bg-transparent border-[#E76F51]/30 text-[#E76F51] hover:bg-[#E76F51]/10'}`}
-                >
-                  <XCircle className="w-4 h-4" /> Reject
-                </button>
-              </div>
-
-              {/* Reject Reason Input Area */}
-              {showRejectMenu && (
-                <div className="mt-4 p-4 bg-black/30 rounded-xl border border-[#E76F51]/30 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[10px] font-bold text-[#E76F51] uppercase tracking-widest mb-2 block">Required: Reject Reason Code</label>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <select
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      className="flex-1 bg-[#1a233a] border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-[#E76F51] outline-none transition-colors"
-                    >
-                      <option value="">Select reason...</option>
-                      <option value="CLIN_OVERRIDE">Clinical Override - Patient history</option>
-                      <option value="WAIT_AND_SEE">Wait and See - Insufficient evidence</option>
-                      <option value="PT_PREFERENCE">Patient Preference / Refusal</option>
-                      <option value="OTHER">Other (Add Note)</option>
-                    </select>
-                    <button
-                      onClick={() => setGateStatus('rejected')}
-                      disabled={!rejectReason}
-                      className="bg-[#E76F51] hover:bg-[#d45e41] disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shrink-0"
-                    >
-                      Confirm Reject
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Post-Action View */}
-          {gateStatus !== 'pending' && (
-            <div className="mt-2 pt-4 border-t border-white/10 flex items-center justify-between">
-              <p className="text-xs text-white/50">
-                {gateStatus === 'accepted' ? 'Action successfully queued for dispatch.' : `Recommendation rejected with code: ${rejectReason || 'Unknown'}`}
-              </p>
-              <button
-                onClick={() => { 
-                  setGateStatus('pending'); 
-                  setShowRejectMenu(false); 
-                  setRejectReason(''); 
-                  setTechActionHint('');
-                  // Clear pre-populated content if they click Undo
-                  if (clinicalNotes.startsWith('Clinically authorized transition')) {
-                    setClinicalNotes('');
-                    setSelectedTherapy('');
-                  }
-                  if (appIahNotes.startsWith('Authorized digital clinical order')) {
-                    setAppIahNotes('');
-                  }
-                }}
-                className="text-[10px] uppercase tracking-widest font-bold text-white/50 hover:text-white transition-colors"
-              >
-                Undo Decision
-              </button>
-            </div>
-          )}
-        </div>
+        <RecommendationBanner
+          isCompact={isCompact}
+          isLive={isLive}
+          role={role}
+          patientId={id}
+          ai={ai}
+          nextAction={nextAction}
+          gateStatus={gateStatus}
+          setGateStatus={setGateStatus}
+          showRejectMenu={showRejectMenu}
+          setShowRejectMenu={setShowRejectMenu}
+          rejectReason={rejectReason}
+          setRejectReason={setRejectReason}
+          onAccept={handleAcceptRecommendation}
+          onUndo={() => { 
+            setGateStatus('pending'); 
+            setShowRejectMenu(false); 
+            setRejectReason(''); 
+            setTechActionHint('');
+            // Clear pre-populated content if they click Undo
+            if (clinicalNotes.startsWith('Clinically authorized transition')) {
+              setClinicalNotes('');
+              setSelectedTherapy('');
+            }
+            if (appIahNotes.startsWith('Authorized digital clinical order')) {
+              setAppIahNotes('');
+            }
+          }}
+        />
       )}
 
       <div className={`grid ${isCompact ? 'grid-cols-1' : 'lg:grid-cols-3'} gap-6`}>
@@ -542,68 +426,27 @@ export default function SummaryContent({
         )}
       </div>
 
-      {showOrderModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/40 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold text-[#0A1128] mb-2">Issue Clinical Order</h3>
-            <p className="text-xs text-[#5A6B7C] mb-6">Log the next clinical step in the patient's record.</p>
-            <textarea
-              value={appIahNotes}
-              onChange={(e) => setAppIahNotes(e.target.value)}
-              placeholder="Order details..."
-              className="w-full h-32 bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#2D9596] outline-none mb-6"
-            />
-            <div className="flex gap-3">
-              <button onClick={() => setShowOrderModal(false)} className="flex-1 py-4 bg-[#E8EEF2] text-[#5A6B7C] font-bold rounded-xl text-xs">Cancel</button>
-              <button onClick={() => {
-                setShowOrderModal(false);
-                setSelectedTherapy('Clinical Order');
-                setShowLogConfirmation(true);
-              }} disabled={!appIahNotes} className="flex-2 py-4 bg-[#2D9596] text-white font-bold rounded-xl text-xs shadow-lg shadow-[#2D9596]/20">Sign & Log Order</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ClinicalOrderModal
+        isOpen={showOrderModal}
+        notes={appIahNotes}
+        setNotes={setAppIahNotes}
+        onClose={() => setShowOrderModal(false)}
+        onSubmit={() => {
+          setShowOrderModal(false);
+          setSelectedTherapy('Clinical Order');
+          setShowLogConfirmation(true);
+        }}
+      />
 
-      {showLogConfirmation && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/40 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] p-10 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 border-t-8 border-[#2D9596]">
-            <div className="w-16 h-16 bg-[#2D9596]/10 rounded-2xl flex items-center justify-center mb-6">
-              <ShieldCheck className="w-8 h-8 text-[#2D9596]" />
-            </div>
-            <h3 className="text-2xl font-bold text-[#0A1128] mb-2">Transition Authorized</h3>
-            <p className="text-sm text-[#5A6B7C] mb-8 leading-relaxed">
-              Therapy transition to <strong>{selectedTherapy}</strong> has been clinically authorized and synced to the care team.
-            </p>
-
-            {/* Digital Signature Block */}
-            <div className="bg-[#FAFAFA] border-2 border-dashed border-[#E8EEF2] rounded-2xl p-5 mb-8 relative overflow-hidden group">
-              <div className="absolute top-[-10px] right-[-10px] opacity-10 group-hover:rotate-12 transition-transform">
-                <ShieldCheck className="w-20 h-20 text-[#2D9596]" />
-              </div>
-              <p className="text-[9px] font-black text-[#2D9596] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                <CheckCircle className="w-3 h-3" /> Digital Clinical Seal
-              </p>
-              <div className="space-y-1">
-                <p className="text-sm font-serif italic text-[#0A1128] border-b border-[#E8EEF2] pb-1">Dr. Sarah Mitchell, MD</p>
-                <p className="text-[8px] text-[#5A6B7C] font-mono">ID: LINDE-AUTH-{Math.random().toString(36).substring(7).toUpperCase()}</p>
-                <p className="text-[8px] text-[#5A6B7C] font-mono">DATE: {new Date().toLocaleString()}</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setShowLogConfirmation(false);
-                setSelectedTherapy('');
-                setClinicalNotes('');
-              }}
-              className="w-full bg-[#0A1128] text-white py-5 rounded-2xl font-bold shadow-lg hover:shadow-[#0A1128]/20 transition-all active:scale-95"
-            >
-              Return to Cockpit
-            </button>
-          </div>
-        </div>
-      )}
+      <AuthorizationModal
+        isOpen={showLogConfirmation}
+        selectedTherapy={selectedTherapy}
+        onClose={() => {
+          setShowLogConfirmation(false);
+          setSelectedTherapy('');
+          setClinicalNotes('');
+        }}
+      />
     </div>
   );
 }
