@@ -8,7 +8,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchPatientSummary, fetchCpapTrends, fetchPatientCohort, PatientCohortMember } from '../../data/api';
+import { fetchPatientSummary, fetchCpapTrends, fetchPatientCohort, PatientCohortMember, calculateComplianceTrajectory, PEER_INTERVENTIONS } from '../../data/api';
 
 type RiskTier = 'CRITICAL' | 'HIGH' | 'ELEVATED' | 'STABLE' | 'LOW';
 
@@ -51,22 +51,10 @@ export default function PatientReporting() {
 
   // Generate comparative 30/60/90 Days Adherence Data
   const complianceChartData = useMemo(() => {
-    const patientScore30 = 82; // Onboarding baseline
-    const patientScore60 = summary?.adherenceRate || 45; // Reflects active EMR adherence rate
-    const patientScore90 = patientScore60 < 60 ? Math.max(30, patientScore60 - 8) : Math.min(95, patientScore60 + 5);
-
-    return [
-      { name: '30 Days (Onboarding)', 'Cohort Average': 84, 'My Progress': patientScore30 },
-      { name: '60 Days (Acclimation)', 'Cohort Average': 78, 'My Progress': patientScore60 },
-      { name: '90 Days (Maintenance)', 'Cohort Average': 71, 'My Progress': patientScore90 },
-    ];
+    return calculateComplianceTrajectory(summary?.adherenceRate || 45);
   }, [summary]);
 
-  const peerInterventions = [
-    { type: 'Mask Refit & Adjustments', desc: 'Resolved seal issues and bridge pressure', successRate: 92, gain: '+1.8 hrs/night' },
-    { type: 'Remote Pressure Adjustment', desc: 'Reduced baseline breathing strain', successRate: 80, gain: '+1.4 hrs/night' },
-    { type: 'Coaching Video Guides', desc: 'Self-guided adjustments via mobile videos', successRate: 74, gain: '+1.1 hrs/night' },
-  ];
+  const peerInterventions = PEER_INTERVENTIONS;
 
   if (isLoading && !summary) {
     return (
