@@ -8,21 +8,22 @@ import {
   Send, CheckCircle, WifiOff, Calendar, AlertCircle
 } from 'lucide-react';
 import { useParams } from 'react-router';
+import { toast } from 'sonner';
 import { useApi } from '../../hooks/useApi';
 import { fetchWeeklyAnalysis, fetchDevices, fetchSurveys, requestPatientSensing } from '../../data/api';
 
 const riskTierColors: Record<string, string> = {
-  Critical: 'bg-[#E76F51] text-white',
-  High:     'bg-[#F4A261] text-white',
-  Medium:   'bg-[#F4A261]/70 text-white',
-  Low:      'bg-[#6A994E] text-white',
+  Critical: 'bg-coral text-white',
+  High:     'bg-amber text-white',
+  Medium:   'bg-amber/70 text-white',
+  Low:      'bg-sage text-white',
 };
 
 const clusterColors: Record<string, string> = {
-  Adherent:    'bg-[#6A994E]/10 text-[#6A994E] border border-[#6A994E]/30',
-  Attempting:  'bg-[#F4A261]/10 text-[#F4A261] border border-[#F4A261]/30',
-  Struggling:  'bg-[#E76F51]/10 text-[#E76F51] border border-[#E76F51]/30',
-  Dropout:     'bg-[#0A1128]/10 text-[#0A1128] border border-[#0A1128]/30',
+  Adherent:    'bg-sage/10 text-sage border border-sage/30',
+  Attempting:  'bg-amber/10 text-amber border border-amber/30',
+  Struggling:  'bg-coral/10 text-coral border border-coral/30',
+  Dropout:     'bg-navy/10 text-navy border border-navy/30',
 };
 
 export default function UniversalAIAnalysis() {
@@ -98,9 +99,10 @@ export default function UniversalAIAnalysis() {
     try {
       await requestPatientSensing(id || '1', offlineDevices);
       setSensingStatus('success');
+      toast.success('Patient sensing request sent successfully!');
       setTimeout(() => setSensingStatus('idle'), 5000);
     } catch (err) {
-      alert('Failed to request patient sensing.');
+      toast.error('Failed to request patient sensing.');
       setSensingStatus('idle');
     }
   };

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { 
   Brain, 
   Cpu, 
@@ -254,7 +255,7 @@ export default function AILifecyclePanel() {
           </div>
         </div>
         <button 
-          onClick={() => alert("Re-evaluating model drift metrics... All clear.")}
+          onClick={() => toast.info("Re-evaluating model drift metrics... All clear.")}
           className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
         >
           <TrendingUp className="w-3.5 h-3.5 text-[#2D9596]" /> Force Evaluation Run

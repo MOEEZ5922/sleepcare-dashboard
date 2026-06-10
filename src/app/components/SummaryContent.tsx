@@ -25,6 +25,7 @@ import {
   Settings2
 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useApi } from '../hooks/useApi';
 import {
   fetchPatientSummary,
@@ -139,7 +140,7 @@ export default function SummaryContent({
 
   const handleOrderSubmit = () => {
     setShowOrderModal(false);
-    alert(`Clinical Order Logged: ${appIahNotes}`);
+    toast.success(`Clinical Order Logged successfully.`);
   };
 
   if ((isSumLoading || isAiLoading) && (!summary || !ai)) {

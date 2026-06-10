@@ -1,6 +1,7 @@
 import { Phone, MessageCircle, AlertCircle, CheckCircle2, Signal, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
+import { toast } from 'sonner';
 import { createSupportTicket } from '../../data/api';
 
 export default function PatientHelp() {
@@ -26,7 +27,7 @@ export default function PatientHelp() {
         setReportDetails('');
       }, 3000);
     } catch (err) {
-      alert('Failed to submit report. Please try again.');
+      toast.error('Failed to submit report. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

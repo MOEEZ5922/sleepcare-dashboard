@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { toast } from 'sonner';
 import {
   AlertTriangle,
   CheckCircle,
@@ -124,7 +125,7 @@ export default function RecommendationBanner({
               <CheckCircle className="w-4 h-4" /> Accept & Auto-Draft
             </button>
             <button
-              onClick={() => alert("Opening modify action dialog...")}
+              onClick={() => toast.info("Opening modify action dialog...")}
               className="bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-2"
             >
               <Settings2 className="w-4 h-4" /> Modify

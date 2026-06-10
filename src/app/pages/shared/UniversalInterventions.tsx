@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'react-router';
+import { toast } from 'sonner';
 import { FileSignature, AlertCircle, Activity, Plus, Package, Phone, Home, Settings, Signal, Loader2, PlaySquare, Star, Clock, CheckCircle } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { fetchInterventions, createIntervention, fetchAuthorizations, createAuthorization } from '../../data/api';
@@ -53,11 +54,11 @@ export default function UniversalInterventions() {
         outcome: 'Logged',
         notes: appIahNotes
       });
-      alert('Clinical Order Submitted!');
+      toast.success('Clinical Order Submitted!');
       refetchInt();
       setShowOrderModal(false);
     } catch (err) {
-      alert('Failed to submit order.');
+      toast.error('Failed to submit order.');
     } finally {
       setIsSubmitting(false);
     }
@@ -73,11 +74,11 @@ export default function UniversalInterventions() {
         outcome: 'Logged',
         notes: techActionNote
       });
-      alert('Technician Intervention Logged!');
+      toast.success('Technician Intervention Logged!');
       refetchInt();
       setShowTechActionModal(false);
     } catch (err) {
-      alert('Failed to log intervention.');
+      toast.error('Failed to log intervention.');
     } finally {
       setIsSubmitting(false);
     }
@@ -92,12 +93,12 @@ export default function UniversalInterventions() {
         physician_id: 'DR-001',
         digital_seal_hash: 'SHA256-V4-SIG-Linde'
       });
-      alert(`Authorization for ${selectedTherapy} submitted successfully!`);
+      toast.success(`Authorization for ${selectedTherapy} submitted successfully!`);
       refetchAuth();
       setSelectedTherapy('');
       setClinicalNotes('');
     } catch (err) {
-      alert('Failed to submit authorization.');
+      toast.error('Failed to submit authorization.');
     } finally {
       setIsSubmitting(false);
     }

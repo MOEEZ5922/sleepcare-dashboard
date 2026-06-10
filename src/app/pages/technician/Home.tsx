@@ -23,6 +23,7 @@ import {
   Plus
 } from 'lucide-react';
 import { Link } from 'react-router';
+import { toast } from 'sonner';
 import VisitPrepCard from '../../components/VisitPrepCard';
 import SummaryContent from '../../components/SummaryContent';
 import { useApi } from '../../hooks/useApi';
@@ -31,18 +32,18 @@ import { fetchTechnicianEvents, fetchTechnicianQueue, submitEventTriage } from '
 type EventStatus = 'pending' | 'confirmed' | 'dismissed';
 
 const eventTypeConfig: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
-  'Mask Leak': { icon: <Droplets className="w-5 h-5" />, color: 'text-[#E76F51]', bg: 'bg-[#E76F51]' },
-  'Usage Drop': { icon: <Moon className="w-5 h-5" />, color: 'text-[#F4A261]', bg: 'bg-[#F4A261]' },
-  'Missed Nights': { icon: <AlertTriangle className="w-5 h-5" />, color: 'text-[#F4A261]', bg: 'bg-[#F4A261]' },
-  'Equipment Alert': { icon: <Wrench className="w-5 h-5" />, color: 'text-[#2D9596]', bg: 'bg-[#2D9596]' },
-  'Patient Self-Report': { icon: <MessageSquare className="w-5 h-5" />, color: 'text-[#2D9596]', bg: 'bg-[#2D9596]' },
+  'Mask Leak': { icon: <Droplets className="w-5 h-5" />, color: 'text-coral', bg: 'bg-coral' },
+  'Usage Drop': { icon: <Moon className="w-5 h-5" />, color: 'text-amber', bg: 'bg-amber' },
+  'Missed Nights': { icon: <AlertTriangle className="w-5 h-5" />, color: 'text-amber', bg: 'bg-amber' },
+  'Equipment Alert': { icon: <Wrench className="w-5 h-5" />, color: 'text-teal', bg: 'bg-teal' },
+  'Patient Self-Report': { icon: <MessageSquare className="w-5 h-5" />, color: 'text-teal', bg: 'bg-teal' },
 };
 
 const clusterColors: Record<string, string> = {
-  'Adherent': 'bg-[#6A994E]/10 text-[#6A994E]',
-  'Attempting': 'bg-[#F4A261]/10 text-[#F4A261]',
-  'Struggling': 'bg-[#E76F51]/10 text-[#E76F51]',
-  'Dropout': 'bg-[#0A1128]/10 text-[#0A1128]',
+  'Adherent': 'bg-sage/10 text-sage',
+  'Attempting': 'bg-amber/10 text-amber',
+  'Struggling': 'bg-coral/10 text-coral',
+  'Dropout': 'bg-navy/10 text-navy',
 };
 
 export default function TechnicianHome() {
@@ -88,12 +89,12 @@ export default function TechnicianHome() {
         technician_id: 'TECH-001',
         notes: action === 'DISMISS' ? dismissReason : 'Validated by technician'
       });
-      alert(`Event ${action === 'VALIDATE' ? 'Confirmed' : 'Dismissed'} Successfully`);
+      toast.success(`Event ${action === 'VALIDATE' ? 'Confirmed' : 'Dismissed'} Successfully`);
       refetchEvents();
       setDismissingId(null);
       setDismissReason('');
     } catch (err) {
-      alert('Failed to submit triage.');
+      toast.error('Failed to submit triage.');
     } finally {
       setIsSubmitting(false);
     }

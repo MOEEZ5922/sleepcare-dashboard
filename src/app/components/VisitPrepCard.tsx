@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { toast } from 'sonner';
 import SummaryContent from './SummaryContent';
 import {
   Package,
@@ -123,7 +124,7 @@ export default function VisitPrepCard({ patient }: VisitPrepCardProps) {
                       <CheckCircle className="w-4 h-4" /> Accept & Dispatch
                     </button>
                     <button 
-                      onClick={() => alert("Opening modify action dialog...")}
+                      onClick={() => toast.info("Opening modify action dialog...")}
                       className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2"
                     >
                       <Wrench className="w-4 h-4" /> Modify
@@ -227,10 +228,10 @@ export default function VisitPrepCard({ patient }: VisitPrepCardProps) {
                         Automated reminders failed. Manual recovery required per clinical protocol.
                       </p>
                       <div className="flex gap-3">
-                        <button onClick={() => alert('Initiating recovery call...')} className="flex-1 bg-[#9b59b6] text-white py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#8e44ad] transition-all flex items-center justify-center gap-2">
+                        <button onClick={() => toast.info('Initiating recovery call...')} className="flex-1 bg-[#9b59b6] text-white py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#8e44ad] transition-all flex items-center justify-center gap-2">
                            <Phone className="w-3.5 h-3.5" /> Resolve via Call
                         </button>
-                        <button onClick={() => alert('New link sent via SMS')} className="flex-1 bg-white border-2 border-[#9b59b6] text-[#9b59b6] py-3 rounded-xl font-bold text-xs hover:bg-[#9b59b6]/5 transition-all">
+                        <button onClick={() => toast.success('New link sent via SMS')} className="flex-1 bg-white border-2 border-[#9b59b6] text-[#9b59b6] py-3 rounded-xl font-bold text-xs hover:bg-[#9b59b6]/5 transition-all">
                            Resend SMS Link
                         </button>
                       </div>

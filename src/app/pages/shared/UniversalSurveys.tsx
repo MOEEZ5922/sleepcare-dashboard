@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'react-router';
+import { toast } from 'sonner';
 import { AlertCircle, ChevronDown, CalendarDays, MessageSquare, ShieldAlert, UserCircle, CheckCircle, ClipboardList, Plus, Signal, BarChart3, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { fetchSurveys, submitMonitoringLog } from '../../data/api';
@@ -192,12 +193,12 @@ export default function UniversalSurveys() {
         notes: formNote,
         technician_id: 'TECH-001'
       });
-      alert(`Monitoring Form Logged & Synced!`);
+      toast.success(`Monitoring Form Logged & Synced!`);
       refetch();
       setSelectedForm('');
       setFormNote('');
     } catch (err) {
-      alert('Failed to log form. Please try again.');
+      toast.error('Failed to log form. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
