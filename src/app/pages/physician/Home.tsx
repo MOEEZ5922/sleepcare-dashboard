@@ -35,7 +35,7 @@ export default function PhysicianHome() {
   if (isLoading && !queue) {
     return (
       <div className="flex items-center justify-center h-full w-full bg-white">
-        <Loader2 className="w-8 h-8 text-[#E76F51] animate-spin" />
+        <Loader2 className="w-8 h-8 text-teal animate-spin" />
       </div>
     );
   }
