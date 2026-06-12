@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface UseApiOptions<T> {
   initialData?: T;
@@ -22,6 +22,20 @@ export function useApi<T>(
 ) {
   const { initialData, dependencies = [], onSuccess, onError, cacheKey, cacheTime = 30000 } = options;
   
+  // Store dynamic callbacks in refs to avoid triggering re-renders or dependencies cycles
+  const apiCallRef = useRef(apiCall);
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    apiCallRef.current = apiCall;
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  });
+
+  // Serialize dependencies to have a single stable primitive value for dependency arrays
+  const serializedDeps = JSON.stringify(dependencies);
+
   // Helper to fetch valid cache entry
   const getCachedValue = useCallback((): T | undefined => {
     if (cacheKey && apiCache[cacheKey]) {
@@ -38,22 +52,13 @@ export function useApi<T>(
   const [isLoading, setIsLoading] = useState<boolean>(cachedVal === undefined);
   const [error, setError] = useState<Error | null>(null);
 
-  // Track previous cache key and dependencies to reset/sync state synchronously during render
+  // Sync state if cacheKey or dependencies change
   const [prevCacheKey, setPrevCacheKey] = useState<string | undefined>(cacheKey);
-  const [prevDeps, setPrevDeps] = useState<any[]>(dependencies);
+  const [prevSerializedDeps, setPrevSerializedDeps] = useState<string>(serializedDeps);
 
-  // Helper to check if dependencies array changed
-  const areDepsEqual = (a: any[], b: any[]): boolean => {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
-    }
-    return true;
-  };
-
-  if (cacheKey !== prevCacheKey || !areDepsEqual(dependencies, prevDeps)) {
+  if (cacheKey !== prevCacheKey || serializedDeps !== prevSerializedDeps) {
     setPrevCacheKey(cacheKey);
-    setPrevDeps(dependencies);
+    setPrevSerializedDeps(serializedDeps);
     const nextCachedVal = getCachedValue();
     setData(nextCachedVal !== undefined ? nextCachedVal : initialData);
     setIsLoading(nextCachedVal === undefined);
@@ -75,24 +80,24 @@ export function useApi<T>(
     setIsLoading(true);
     setError(null);
     try {
-      const result = await apiCall();
+      const result = await apiCallRef.current();
       setData(result);
       if (cacheKey) {
         apiCache[cacheKey] = { data: result, timestamp: Date.now() };
       }
-      if (onSuccess) onSuccess(result);
+      if (onSuccessRef.current) onSuccessRef.current(result);
     } catch (err) {
       const errorObject = err instanceof Error ? err : new Error(String(err));
       setError(errorObject);
-      if (onError) onError(errorObject);
+      if (onErrorRef.current) onErrorRef.current(errorObject);
     } finally {
       setIsLoading(false);
     }
-  }, [...dependencies, cacheKey, cacheTime]);
+  }, [cacheKey, cacheTime]);
 
   useEffect(() => {
     fetchData(false);
-  }, [fetchData]);
+  }, [fetchData, serializedDeps]); // Refetches when dependencies serialize value changes
 
   const refetch = useCallback(() => {
     return fetchData(true);
@@ -100,4 +105,5 @@ export function useApi<T>(
 
   return { data, isLoading, error, refetch, setData };
 }
+
 
