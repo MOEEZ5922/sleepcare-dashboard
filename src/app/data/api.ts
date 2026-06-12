@@ -472,6 +472,7 @@ export async function submitMonitoringLog(patientId: string, data: {
   });
 }
 
+
 /** Create a new intervention (Physician or Technician) */
 export async function createIntervention(patientId: string, data: {
   type: string;
@@ -481,9 +482,22 @@ export async function createIntervention(patientId: string, data: {
   notes?: string;
   signature_hash?: string;
 }) {
+  // Map frontend parameters to backend InterventionInput schema:
+  // type, status, technician_id, notes
+  const backendData = {
+    type: data.type,
+    status: data.outcome || 'Done',
+    technician_id: data.actor?.id || 'DR-001',
+    notes: [
+      data.notes || '',
+      data.job_code ? `[Job Code: ${data.job_code}]` : '',
+      data.signature_hash ? `[Signature Hash: ${data.signature_hash}]` : ''
+    ].filter(Boolean).join(' ')
+  };
+
   return apiFetch(`/api/interventions/${formatPatientId(patientId)}`, {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify(backendData),
   });
 }
 
@@ -517,10 +531,21 @@ export async function submitSurveyResponse(patientId: string, surveyId: string, 
   answers: { question_id: string; value: string | number }[];
   completion_time_seconds?: number;
 }) {
-  return apiFetch(`/api/surveys/${formatPatientId(patientId)}/submit`, {
-    method: 'POST',
-    body: JSON.stringify({ ...data, timestamp: new Date().toISOString() }),
+  const patientIdFormatted = formatPatientId(patientId);
+  const promises = data.answers.map(ans => {
+    const scoreVal = typeof ans.value === 'number' ? ans.value : parseFloat(String(ans.value));
+    return apiFetch(`/api/surveys/${patientIdFormatted}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({
+        survey_name: surveyId,
+        question_id: ans.question_id,
+        answer_value: String(ans.value),
+        score_value: isNaN(scoreVal) ? null : scoreVal,
+        severity_label: null
+      }),
+    });
   });
+  return Promise.all(promises);
 }
 
 /** Patient creates a support ticket */
@@ -541,6 +566,91 @@ export async function requestPatientSensing(patientId: string, streams: string[]
     body: JSON.stringify({ streams, timestamp: new Date().toISOString() }),
   });
 }
+
+/** Log Clinician Override (Accept/Reject AI recommendation) */
+export async function submitClinicianOverride(patientId: string, data: {
+  status: 'accepted' | 'rejected';
+  reject_reason?: string;
+  notes?: string;
+}) {
+  return apiFetch(`/api/dashboard/patient/${formatPatientId(patientId)}/analysis/weekly/override`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+/** Technician pairs a new device to a patient */
+export async function pairDevice(patientId: string, data: {
+  device_name: string;
+  device_type: string;
+  serial_number: string;
+  assigned_date?: string;
+}) {
+  return apiFetch(`/api/devices/patient/${formatPatientId(patientId)}/pair`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+/** Technician unpairs a device from a patient */
+export async function unpairDevice(patientId: string, deviceId: string) {
+  return apiFetch(`/api/devices/patient/${formatPatientId(patientId)}/unpair`, {
+    method: 'POST',
+    body: JSON.stringify({ device_id: deviceId })
+  });
+}
+
+/** Triggers a remote diagnostic check on a patient's device */
+export async function runDeviceDiagnostic(patientId: string, deviceId: string) {
+  return apiFetch(`/api/devices/patient/${formatPatientId(patientId)}/diagnostic`, {
+    method: 'POST',
+    body: JSON.stringify({ device_id: deviceId })
+  });
+}
+
+/** Technician adds a new biomarker device to warehouse stock */
+export async function addInventoryItem(data: {
+  item: string;
+  category: string;
+  stock: number;
+  min_stock: number;
+  status?: string;
+}) {
+  return apiFetch(`/api/inventory/`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+/** Technician triggers a reorder request for a low-stock item */
+export async function reorderInventory(data: {
+  item_id: string;
+  quantity: number;
+  vendor: string;
+}) {
+  return apiFetch(`/api/inventory/reorder`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+/** List all ML models with their current health metrics */
+export async function fetchModels() {
+  return apiFetch<any[]>(`/api/models/`);
+}
+
+/** Request retraining of a specific ML model */
+export async function requestRetraining(modelId: string) {
+  return apiFetch(`/api/models/${modelId}/retrain`, {
+    method: 'POST'
+  });
+}
+
+/** Calculates effectiveness of each intervention type for a patient */
+export async function fetchInterventionsEffectiveness(patientId: string) {
+  return apiFetch<any>(`/api/dashboard/patient/${formatPatientId(patientId)}/reporting/interventions-effectiveness`);
+}
+
 
 // ─── Peer Cohort Types & Fetch Helpers ──────────────────────────────────────
 

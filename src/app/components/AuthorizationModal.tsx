@@ -4,18 +4,22 @@ interface AuthorizationModalProps {
   isOpen: boolean;
   selectedTherapy: string;
   onClose: () => void;
+  signatureId?: string;
+  signatureDate?: string;
 }
 
 export default function AuthorizationModal({
   isOpen,
   selectedTherapy,
-  onClose
+  onClose,
+  signatureId,
+  signatureDate
 }: AuthorizationModalProps) {
   if (!isOpen) return null;
 
-  // Static ID and Date generated once per mount of this modal to keep it stable
-  const signatureId = "LINDE-AUTH-" + Math.random().toString(36).substring(7).toUpperCase();
-  const signatureDate = new Date().toLocaleString();
+  // Display the passed-in signature details, or generate fallback if not provided
+  const displaySignatureId = signatureId || "LINDE-AUTH-" + Math.random().toString(36).substring(7).toUpperCase();
+  const displaySignatureDate = signatureDate || new Date().toLocaleString();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/40 backdrop-blur-sm">
@@ -38,8 +42,8 @@ export default function AuthorizationModal({
           </p>
           <div className="space-y-1">
             <p className="text-sm font-serif italic text-[#0A1128] border-b border-[#E8EEF2] pb-1">Dr. Sarah Mitchell, MD</p>
-            <p className="text-[8px] text-[#5A6B7C] font-mono">ID: {signatureId}</p>
-            <p className="text-[8px] text-[#5A6B7C] font-mono">DATE: {signatureDate}</p>
+            <p className="text-[8px] text-[#5A6B7C] font-mono">ID: {displaySignatureId}</p>
+            <p className="text-[8px] text-[#5A6B7C] font-mono">DATE: {displaySignatureDate}</p>
           </div>
         </div>
 

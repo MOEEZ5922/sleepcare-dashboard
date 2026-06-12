@@ -462,37 +462,86 @@ export default function UniversalInterventions() {
               <div className="bg-white rounded-xl border border-[#E8EEF2] shadow-sm overflow-hidden">
                  <div className="p-6">
                      <div className="space-y-6 animate-in fade-in duration-300">
-                         <div className="bg-[#2D9596]/5 border border-[#2D9596]/30 rounded-xl p-4">
-                           <div className="flex justify-between items-center mb-4">
-                               <h3 className="text-sm text-[#0A1128] font-bold flex items-center gap-2"><Activity className="w-4 h-4 text-[#2D9596]"/> Escalation Source</h3>
-                           </div>
-                           <div className="flex gap-2 mb-4">
-                             <button onClick={() => setEscalationSource('ai')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${escalationSource === 'ai' ? 'bg-[#2D9596] text-white shadow' : 'bg-white border border-[#E8EEF2] text-[#5A6B7C]'}`}>AI Triggered</button>
-                             <button onClick={() => setEscalationSource('technician')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${escalationSource === 'technician' ? 'bg-[#E76F51] text-white shadow' : 'bg-white border border-[#E8EEF2] text-[#5A6B7C]'}`}>Tech Escalated</button>
-                           </div>
-                           <p className={`text-xs border-l-2 ${escalationSource === 'ai' ? 'border-[#2D9596]' : 'border-[#E76F51]'} bg-white p-3 rounded-r-lg shadow-sm transition-all`}>
-                             {escalationSource === 'ai' 
-                                 ? 'System detected Severe AHI flow issues and automatically escalated for review.'
-                                 : 'Technician logged "Physician Collaboration". Airflow problem requires clinical modification.'}
-                           </p>
-                         </div>
-                         
-                         <label className="block text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-2">Issue Clinical Order</label>
-                         <textarea 
-                             className="w-full h-24 p-3 bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl focus:ring-2 focus:ring-[#2D9596] outline-none mb-4 resize-none text-sm transition-all"
-                             placeholder="e.g. 'Increase pressure to 12 cmH2O due to residual AHI'..."
-                             value={appIahNotes}
-                             onChange={(e) => setAppIahNotes(e.target.value)}
-                         />
+                          {/* Pathway Toggle */}
+                          <div className="flex bg-[#FAFAFA] p-1 rounded-xl border border-[#E8EEF2] mb-4">
+                            <button
+                              onClick={() => setActivePathway('app_iah')}
+                              className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${activePathway === 'app_iah' ? 'bg-white shadow-sm text-[#0A1128] border border-[#E8EEF2]' : 'text-[#5A6B7C]'}`}
+                            >
+                              APPEL IAH
+                            </button>
+                            <button
+                              onClick={() => setActivePathway('alt_therapy')}
+                              className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${activePathway === 'alt_therapy' ? 'bg-white shadow-sm text-[#0A1128] border border-[#E8EEF2]' : 'text-[#5A6B7C]'}`}
+                            >
+                              MAD/HNS PATH
+                            </button>
+                          </div>
 
-                         <button 
-                           onClick={handleAppIahSubmit} 
-                           disabled={!appIahNotes || isSubmitting}
-                           className="w-full bg-[#0A1128] text-white px-4 py-4 rounded-xl hover:bg-[#1a233a] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                         >
-                             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4 text-[#F4A261]" />}
-                             <span className="font-bold uppercase tracking-widest text-xs">Sign Order</span>
-                         </button>
+                          {activePathway === 'app_iah' ? (
+                            <div className="space-y-6">
+                              <div className="bg-[#2D9596]/5 border border-[#2D9596]/30 rounded-xl p-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-sm text-[#0A1128] font-bold flex items-center gap-2"><Activity className="w-4 h-4 text-[#2D9596]"/> Escalation Source</h3>
+                                </div>
+                                <div className="flex gap-2 mb-4">
+                                  <button onClick={() => setEscalationSource('ai')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${escalationSource === 'ai' ? 'bg-[#2D9596] text-white shadow' : 'bg-white border border-[#E8EEF2] text-[#5A6B7C]'}`}>AI Triggered</button>
+                                  <button onClick={() => setEscalationSource('technician')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${escalationSource === 'technician' ? 'bg-[#E76F51] text-white shadow' : 'bg-white border border-[#E8EEF2] text-[#5A6B7C]'}`}>Tech Escalated</button>
+                                </div>
+                                <p className={`text-xs border-l-2 ${escalationSource === 'ai' ? 'border-[#2D9596]' : 'border-[#E76F51]'} bg-white p-3 rounded-r-lg shadow-sm transition-all`}>
+                                  {escalationSource === 'ai' 
+                                      ? 'System detected Severe AHI flow issues and automatically escalated for review.'
+                                      : 'Technician logged "Physician Collaboration". Airflow problem requires clinical modification.'}
+                                </p>
+                              </div>
+                              
+                              <label className="block text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-2">Issue Clinical Order</label>
+                              <textarea 
+                                  className="w-full h-24 p-3 bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl focus:ring-2 focus:ring-[#2D9596] outline-none mb-4 resize-none text-sm transition-all"
+                                  placeholder="e.g. 'Increase pressure to 12 cmH2O due to residual AHI'..."
+                                  value={appIahNotes}
+                                  onChange={(e) => setAppIahNotes(e.target.value)}
+                              />
+     
+                              <button 
+                                onClick={handleAppIahSubmit} 
+                                disabled={!appIahNotes || isSubmitting}
+                                className="w-full bg-[#0A1128] text-white px-4 py-4 rounded-xl hover:bg-[#1a233a] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4 text-[#F4A261]" />}
+                                  <span className="font-bold uppercase tracking-widest text-xs">Sign Order</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-4 animate-in fade-in duration-300">
+                              <div className="grid grid-cols-2 gap-2">
+                                {['MAD', 'HNS'].map(t => (
+                                  <button
+                                    key={t}
+                                    onClick={() => setSelectedTherapy(t)}
+                                    title={t === 'MAD' ? 'Oral appliance used to manage airway collapse' : "Surgically implanted device placed under the skin on the patient's chest"}
+                                    className={`py-3 rounded-lg border-2 text-[10px] font-bold transition-all ${selectedTherapy === t ? 'border-[#2D9596] bg-[#2D9596]/5 text-[#2D9596]' : 'border-[#E8EEF2] text-[#5A6B7C]'}`}
+                                  >
+                                    {t === 'MAD' ? 'Oral Appliance (MAD)' : 'Chest Implant (HNS)'}
+                                  </button>
+                                ))}
+                              </div>
+                              <textarea
+                                value={clinicalNotes}
+                                onChange={(e) => setClinicalNotes(e.target.value)}
+                                placeholder="Rationale..."
+                                className="w-full h-20 bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-3 text-[11px] focus:ring-1 focus:ring-[#2D9596] outline-none"
+                              />
+                              <button
+                                onClick={handleAuthorize}
+                                disabled={!selectedTherapy || !clinicalNotes || isSubmitting}
+                                className="w-full bg-[#2D9596] text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                              >
+                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                Authorize Transition
+                              </button>
+                            </div>
+                          )}
                      </div>
                  </div>
               </div>

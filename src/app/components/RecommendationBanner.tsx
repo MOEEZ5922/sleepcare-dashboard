@@ -28,6 +28,7 @@ interface RecommendationBannerProps {
   rejectReason: string;
   setRejectReason: (reason: string) => void;
   onAccept: () => void;
+  onReject: (reason: string) => void;
   onUndo: () => void;
 }
 
@@ -45,6 +46,7 @@ export default function RecommendationBanner({
   rejectReason,
   setRejectReason,
   onAccept,
+  onReject,
   onUndo
 }: RecommendationBannerProps) {
   return (
@@ -155,7 +157,7 @@ export default function RecommendationBanner({
                   <option value="OTHER">Other (Add Note)</option>
                 </select>
                 <button
-                  onClick={() => setGateStatus('rejected')}
+                  onClick={() => onReject(rejectReason)}
                   disabled={!rejectReason}
                   className="bg-coral hover:bg-coral/90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg font-bold text-sm transition-colors shrink-0"
                 >

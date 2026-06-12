@@ -32,6 +32,9 @@ import {
   fetchWeeklyAnalysis,
   fetchCpapTrends,
   fetchInterventions,
+  createIntervention,
+  createAuthorization,
+  submitClinicianOverride,
   PatientSummary,
   WeeklyAnalysis,
   CpapTrends
@@ -95,8 +98,26 @@ export default function SummaryContent({
   const [highlightActionCenter, setHighlightActionCenter] = useState(false);
   const [techActionHint, setTechActionHint] = useState('');
 
-  const handleAcceptRecommendation = () => {
+  const [signatureId, setSignatureId] = useState('');
+  const [signatureDate, setSignatureDate] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleOverride = async (status: 'accepted' | 'rejected', reason?: string) => {
+    try {
+      await submitClinicianOverride(id, {
+        status,
+        reject_reason: reason,
+        notes: status === 'accepted' ? 'Accepted recommendation via dashboard' : 'Rejected recommendation via dashboard'
+      });
+      toast.success(`Recommendation ${status === 'accepted' ? 'Approved' : 'Rejected'}!`);
+    } catch (err) {
+      console.error('Failed to log clinician override', err);
+    }
+  };
+
+  const handleAcceptRecommendation = async () => {
     setGateStatus('accepted');
+    await handleOverride('accepted');
     
     // Connected workflow logic
     if (role === 'physician') {
@@ -134,13 +155,94 @@ export default function SummaryContent({
     setTimeout(() => setHighlightActionCenter(false), 5000); // Glow for 5 seconds
   };
 
-  const handleAuthorize = () => {
-    setShowLogConfirmation(true);
+  const handleRejectRecommendation = async (reason: string) => {
+    setGateStatus('rejected');
+    await handleOverride('rejected', reason);
   };
 
-  const handleOrderSubmit = () => {
-    setShowOrderModal(false);
-    toast.success(`Clinical Order Logged successfully.`);
+  const handleAuthorize = async () => {
+    setIsSubmitting(true);
+    const sigId = "LINDE-AUTH-" + Math.random().toString(36).substring(7).toUpperCase();
+    const sigDate = new Date().toLocaleString();
+    
+    setSignatureId(sigId);
+    setSignatureDate(sigDate);
+
+    try {
+      await createAuthorization(id, {
+        type: selectedTherapy,
+        status: 'Approved',
+        physician_id: 'PHY102',
+        digital_seal_hash: sigId
+      });
+
+      // Also log it as a successful clinical intervention
+      await createIntervention(id, {
+        type: `Authorization: ${selectedTherapy}`,
+        job_code: 'AUTH-TRANS',
+        actor: { role: 'physician', id: 'PHY102' },
+        outcome: 'Success',
+        notes: clinicalNotes,
+        signature_hash: sigId
+      });
+
+      toast.success(`Transition to ${selectedTherapy} Authorized!`);
+      refetchInt();
+      setShowLogConfirmation(true);
+    } catch (err) {
+      toast.error('Failed to authorize transition.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOrderSubmit = async () => {
+    setIsSubmitting(true);
+    const sigId = "LINDE-AUTH-" + Math.random().toString(36).substring(7).toUpperCase();
+    const sigDate = new Date().toLocaleString();
+    
+    setSignatureId(sigId);
+    setSignatureDate(sigDate);
+
+    try {
+      await createIntervention(id, {
+        type: 'Clinical Order',
+        job_code: 'CLIN-ORD',
+        actor: { role: 'physician', id: 'PHY102' },
+        outcome: 'Success',
+        notes: appIahNotes,
+        signature_hash: sigId
+      });
+
+      toast.success(`Clinical Order Logged successfully.`);
+      refetchInt();
+      setShowOrderModal(false);
+      setSelectedTherapy('Clinical Order');
+      setShowLogConfirmation(true);
+    } catch (err) {
+      toast.error('Failed to log clinical order.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTechAction = async (actionType: string, jobCode: string, notes: string) => {
+    setIsSubmitting(true);
+    try {
+      await createIntervention(id, {
+        type: actionType,
+        job_code: jobCode,
+        actor: { role: 'technician', id: 'TECH-001' },
+        outcome: 'Success',
+        notes
+      });
+      toast.success(`${actionType} logged successfully!`);
+      refetchInt();
+    } catch (err) {
+      toast.error(`Failed to log ${actionType.toLowerCase()}.`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if ((isSumLoading || isAiLoading) && (!summary || !ai)) {
@@ -177,6 +279,7 @@ export default function SummaryContent({
           rejectReason={rejectReason}
           setRejectReason={setRejectReason}
           onAccept={handleAcceptRecommendation}
+          onReject={handleRejectRecommendation}
           onUndo={() => { 
             setGateStatus('pending'); 
             setShowRejectMenu(false); 
@@ -379,9 +482,10 @@ export default function SummaryContent({
                       />
                       <button
                         onClick={handleAuthorize}
-                        disabled={!selectedTherapy || !clinicalNotes}
+                        disabled={!selectedTherapy || !clinicalNotes || isSubmitting}
                         className="w-full bg-[#2D9596] text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 disabled:opacity-40"
                       >
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                         Authorize Transition
                       </button>
                     </div>
@@ -389,29 +493,46 @@ export default function SummaryContent({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <button className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
+                  <button 
+                    onClick={() => handleTechAction('Remote Call', 'EX-TEL', 'Remote call initiated via cockpit.')}
+                    disabled={isSubmitting}
+                    className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
                     techActionHint === 'Initiate Call' 
                       ? 'bg-[#6A994E] shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]' 
-                      : 'bg-[#F4A261] hover:bg-[#e08e4a]'
+                      : 'bg-[#F4A261] hover:bg-[#e08e4a] disabled:opacity-50'
                   }`}>
-                    <Phone className="w-4 h-4" /> Initiate Call {techActionHint === 'Initiate Call' && '✨'}
+                    {isSubmitting && techActionHint === 'Initiate Call' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />} 
+                    Initiate Call {techActionHint === 'Initiate Call' && '✨'}
                   </button>
-                  <button className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
+                  <button 
+                    onClick={() => handleTechAction('Delivery', 'EX-DISP', 'Asset delivery dispatched via cockpit.')}
+                    disabled={isSubmitting}
+                    className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
                     techActionHint === 'Dispatch Asset' 
                       ? 'bg-[#6A994E] shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]' 
-                      : 'bg-[#0A1128] hover:bg-black'
+                      : 'bg-[#0A1128] hover:bg-black disabled:opacity-50'
                   }`}>
-                    <Truck className="w-4 h-4" /> Dispatch Asset {techActionHint === 'Dispatch Asset' && '✨'}
+                    {isSubmitting && techActionHint === 'Dispatch Asset' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />} 
+                    Dispatch Asset {techActionHint === 'Dispatch Asset' && '✨'}
                   </button>
-                  <button className={`w-full font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
+                  <button 
+                    onClick={() => handleTechAction('Visit', 'O7', 'Home visit scheduled via cockpit.')}
+                    disabled={isSubmitting}
+                    className={`w-full font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
                     techActionHint === 'Schedule Visit' 
                       ? 'bg-[#6A994E] text-white shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]' 
-                      : 'bg-white border-2 border-[#E8EEF2] text-[#0A1128] hover:bg-[#FAFAFA]'
+                      : 'bg-white border-2 border-[#E8EEF2] text-[#0A1128] hover:bg-[#FAFAFA] disabled:opacity-50'
                   }`}>
-                    <Calendar className="w-4 h-4 text-[#F4A261]" /> Schedule Visit {techActionHint === 'Schedule Visit' && '✨'}
+                    {isSubmitting && techActionHint === 'Schedule Visit' ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Calendar className="w-4 h-4 text-[#F4A261]" />} 
+                    Schedule Visit {techActionHint === 'Schedule Visit' && '✨'}
                   </button>
-                  <button className="w-full bg-white border-2 border-[#E8EEF2] text-[#0A1128] font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-[#E8EEF2] transition-colors mt-4">
-                    <Stethoscope className="w-4 h-4" /> Escalate to Physician
+                  <button 
+                    onClick={() => handleTechAction('Physician Escalation', 'SL-REF', 'Escalated patient to physician for clinical pathway review.')}
+                    disabled={isSubmitting}
+                    className="w-full bg-white border-2 border-[#E8EEF2] text-[#0A1128] font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-[#E8EEF2] transition-colors mt-4 disabled:opacity-50"
+                  >
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-[#0A1128]" /> : <Stethoscope className="w-4 h-4" />} 
+                    Escalate to Physician
                   </button>
                 </div>
               )}
@@ -432,20 +553,21 @@ export default function SummaryContent({
         notes={appIahNotes}
         setNotes={setAppIahNotes}
         onClose={() => setShowOrderModal(false)}
-        onSubmit={() => {
-          setShowOrderModal(false);
-          setSelectedTherapy('Clinical Order');
-          setShowLogConfirmation(true);
-        }}
+        onSubmit={handleOrderSubmit}
+        isSubmitting={isSubmitting}
       />
 
       <AuthorizationModal
         isOpen={showLogConfirmation}
         selectedTherapy={selectedTherapy}
+        signatureId={signatureId}
+        signatureDate={signatureDate}
         onClose={() => {
           setShowLogConfirmation(false);
           setSelectedTherapy('');
           setClinicalNotes('');
+          setSignatureId('');
+          setSignatureDate('');
         }}
       />
     </div>

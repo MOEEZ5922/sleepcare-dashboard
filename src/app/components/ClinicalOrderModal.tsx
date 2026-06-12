@@ -1,4 +1,4 @@
-import { FileSignature } from 'lucide-react';
+import { FileSignature, Loader2 } from 'lucide-react';
 
 interface ClinicalOrderModalProps {
   isOpen: boolean;
@@ -6,6 +6,7 @@ interface ClinicalOrderModalProps {
   setNotes: (notes: string) => void;
   onClose: () => void;
   onSubmit: () => void;
+  isSubmitting?: boolean;
 }
 
 export default function ClinicalOrderModal({
@@ -13,7 +14,8 @@ export default function ClinicalOrderModal({
   notes,
   setNotes,
   onClose,
-  onSubmit
+  onSubmit,
+  isSubmitting = false
 }: ClinicalOrderModalProps) {
   if (!isOpen) return null;
 
@@ -29,8 +31,11 @@ export default function ClinicalOrderModal({
           className="w-full h-32 bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-4 text-sm focus:ring-2 focus:ring-[#2D9596] outline-none mb-6"
         />
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-4 bg-[#E8EEF2] text-[#5A6B7C] font-bold rounded-xl text-xs">Cancel</button>
-          <button onClick={onSubmit} disabled={!notes} className="flex-2 py-4 bg-[#2D9596] text-white font-bold rounded-xl text-xs shadow-lg shadow-[#2D9596]/20">Sign & Log Order</button>
+          <button onClick={onClose} disabled={isSubmitting} className="flex-1 py-4 bg-[#E8EEF2] text-[#5A6B7C] font-bold rounded-xl text-xs">Cancel</button>
+          <button onClick={onSubmit} disabled={!notes || isSubmitting} className="flex-2 py-4 bg-[#2D9596] text-white font-bold rounded-xl text-xs shadow-lg shadow-[#2D9596]/20 flex items-center justify-center gap-1.5">
+            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+            Sign & Log Order
+          </button>
         </div>
       </div>
     </div>
