@@ -188,6 +188,7 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
       ...options,
     });
     if (!res.ok) {
@@ -467,11 +468,11 @@ export async function fetchInventory() {
 /** Backend health check */
 export async function checkHealth() {
   try {
-    const res = await fetch(`${BASE_URL}/health`);
+    const res = await fetch(`${BASE_URL}/health`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Clinical services unavailable');
     return await res.json();
   } catch (error) {
-    const res = await fetch(`${BASE_URL}/api/patients/`);
+    const res = await fetch(`${BASE_URL}/api/patients/`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Clinical services unavailable');
     return { status: 'ok' };
   }
