@@ -13,7 +13,7 @@ export default function PatientLayout() {
     cacheKey: `patient-summary-${id || '1'}`
   });
 
-  const isLive = !error && !!summary;
+  const isLive = !!(summary && (summary as any).__isLive);
   const patientName = (summary?.name || summary?.patient?.name)?.split(' ')[0] || 'Patient';
 
   const navigation = [

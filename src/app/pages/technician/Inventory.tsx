@@ -10,7 +10,7 @@ export default function TechnicianInventory() {
   });
 
   const stock: any[] = Array.isArray(inventory) ? inventory : ((inventory as any)?.items || (inventory as any)?.inventory || []);
-  const isLive = !error && !!inventory;
+  const isLive = !!(inventory && (inventory as any).__isLive);
 
   const [searchTerm, setSearchTerm] = useState('');
 

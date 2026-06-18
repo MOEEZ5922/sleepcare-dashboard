@@ -59,7 +59,7 @@ export default function TechnicianHome() {
   const events: any[] = Array.isArray(eventsData) ? eventsData : ((eventsData as any)?.events || []);
   const rawQueue: any[] = Array.isArray(queueData) ? queueData : ((queueData as any)?.patients || (queueData as any)?.queue || []);
   const queue = [...rawQueue].sort((a, b) => (b.dropoutRisk || 0) - (a.dropoutRisk || 0));
-  const isLive = !eventError && !!eventsData;
+  const isLive = !!(eventsData && (eventsData as any).__isLive);
 
 
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);

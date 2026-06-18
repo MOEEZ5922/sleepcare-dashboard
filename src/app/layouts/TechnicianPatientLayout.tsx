@@ -13,7 +13,7 @@ export default function TechnicianPatientLayout() {
     cacheKey: `patient-summary-${id || '1'}`
   });
 
-  const isLive = !error && !!summary;
+  const isLive = !!(summary && (summary as any).__isLive);
 
   const tabs = [
     { name: 'Clinical Summary', href: `/technician/patient/${id}` },

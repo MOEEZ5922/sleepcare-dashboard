@@ -46,7 +46,7 @@ export default function UniversalAIAnalysis() {
 
   const [sensingStatus, setSensingStatus] = useState<'idle' | 'loading' | 'success'>('idle');
 
-  const isLive = !error && !!ai;
+  const isLive = !!(ai && (ai as any).__isLive);
 
   if (isLoading && !ai) {
     return (

@@ -18,7 +18,7 @@ export default function UniversalCPAP({ role = 'physician' }: { role?: 'physicia
     cacheKey: `cpap-trends-${chartPeriod}-${id || '1'}`
   });
 
-  const isLive = !error && !!cpap;
+  const isLive = !!(cpap && (cpap as any).__isLive);
 
   if (isLoading && !cpap) {
     return (

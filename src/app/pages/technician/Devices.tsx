@@ -13,7 +13,7 @@ export default function TechnicianDevices() {
     cacheKey: `devices-${id || '1'}`
   });
 
-  const isLive = !error && !!devices;
+  const isLive = !!(devices && (devices as any).__isLive);
 
   // Pairing Modal States
   const [showPairModal, setShowPairModal] = useState(false);

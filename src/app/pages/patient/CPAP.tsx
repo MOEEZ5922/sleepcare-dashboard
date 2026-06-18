@@ -10,7 +10,7 @@ export default function PatientCPAP() {
     cacheKey: `cpap-trends-7-${id || '1'}`
   });
 
-  const isLive = !error && !!cpapData;
+  const isLive = !!(cpapData && (cpapData as any).__isLive);
 
   if (isLoading && !cpapData) {
     return (

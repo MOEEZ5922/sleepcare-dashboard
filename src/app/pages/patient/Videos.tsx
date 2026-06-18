@@ -45,7 +45,7 @@ export default function PatientVideos() {
 
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
 
-  const isLive = !error && !!liveVideos;
+  const isLive = !!(liveVideos && (liveVideos as any).__isLive);
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
   const videos = useMemo(() => {
     const list = Array.isArray(rawVideos) ? rawVideos : [];

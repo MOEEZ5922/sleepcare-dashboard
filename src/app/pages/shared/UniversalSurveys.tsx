@@ -171,7 +171,7 @@ export default function UniversalSurveys() {
       cacheKey: `surveys-${id || '1'}`
    });
 
-   const isLive = !error && !!liveSurveys;
+   const isLive = !!(liveSurveys && (liveSurveys as any).__isLive);
 
    const [activeSurvey, setActiveSurvey] = useState<SurveyType>('ESS');
    const [selectedForm, setSelectedForm] = useState('');

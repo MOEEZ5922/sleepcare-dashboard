@@ -39,7 +39,7 @@ export default function PatientHome() {
     return () => clearInterval(interval);
   }, [refetchSummary, refetchTrends, refetchSurveys]);
 
-  const isLive = !summaryError && !!summary;
+  const isLive = !!(summary && (summary as any).__isLive);
   
   const [showVideoBanner, setShowVideoBanner] = useState(true);
   const [showMicroSurvey, setShowMicroSurvey] = useState(true);

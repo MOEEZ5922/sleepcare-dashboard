@@ -12,7 +12,7 @@ export default function PhysicianDirectory() {
     cacheKey: 'physician-directory'
   });
 
-  const isLive = !error && !!patients;
+  const isLive = !!(patients && (patients as any).__isLive);
 
   const rawList = Array.isArray(patients) ? patients : (patients?.patients || []);
   const patientList = rawList.map((p: any) => {

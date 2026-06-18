@@ -20,7 +20,7 @@ export default function UniversalInterventions() {
     cacheKey: `authorizations-${id || '1'}`
   });
 
-  const isLive = (!intError && !!liveInterventions) || (!authError && !!liveAuths);
+  const isLive = !!((liveInterventions && (liveInterventions as any).__isLive) || (liveAuths && (liveAuths as any).__isLive));
 
   const [activePathway, setActivePathway] = useState<'app_iah' | 'alt_therapy'>('app_iah');
   const [selectedTherapy, setSelectedTherapy] = useState('');

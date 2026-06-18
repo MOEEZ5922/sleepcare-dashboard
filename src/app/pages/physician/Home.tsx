@@ -13,7 +13,7 @@ export default function PhysicianHome() {
     cacheKey: 'physician-queue'
   });
 
-  const isLive = !error && !!queue;
+  const isLive = !!(queue && (queue as any).__isLive);
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
 
   // Set initial selected patient and tab when queue loads

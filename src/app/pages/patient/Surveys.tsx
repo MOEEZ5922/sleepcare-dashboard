@@ -62,7 +62,7 @@ export default function PatientSurveys() {
     cacheKey: `surveys-${id || '1'}`
   });
 
-  const isLive = !error && !!liveSurveys;
+  const isLive = !!(liveSurveys && (liveSurveys as any).__isLive);
   const nextSurvey = liveSurveys?.patient?.next || { 
     name: 'Health Survey', 
     dueDate: new Date().toISOString(), 

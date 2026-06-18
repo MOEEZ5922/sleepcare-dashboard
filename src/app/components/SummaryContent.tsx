@@ -81,7 +81,7 @@ export default function SummaryContent({
     cacheKey: `interventions-${id}`
   });
 
-  const isLive = !sumError && !!summary;
+  const isLive = !!(summary && (summary as any).__isLive);
 
   const [showLogConfirmation, setShowLogConfirmation] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);

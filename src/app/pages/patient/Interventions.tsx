@@ -15,7 +15,7 @@ export default function PatientInterventions() {
     cacheKey: `devices-${id || '1'}`
   });
 
-  const isLive = !intError && !!liveInterventions;
+  const isLive = !!(liveInterventions && (liveInterventions as any).__isLive);
   const delivery = (liveInterventions as any)?.patient?.upcomingDelivery || (liveInterventions as any)?.upcomingDelivery || null;
   const devices = Array.isArray(liveDevices) ? liveDevices : [];
 

@@ -193,7 +193,11 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     if (!res.ok) {
       throw new Error(`API Error ${res.status}: ${res.statusText} — ${endpoint}`);
     }
-    return await res.json();
+    const data = await res.json();
+    if (data && typeof data === 'object') {
+      (data as any).__isLive = true;
+    }
+    return data;
   } catch (error) {
     console.warn(`Falling back to mock data for: ${endpoint}`, error);
 
@@ -328,7 +332,7 @@ export async function fetchCpapTrends(patientId: string, days = 90): Promise<Cpa
     else break;
   }
 
-  return {
+  const result: CpapTrends = {
     averageHours: data.avg_usage_hours || 0,
     currentAHI: sortedSessions[0]?.ahi || 0,
     percentileLeak: sortedSessions[0]?.leaks95 || sortedSessions[0]?.leaks90 || 0,
@@ -348,6 +352,11 @@ export async function fetchCpapTrends(patientId: string, days = 90): Promise<Cpa
       pressure90: s.pressure90
     })).reverse()
   };
+
+  if ((data as any).__isLive) {
+    (result as any).__isLive = true;
+  }
+  return result;
 }
 
 /** Get biomarker data for a patient (legacy mock-compatible) */
@@ -378,7 +387,11 @@ export async function fetchSleepData(patientId: string): Promise<{ nights: Somno
 /** Get biomarker devices assigned to a patient */
 export async function fetchDevices(patientId: string): Promise<DeviceInfo[]> {
   const data = await apiFetch<any>(`/api/devices/patient/${formatPatientId(patientId)}`);
-  return data.devices || data || [];
+  const devices = data.devices || data || [];
+  if (data && (data as any).__isLive) {
+    (devices as any).__isLive = true;
+  }
+  return devices;
 }
 
 /** Get intervention history for a patient */
@@ -387,10 +400,15 @@ export async function fetchInterventions(patientId: string): Promise<any[]> {
   const list = data.interventions || (Array.isArray(data) ? data : []);
 
   // Ensure every item has a 'type' field (mapping from backend 'job_category' if needed)
-  return list.map((item: any) => ({
+  const mapped = list.map((item: any) => ({
     ...item,
     type: item.type || item.job_category || 'Intervention'
   }));
+
+  if (data && (data as any).__isLive) {
+    (mapped as any).__isLive = true;
+  }
+  return mapped;
 }
 
 /** Get survey data for a patient */
@@ -402,7 +420,7 @@ export async function fetchSurveys(patientId: string): Promise<SurveyResponse> {
       apiFetch<any>(`/api/surveys/${patientIdFormatted}/medical`).catch(() => ({ physician: [] }))
     ]);
 
-    return {
+    const result: SurveyResponse = {
       physician: medicalData?.physician || (Array.isArray(medicalData) ? medicalData : []),
       technician: monitoringData?.technician || (Array.isArray(monitoringData) ? monitoringData : []),
       calendar: monitoringData?.calendar || medicalData?.calendar || [],
@@ -416,6 +434,11 @@ export async function fetchSurveys(patientId: string): Promise<SurveyResponse> {
         history: []
       }
     };
+
+    if ((monitoringData as any)?.__isLive || (medicalData as any)?.__isLive) {
+      (result as any).__isLive = true;
+    }
+    return result;
   } catch (err) {
     return apiFetch<SurveyResponse>(`/api/surveys/${patientIdFormatted}/monitoring`);
   }

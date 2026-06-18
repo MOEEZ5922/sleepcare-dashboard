@@ -13,7 +13,7 @@ export default function PhysicianPatientLayout() {
     cacheKey: `patient-summary-${id || '1'}`
   });
 
-  const isLive = !error && !!summary;
+  const isLive = !!(summary && (summary as any).__isLive);
 
   const getRiskColor = (score: number) => {
     if (score >= 80) return 'text-[#E76F51]';
