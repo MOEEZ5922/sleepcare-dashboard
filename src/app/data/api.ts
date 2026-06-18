@@ -1,6 +1,6 @@
 import * as mock from './mockData';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://cpap-backend-v3.onrender.com';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 /** Resolves video URLs that may be relative or absolute from the video storage server */
 export function getFullVideoUrl(url: string | null | undefined): string {
