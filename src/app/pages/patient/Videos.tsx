@@ -325,7 +325,6 @@ export default function PatientVideos() {
                 className="w-full h-full" 
                 controls 
                 autoPlay
-                crossOrigin="anonymous"
               >
                 <source src={getFullVideoUrl(activeVideo.url || activeVideo.video_url || 'https://www.w3schools.com/html/mov_bbb.mp4')} type="video/mp4" />
                 <track 

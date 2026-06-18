@@ -4,7 +4,9 @@ const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 /** Resolves video URLs that may be relative or absolute from the video storage server */
 export function getFullVideoUrl(url: string | null | undefined): string {
-  if (!url) return '';
+  if (!url || url.includes('mock.video')) {
+    return 'https://www.w3schools.com/html/mov_bbb.mp4';
+  }
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;
   }

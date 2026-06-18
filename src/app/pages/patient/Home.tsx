@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Moon, Flame, ChevronRight, Package, FileText, Sparkles, Video, HelpCircle, X, AlertCircle, Play, Signal, Loader2 } from 'lucide-react';
+import { Moon, Flame, ChevronRight, Package, FileText, Sparkles, Video, HelpCircle, X, AlertCircle, Play, Signal, Loader2, Star } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useApi } from '../../hooks/useApi';
 import { 
@@ -7,6 +7,9 @@ import {
   fetchCpapTrends, 
   fetchSurveys, 
   submitSurveyResponse,
+  fetchVideos,
+  submitVideoInteraction,
+  getFullVideoUrl,
   PatientSummary,
   CpapTrends,
   SurveyResponse
@@ -28,6 +31,10 @@ export default function PatientHome() {
     dependencies: [id],
     cacheKey: `surveys-${id || '1'}`
   });
+  const { data: liveVideos } = useApi<any[]>(() => fetchVideos(id || '1'), {
+    dependencies: [id],
+    cacheKey: `videos-${id || '1'}`
+  });
 
   // Poll Cloud DB every 3 seconds for real-time edge triggers written by RPi
   React.useEffect(() => {
@@ -45,6 +52,30 @@ export default function PatientHome() {
   const [showMicroSurvey, setShowMicroSurvey] = useState(true);
   const [surveyResponse, setSurveyResponse] = useState<string | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'video' | null>('welcome');
+  const [activeVideo, setActiveVideo] = useState<any | null>(null);
+  const [ratingMap, setRatingMap] = useState<{ [id: string | number]: number | null }>({});
+
+  const handleRating = async (videoId: string | number, stars: number) => {
+    setRatingMap(prev => ({ ...prev, [videoId]: stars }));
+    try {
+      await submitVideoInteraction(id || '1', videoId, {
+        watched: true,
+        rating: stars,
+        watch_duration_seconds: 120
+      });
+    } catch (err) {
+      console.error('Failed to log video rating');
+    }
+  };
+
+  const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
+  const videos = Array.isArray(rawVideos) ? rawVideos : [];
+  const comfortVideo = videos.find((v: any) => v.category === 'Mask & Equipment' || v.id === 1) || videos[0] || {
+    id: 1,
+    title: "How to Tighten Your Mask for a Better Seal",
+    url: "https://www.w3schools.com/html/mov_bbb.mp4",
+    category: "Mask & Equipment"
+  };
 
   // Derive data from CPAP trends API
   const usageHistory = cpapTrends?.usageHistory || [];
@@ -103,7 +134,10 @@ export default function PatientHome() {
         {cpapTrends && cpapTrends.percentileLeak > 20 && (
           <div className="bg-gradient-to-br from-[#0A1128] to-[#1E293B] text-white rounded-[2rem] p-8 shadow-2xl relative overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500">
             <div className="flex items-start gap-6">
-              <div className="w-16 h-16 bg-[#F4A261]/20 rounded-[1.25rem] flex items-center justify-center flex-shrink-0 relative overflow-hidden group cursor-pointer shadow-lg">
+              <div 
+                onClick={() => setActiveVideo(comfortVideo)}
+                className="w-16 h-16 bg-[#F4A261]/20 rounded-[1.25rem] flex items-center justify-center flex-shrink-0 relative overflow-hidden group cursor-pointer shadow-lg"
+              >
                 <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=150" alt="Video thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-all scale-110 group-hover:scale-100" />
                 <div className="absolute inset-0 bg-[#F4A261]/20 group-hover:bg-transparent transition-all" />
                 <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
@@ -116,7 +150,7 @@ export default function PatientHome() {
                 <h3 className="text-xl font-bold mb-4 leading-tight">Your mask had a tiny leak of {cpapTrends.percentileLeak} L/min last night. Let's optimize it for deeper comfort in 60s!</h3>
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => navigate(`/patient/${id}/videos`)}
+                    onClick={() => setActiveVideo(comfortVideo)}
                     className="bg-[#2D9596] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#247c7d] transition-all shadow-lg active:scale-95 text-xs"
                   >
                     View Comfort Tip (1 min)
@@ -396,7 +430,10 @@ export default function PatientHome() {
               Hello <span className="font-bold text-[#0A1128]">{summary?.name || 'there'}</span>! Your SleepCare portal is fully connected.
             </p>
             
-            <div className="relative w-full h-36 bg-gray-100 rounded-2xl mb-5 overflow-hidden group cursor-pointer shadow-sm border border-[#E8EEF2]">
+            <div 
+              onClick={() => { setActiveVideo(comfortVideo); setOnboardingStep(null); }}
+              className="relative w-full h-36 bg-gray-100 rounded-2xl mb-5 overflow-hidden group cursor-pointer shadow-sm border border-[#E8EEF2]"
+            >
               <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=400" alt="Video thumbnail" className="w-full h-full object-cover opacity-90 group-hover:scale-102 transition-transform duration-500" />
               <div className="absolute inset-0 bg-[#0A1128]/10 group-hover:bg-[#0A1128]/5 transition-colors flex items-center justify-center">
                 <div className="w-12 h-12 bg-white/95 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform">
@@ -411,7 +448,7 @@ export default function PatientHome() {
             
             <div className="flex flex-col gap-3">
               <button 
-                onClick={() => navigate(`/patient/${id}/videos`)}
+                onClick={() => { setActiveVideo(comfortVideo); setOnboardingStep(null); }}
                 className="w-full bg-[#2D9596] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#2D9596]/15 hover:bg-[#247c7d] transition-all hover:shadow-xl hover:scale-[1.01]"
               >
                 Watch Comfort Tip (1:00)
@@ -422,6 +459,80 @@ export default function PatientHome() {
               >
                 Go to Dashboard
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Video Player Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#0A1128]/85 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
+              <div>
+                <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block mb-1">
+                  {activeVideo.category}
+                </span>
+                <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">{activeVideo.title}</h3>
+              </div>
+              <button 
+                onClick={() => setActiveVideo(null)}
+                className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Video Canvas */}
+            <div className="relative bg-black aspect-video flex items-center justify-center">
+              <video 
+                key={activeVideo.id}
+                className="w-full h-full" 
+                controls 
+                autoPlay
+              >
+                <source src={getFullVideoUrl(activeVideo.url || activeVideo.video_url || 'https://www.w3schools.com/html/mov_bbb.mp4')} type="video/mp4" />
+                <track 
+                  src={activeVideo.vtt_en_url || activeVideo.subtitles_en || ''} 
+                  kind="subtitles" 
+                  srcLang="en" 
+                  label="English" 
+                  default 
+                />
+                <track 
+                  src={activeVideo.vtt_fr_url || activeVideo.subtitles_fr || ''} 
+                  kind="subtitles" 
+                  srcLang="fr" 
+                  label="Français" 
+                />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+
+            {/* Quick Feedback Action */}
+            <div className="p-5 bg-[#FAFAFA] border-t border-[#E8EEF2] text-center space-y-3">
+              <p className="text-xs font-bold text-[#0A1128]">Was this coaching tip helpful?</p>
+              <div className="flex justify-center gap-1.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => handleRating(activeVideo.id, star)}
+                    className="p-1 hover:scale-110 transition-transform"
+                  >
+                    <Star
+                      className="w-6 h-6 transition-colors"
+                      fill={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : 'none'}
+                      stroke={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : '#CBD5E1'}
+                    />
+                  </button>
+                ))}
+              </div>
+              {ratingMap[activeVideo.id] && (
+                <p className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider animate-pulse">
+                  ✓ Feedback logged to care portal
+                </p>
+              )}
             </div>
           </div>
         </div>
