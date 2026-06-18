@@ -28,6 +28,25 @@ const thumbnailGradients: { [key: string]: string } = {
   'Lifestyle': 'from-[#0A1128] to-[#1a233a]',
 };
 
+function getSubtitleUrl(videoUrl: string | null | undefined, lang: 'en' | 'fr'): string {
+  if (!videoUrl) return '';
+  if (videoUrl.includes('/videos/existing/') || videoUrl.includes('/videos/new/')) {
+    const base = videoUrl.replace(/\/videos\/(existing|new)\//, '/subtitles/');
+    const index = base.lastIndexOf('.');
+    if (index !== -1) {
+      const withoutExt = base.substring(0, index);
+      if (lang === 'fr' && withoutExt.endsWith('_en')) {
+        return withoutExt.substring(0, withoutExt.length - 3) + '_fr.vtt';
+      }
+      if (lang === 'en' && withoutExt.endsWith('_fr')) {
+        return withoutExt.substring(0, withoutExt.length - 3) + '_en.vtt';
+      }
+      return withoutExt + '.vtt';
+    }
+  }
+  return '';
+}
+
 export default function PatientVideos() {
   const { id } = useParams();
   const { data: liveVideos, isLoading, error, refetch: refetchVideos } = useApi(() => fetchVideos(id || '1'), {
@@ -185,7 +204,7 @@ export default function PatientVideos() {
                     <span className="opacity-60">|</span>
                     <span>{video.category}</span>
                   </div>
-                  <button
+                  <button type="button"
                     onClick={() => handleWatch(video)}
                     className="w-full bg-white text-[#0A1128] hover:bg-white/90 transition-all font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm"
                   >
@@ -228,18 +247,18 @@ export default function PatientVideos() {
           >
             <div className="flex gap-4 p-4">
               {/* Thumbnail */}
-              <div className={`relative w-28 h-20 bg-gradient-to-br ${thumbnailGradients[video.category] || 'from-[#2D9596] to-[#1a7273]'} rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer overflow-hidden group`}
-                onClick={() => handleWatch(video)}
-              >
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
-                {watchedMap[video.id]
-                  ? <CheckCircle className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
-                  : <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
-                }
-                <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
-                  {video.duration}
-                </div>
-              </div>
+                <button type="button" className={`relative w-28 h-20 bg-gradient-to-br ${thumbnailGradients[video.category] || 'from-[#2D9596] to-[#1a7273]'} rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden group`}
+                  onClick={() => handleWatch(video)}
+                >
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                  {watchedMap[video.id]
+                    ? <CheckCircle className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
+                    : <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
+                  }
+                  <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                    {video.duration}
+                  </div>
+                </button>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
@@ -275,7 +294,7 @@ export default function PatientVideos() {
                     </div>
                   </div>
                 ) : (
-                  <button
+                  <button type="button"
                     onClick={() => handleWatch(video)}
                     className="text-xs text-[#2D9596] font-bold flex items-center gap-1 hover:gap-2 transition-all uppercase tracking-widest"
                   >
@@ -325,17 +344,18 @@ export default function PatientVideos() {
                 className="w-full h-full" 
                 controls 
                 autoPlay
+                crossOrigin="anonymous"
+                src={getFullVideoUrl(activeVideo.url || activeVideo.video_url || 'https://www.w3schools.com/html/mov_bbb.mp4') + '?cb=' + (activeVideo.id || '1')}
               >
-                <source src={getFullVideoUrl(activeVideo.url || activeVideo.video_url || 'https://www.w3schools.com/html/mov_bbb.mp4')} type="video/mp4" />
                 <track 
-                  src={activeVideo.vtt_en_url || activeVideo.subtitles_en || ''} 
+                  src={activeVideo.vtt_en_url || activeVideo.subtitles_en || getSubtitleUrl(activeVideo.url || activeVideo.video_url, 'en')} 
                   kind="subtitles" 
                   srcLang="en" 
                   label="English" 
                   default 
                 />
                 <track 
-                  src={activeVideo.vtt_fr_url || activeVideo.subtitles_fr || ''} 
+                  src={activeVideo.vtt_fr_url || activeVideo.subtitles_fr || getSubtitleUrl(activeVideo.url || activeVideo.video_url, 'fr')} 
                   kind="subtitles" 
                   srcLang="fr" 
                   label="Français" 

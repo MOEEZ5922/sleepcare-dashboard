@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Moon, Flame, ChevronRight, Package, FileText, Sparkles, Video, HelpCircle, X, AlertCircle, Play, Signal, Loader2, Star } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useApi } from '../../hooks/useApi';
-import { 
-  fetchPatientSummary, 
-  fetchCpapTrends, 
-  fetchSurveys, 
+import {
+  fetchPatientSummary,
+  fetchCpapTrends,
+  fetchSurveys,
   submitSurveyResponse,
   fetchVideos,
   submitVideoInteraction,
@@ -15,10 +15,29 @@ import {
   SurveyResponse
 } from '../../data/api';
 
+function getSubtitleUrl(videoUrl: string | null | undefined, lang: 'en' | 'fr'): string {
+  if (!videoUrl) return '';
+  if (videoUrl.includes('/videos/existing/') || videoUrl.includes('/videos/new/')) {
+    const base = videoUrl.replace(/\/videos\/(existing|new)\//, '/subtitles/');
+    const index = base.lastIndexOf('.');
+    if (index !== -1) {
+      const withoutExt = base.substring(0, index);
+      if (lang === 'fr' && withoutExt.endsWith('_en')) {
+        return withoutExt.substring(0, withoutExt.length - 3) + '_fr.vtt';
+      }
+      if (lang === 'en' && withoutExt.endsWith('_fr')) {
+        return withoutExt.substring(0, withoutExt.length - 3) + '_en.vtt';
+      }
+      return withoutExt + '.vtt';
+    }
+  }
+  return '';
+}
+
 export default function PatientHome() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const { data: summary, error: summaryError, refetch: refetchSummary } = useApi<PatientSummary>(() => fetchPatientSummary(id || '1'), {
     dependencies: [id],
     cacheKey: `patient-summary-${id || '1'}`
@@ -31,7 +50,7 @@ export default function PatientHome() {
     dependencies: [id],
     cacheKey: `surveys-${id || '1'}`
   });
-  const { data: liveVideos } = useApi<any[]>(() => fetchVideos(id || '1'), {
+  const { data: liveVideos, refetch: refetchVideos } = useApi<any[]>(() => fetchVideos(id || '1'), {
     dependencies: [id],
     cacheKey: `videos-${id || '1'}`
   });
@@ -42,12 +61,13 @@ export default function PatientHome() {
       refetchSummary();
       refetchTrends();
       refetchSurveys();
+      refetchVideos(); // added to refresh videos
     }, 3000);
     return () => clearInterval(interval);
-  }, [refetchSummary, refetchTrends, refetchSurveys]);
+  }, [refetchSummary, refetchTrends, refetchSurveys, refetchVideos]);
 
   const isLive = !!(summary && (summary as any).__isLive);
-  
+
   const [showVideoBanner, setShowVideoBanner] = useState(true);
   const [showMicroSurvey, setShowMicroSurvey] = useState(true);
   const [surveyResponse, setSurveyResponse] = useState<string | null>(null);
@@ -70,12 +90,10 @@ export default function PatientHome() {
 
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
   const videos = Array.isArray(rawVideos) ? rawVideos : [];
-  const comfortVideo = videos.find((v: any) => v.category === 'Mask & Equipment' || v.id === 1) || videos[0] || {
-    id: 1,
-    title: "How to Tighten Your Mask for a Better Seal",
-    url: "https://www.w3schools.com/html/mov_bbb.mp4",
-    category: "Mask & Equipment"
-  };
+
+  // Loading state – wait for API data before selecting a comfort video
+  const isLoadingVideos = !liveVideos;
+  const comfortVideo = videos.length > 0 ? (videos.find((v: any) => v.category === 'Mask & Equipment' || v.id === 1) || videos[0]) : null;
 
   // Derive data from CPAP trends API
   const usageHistory = cpapTrends?.usageHistory || [];
@@ -98,11 +116,11 @@ export default function PatientHome() {
       <div className="bg-white rounded-3xl p-8 border-2 border-[#E8EEF2] shadow-sm mb-4 relative overflow-hidden">
         {/* Soft decorative accent */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#2D9596]/5 rounded-full blur-3xl" />
-        
+
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-[#0A1128] leading-tight">
-              Hello, {summary?.name?.split(' ')[0] || 'Friend'}. <br className="hidden sm:block"/> We are so glad you are here.
+              Hello, {summary?.name?.split(' ')[0] || 'Friend'}. <br className="hidden sm:block" /> We are so glad you are here.
             </h1>
             {isLive && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-lg shrink-0">
@@ -113,7 +131,7 @@ export default function PatientHome() {
           </div>
           <div className="space-y-5 text-[#0A1128] leading-relaxed text-lg sm:text-xl max-w-3xl">
             <p>
-              Getting used to a CPAP machine takes time. It is a new habit for your body. 
+              Getting used to a CPAP machine takes time. It is a new habit for your body.
             </p>
             <p>
               You might feel frustrated on some nights, and that is completely normal. Remember, every single day you try, you are taking a brave step to protect your health.
@@ -127,15 +145,15 @@ export default function PatientHome() {
           </div>
         </div>
       </div>
-        
+
       {/* 2-Minute Objective: Action Center */}
       <div className="space-y-4">
         {/* Persistent AI Trigger (Dynamic based on leak) */}
         {cpapTrends && cpapTrends.percentileLeak > 20 && (
           <div className="bg-gradient-to-br from-[#0A1128] to-[#1E293B] text-white rounded-[2rem] p-8 shadow-2xl relative overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500">
             <div className="flex items-start gap-6">
-              <div 
-                onClick={() => setActiveVideo(comfortVideo)}
+              <div
+                onClick={() => { if (comfortVideo) setActiveVideo(comfortVideo); }}
                 className="w-16 h-16 bg-[#F4A261]/20 rounded-[1.25rem] flex items-center justify-center flex-shrink-0 relative overflow-hidden group cursor-pointer shadow-lg"
               >
                 <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=150" alt="Video thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-all scale-110 group-hover:scale-100" />
@@ -149,9 +167,10 @@ export default function PatientHome() {
                 </div>
                 <h3 className="text-xl font-bold mb-4 leading-tight">Your mask had a tiny leak of {cpapTrends.percentileLeak} L/min last night. Let's optimize it for deeper comfort in 60s!</h3>
                 <div className="flex gap-3">
-                  <button 
-                    onClick={() => setActiveVideo(comfortVideo)}
-                    className="bg-[#2D9596] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#247c7d] transition-all shadow-lg active:scale-95 text-xs"
+                  <button
+                    onClick={() => { if (comfortVideo) setActiveVideo(comfortVideo); }}
+                    disabled={!comfortVideo}
+                    className={`bg-[#2D9596] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#247c7d] transition-all shadow-lg active:scale-95 text-xs ${comfortVideo ? '' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                   >
                     View Comfort Tip (1 min)
                   </button>
@@ -177,7 +196,7 @@ export default function PatientHome() {
           </div>
           <div className="mb-6">
             <p className="text-white/90 leading-relaxed mb-3">
-              Your clinical team needs the {surveyName} survey to calibrate your therapy. <br/>
+              Your clinical team needs the {surveyName} survey to calibrate your therapy. <br />
               <span className="font-bold">Due in {surveyDaysLeft} days.</span>
             </p>
             <div className="flex items-center justify-between text-xs font-semibold text-white/80 mb-1">
@@ -209,7 +228,7 @@ export default function PatientHome() {
             <p className="text-sm text-[#414D5B]">Did you feel rested this morning?</p>
           </div>
         </div>
-        
+
         <div className="flex gap-3">
           {['Good 👍', 'Okay 😐', 'Bad 👎'].map((rating) => (
             <button
@@ -217,7 +236,7 @@ export default function PatientHome() {
               onClick={async () => {
                 setSurveyResponse(rating);
                 try {
-                  await submitSurveyResponse(id || '1', 'daily-pulse', { 
+                  await submitSurveyResponse(id || '1', 'daily-pulse', {
                     answers: [{ question_id: 'restful_feeling', value: rating }]
                   });
                 } catch (e) {
@@ -225,11 +244,10 @@ export default function PatientHome() {
                 }
                 setTimeout(() => setShowMicroSurvey(false), 1500);
               }}
-              className={`flex-1 py-4 rounded-xl border-2 transition-all font-bold text-sm ${
-                surveyResponse === rating 
-                  ? 'border-[#2D9596] bg-[#2D9596]/10 text-[#2D9596]' 
+              className={`flex-1 py-4 rounded-xl border-2 transition-all font-bold text-sm ${surveyResponse === rating
+                  ? 'border-[#2D9596] bg-[#2D9596]/10 text-[#2D9596]'
                   : 'border-[#E8EEF2] text-[#414D5B] hover:border-[#2D9596]/50 shadow-sm'
-              }`}
+                }`}
             >
               {rating}
             </button>
@@ -245,7 +263,7 @@ export default function PatientHome() {
       {/* Sleep Progress Rings */}
       <div className="bg-white rounded-3xl p-8 shadow-sm">
         <h3 className="text-xl text-[#0A1128] mb-6">Last Night's Progress</h3>
-        
+
         <div className="grid grid-cols-2 gap-8">
           {/* Hours Ring */}
           <div className="text-center">
@@ -357,7 +375,7 @@ export default function PatientHome() {
       <div className="bg-gradient-to-br from-[#F4A261] to-[#e39350] rounded-3xl p-8 text-white shadow-lg">
         <h3 className="text-xl font-bold mb-3">💡 Sleep Better Tip</h3>
         <p className="text-white/95 text-lg leading-relaxed">
-          "Try wearing your mask for 30 minutes before bed while reading or watching TV. 
+          "Try wearing your mask for 30 minutes before bed while reading or watching TV.
           This helps your body get comfortable with the therapy before sleep."
         </p>
       </div>
@@ -396,10 +414,10 @@ export default function PatientHome() {
             </div>
             <h2 className="text-3xl font-bold text-[#0A1128] mb-4">You're doing great!</h2>
             <p className="text-[#414D5B] text-lg leading-relaxed mb-8 px-2">
-              Adjusting to CPAP therapy takes time, and every night you try is a huge step forward. 
+              Adjusting to CPAP therapy takes time, and every night you try is a huge step forward.
               We are here to guide you to a perfect night's rest. Let's check today's tip!
             </p>
-            <button 
+            <button
               onClick={() => setOnboardingStep('video')}
               className="w-full bg-[#0A1128] text-white font-bold py-4 rounded-2xl text-lg hover:bg-[#1E293B] shadow-xl hover:scale-[1.02] transition-all"
             >
@@ -415,7 +433,7 @@ export default function PatientHome() {
           <div className="bg-white rounded-[2.25rem] p-8 max-w-sm w-full shadow-2xl border border-[#E8EEF2] animate-in slide-in-from-bottom-8 duration-500 relative overflow-hidden">
             {/* Top decorative clinical seal */}
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#2D9596] to-[#6A994E]" />
-            
+
             <div className="flex items-center gap-4 mb-5">
               <div className="w-12 h-12 bg-[#6A994E]/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-6 h-6 text-[#6A994E]" />
@@ -429,8 +447,8 @@ export default function PatientHome() {
             <p className="text-sm text-[#414D5B] mb-5 leading-relaxed">
               Hello <span className="font-bold text-[#0A1128]">{summary?.name || 'there'}</span>! Your SleepCare portal is fully connected.
             </p>
-            
-            <div 
+
+            <div
               onClick={() => { setActiveVideo(comfortVideo); setOnboardingStep(null); }}
               className="relative w-full h-36 bg-gray-100 rounded-2xl mb-5 overflow-hidden group cursor-pointer shadow-sm border border-[#E8EEF2]"
             >
@@ -441,19 +459,19 @@ export default function PatientHome() {
                 </div>
               </div>
             </div>
-            
+
             <p className="text-xs text-[#5A6B7C] mb-6 leading-relaxed bg-[#FAFAFA] p-3.5 rounded-xl border border-[#E8EEF2]">
-              🛡️ <span className="font-bold text-[#0A1128]">Clinical Tip:</span> To help you sleep deeper tonight, your care team prepared a friendly 60-second comfort guide on fitting your CPAP headgear for a perfect seal. 
+              🛡️ <span className="font-bold text-[#0A1128]">Clinical Tip:</span> To help you sleep deeper tonight, your care team prepared a friendly 60-second comfort guide on fitting your CPAP headgear for a perfect seal.
             </p>
-            
+
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={() => { setActiveVideo(comfortVideo); setOnboardingStep(null); }}
                 className="w-full bg-[#2D9596] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#2D9596]/15 hover:bg-[#247c7d] transition-all hover:shadow-xl hover:scale-[1.01]"
               >
                 Watch Comfort Tip (1:00)
               </button>
-              <button 
+              <button
                 onClick={() => setOnboardingStep(null)}
                 className="w-full bg-[#FAFAFA] text-[#5A6B7C] font-semibold py-3.5 rounded-xl border border-[#E8EEF2] hover:bg-[#E8EEF2]/50 transition-colors"
               >
@@ -467,16 +485,17 @@ export default function PatientHome() {
       {/* Premium Video Player Modal */}
       {activeVideo && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#0A1128]/85 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300 flex flex-col">
+
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
               <div>
                 <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block mb-1">
-                  {activeVideo.category}
+                  {activeVideo.category || 'Video'}
                 </span>
-                <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">{activeVideo.title}</h3>
+                <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">{activeVideo.title || 'Comfort Tip'}</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setActiveVideo(null)}
                 className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors"
               >
@@ -486,25 +505,26 @@ export default function PatientHome() {
 
             {/* Video Canvas */}
             <div className="relative bg-black aspect-video flex items-center justify-center">
-              <video 
+              <video
                 key={activeVideo.id}
-                className="w-full h-full" 
-                controls 
+                className="w-full h-full"
+                controls
                 autoPlay
+                crossOrigin="anonymous"
+                src={getFullVideoUrl(activeVideo.url || activeVideo.video_url || '') + '?cb=' + (activeVideo.id || '1')}
               >
-                <source src={getFullVideoUrl(activeVideo.url || activeVideo.video_url || 'https://www.w3schools.com/html/mov_bbb.mp4')} type="video/mp4" />
-                <track 
-                  src={activeVideo.vtt_en_url || activeVideo.subtitles_en || ''} 
-                  kind="subtitles" 
-                  srcLang="en" 
-                  label="English" 
-                  default 
+                <track
+                  src={activeVideo.vtt_en_url || activeVideo.subtitles_en || getSubtitleUrl(activeVideo.url || activeVideo.video_url, 'en')}
+                  kind="subtitles"
+                  srcLang="en"
+                  label="English"
+                  default
                 />
-                <track 
-                  src={activeVideo.vtt_fr_url || activeVideo.subtitles_fr || ''} 
-                  kind="subtitles" 
-                  srcLang="fr" 
-                  label="Français" 
+                <track
+                  src={activeVideo.vtt_fr_url || activeVideo.subtitles_fr || getSubtitleUrl(activeVideo.url || activeVideo.video_url, 'fr')}
+                  kind="subtitles"
+                  srcLang="fr"
+                  label="Français"
                 />
                 Your browser does not support the video tag.
               </video>
