@@ -1,6 +1,16 @@
 import * as mock from './mockData';
 
-const BASE_URL = 'https://cpap-backend-v3.onrender.com';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://cpap-backend-v3.onrender.com';
+
+/** Resolves video URLs that may be relative or absolute from the video storage server */
+export function getFullVideoUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const videoBase = import.meta.env.VITE_VIDEO_URL || BASE_URL;
+  return `${videoBase}${url.startsWith('/') ? '' : '/'}${url}`;
+}
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 export interface PatientSummary {

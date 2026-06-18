@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
-import { Play, Star, CheckCircle, Clock, BookOpen, Wrench, Lightbulb, Plane, ChevronRight, Signal, Loader2 } from 'lucide-react';
+import { Play, Star, CheckCircle, Clock, BookOpen, Wrench, Lightbulb, Plane, ChevronRight, Signal, Loader2, X } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchVideos, submitVideoInteraction } from '../../data/api';
+import { fetchVideos, submitVideoInteraction, getFullVideoUrl } from '../../data/api';
 
 const categoryIcons: { [key: string]: React.ReactNode } = {
   'Mask & Equipment': <Wrench className="w-3.5 h-3.5" />,
@@ -30,10 +30,20 @@ const thumbnailGradients: { [key: string]: string } = {
 
 export default function PatientVideos() {
   const { id } = useParams();
-  const { data: liveVideos, isLoading, error } = useApi(() => fetchVideos(id || '1'), {
+  const { data: liveVideos, isLoading, error, refetch: refetchVideos } = useApi(() => fetchVideos(id || '1'), {
     dependencies: [id],
     cacheKey: `videos-${id || '1'}`
   });
+
+  // Poll videos from cloud DB every 3 seconds during the demo
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchVideos();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [refetchVideos]);
+
+  const [activeVideo, setActiveVideo] = useState<any | null>(null);
 
   const isLive = !error && !!liveVideos;
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
@@ -86,11 +96,12 @@ export default function PatientVideos() {
     ? videos
     : videos.filter((v: any) => v.category === activeFilter);
 
-  const handleWatch = async (videoId: string | number) => {
-    setWatchedMap(prev => ({ ...prev, [videoId]: true }));
+  const handleWatch = async (video: any) => {
+    setActiveVideo(video);
+    setWatchedMap(prev => ({ ...prev, [video.id]: true }));
     if (isLive) {
       try {
-        await submitVideoInteraction(id || '1', videoId, {
+        await submitVideoInteraction(id || '1', video.id, {
           watched: true,
           watch_duration_seconds: 120 // Demo value
         });
@@ -175,7 +186,7 @@ export default function PatientVideos() {
                     <span>{video.category}</span>
                   </div>
                   <button
-                    onClick={() => handleWatch(video.id)}
+                    onClick={() => handleWatch(video)}
                     className="w-full bg-white text-[#0A1128] hover:bg-white/90 transition-all font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm"
                   >
                     <Play className="w-4 h-4 fill-[#0A1128]" />
@@ -218,7 +229,7 @@ export default function PatientVideos() {
             <div className="flex gap-4 p-4">
               {/* Thumbnail */}
               <div className={`relative w-28 h-20 bg-gradient-to-br ${thumbnailGradients[video.category] || 'from-[#2D9596] to-[#1a7273]'} rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer overflow-hidden group`}
-                onClick={() => handleWatch(video.id)}
+                onClick={() => handleWatch(video)}
               >
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
                 {watchedMap[video.id]
@@ -265,7 +276,7 @@ export default function PatientVideos() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => handleWatch(video.id)}
+                    onClick={() => handleWatch(video)}
                     className="text-xs text-[#2D9596] font-bold flex items-center gap-1 hover:gap-2 transition-all uppercase tracking-widest"
                   >
                     Watch <ChevronRight className="w-3 h-3" />
@@ -286,6 +297,81 @@ export default function PatientVideos() {
           Contact Support <ChevronRight className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Premium Video Player Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#0A1128]/85 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
+              <div>
+                <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block mb-1">
+                  {activeVideo.category}
+                </span>
+                <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">{activeVideo.title}</h3>
+              </div>
+              <button 
+                onClick={() => setActiveVideo(null)}
+                className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Video Canvas */}
+            <div className="relative bg-black aspect-video flex items-center justify-center">
+              <video 
+                key={activeVideo.id}
+                className="w-full h-full" 
+                controls 
+                autoPlay
+                crossOrigin="anonymous"
+              >
+                <source src={getFullVideoUrl(activeVideo.url || activeVideo.video_url || 'https://www.w3schools.com/html/mov_bbb.mp4')} type="video/mp4" />
+                <track 
+                  src={activeVideo.vtt_en_url || activeVideo.subtitles_en || ''} 
+                  kind="subtitles" 
+                  srcLang="en" 
+                  label="English" 
+                  default 
+                />
+                <track 
+                  src={activeVideo.vtt_fr_url || activeVideo.subtitles_fr || ''} 
+                  kind="subtitles" 
+                  srcLang="fr" 
+                  label="Français" 
+                />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+
+            {/* Quick Feedback Action */}
+            <div className="p-5 bg-[#FAFAFA] border-t border-[#E8EEF2] text-center space-y-3">
+              <p className="text-xs font-bold text-[#0A1128]">Was this coaching tip helpful?</p>
+              <div className="flex justify-center gap-1.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => handleRating(activeVideo.id, star)}
+                    className="p-1 hover:scale-110 transition-transform"
+                  >
+                    <Star
+                      className="w-6 h-6 transition-colors"
+                      fill={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : 'none'}
+                      stroke={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : '#CBD5E1'}
+                    />
+                  </button>
+                ))}
+              </div>
+              {ratingMap[activeVideo.id] && (
+                <p className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider animate-pulse">
+                  ✓ Feedback logged to care portal
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

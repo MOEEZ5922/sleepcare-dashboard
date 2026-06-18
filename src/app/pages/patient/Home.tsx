@@ -16,18 +16,28 @@ export default function PatientHome() {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  const { data: summary, error: summaryError } = useApi<PatientSummary>(() => fetchPatientSummary(id || '1'), {
+  const { data: summary, error: summaryError, refetch: refetchSummary } = useApi<PatientSummary>(() => fetchPatientSummary(id || '1'), {
     dependencies: [id],
     cacheKey: `patient-summary-${id || '1'}`
   });
-  const { data: cpapTrends, error: cpapError } = useApi<CpapTrends>(() => fetchCpapTrends(id || '1', 7), {
+  const { data: cpapTrends, error: cpapError, refetch: refetchTrends } = useApi<CpapTrends>(() => fetchCpapTrends(id || '1', 7), {
     dependencies: [id],
     cacheKey: `cpap-trends-7-${id || '1'}`
   });
-  const { data: surveyData, error: surveyError } = useApi<SurveyResponse>(() => fetchSurveys(id || '1'), {
+  const { data: surveyData, error: surveyError, refetch: refetchSurveys } = useApi<SurveyResponse>(() => fetchSurveys(id || '1'), {
     dependencies: [id],
     cacheKey: `surveys-${id || '1'}`
   });
+
+  // Poll Cloud DB every 3 seconds for real-time edge triggers written by RPi
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      refetchSummary();
+      refetchTrends();
+      refetchSurveys();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [refetchSummary, refetchTrends, refetchSurveys]);
 
   const isLive = !summaryError && !!summary;
   
