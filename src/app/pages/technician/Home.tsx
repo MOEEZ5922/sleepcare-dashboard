@@ -127,7 +127,6 @@ export default function TechnicianHome() {
 
         <div className="flex gap-4">
           {[
-            { label: 'AI Resolved (24h)', val: 'NaN', color: 'text-[#6A994E]' },
             { label: 'Retention Queue', val: queue.length, color: 'text-[#2D9596]' },
             { label: 'Escalated Risks', val: queue.filter((p: any) => p.dropoutRisk > 80).length, color: 'text-[#E76F51]' }
           ].map(stat => (
