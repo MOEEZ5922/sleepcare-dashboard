@@ -67,9 +67,35 @@ export default function PatientHome() {
   const [showVideoBanner, setShowVideoBanner] = useState(true);
   const [showMicroSurvey, setShowMicroSurvey] = useState(true);
   const [surveyResponse, setSurveyResponse] = useState<string | null>(null);
-  const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'video' | null>('welcome');
+  const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'video' | null>(null);
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
   const [ratingMap, setRatingMap] = useState<{ [id: string | number]: number | null }>({});
+
+  const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
+  const videos = Array.isArray(rawVideos) ? rawVideos : [];
+
+  // Onboarding control: only show popup if a new video has been added
+  React.useEffect(() => {
+    if (videos.length > 0) {
+      const videoIdsStr = videos.map((v: any) => String(v.id)).sort().join(',');
+      const storageKey = `seen-videos-${id || '1'}`;
+      const storedIds = localStorage.getItem(storageKey);
+      
+      if (storedIds) {
+        const storedArray = storedIds.split(',');
+        const hasNewVideo = videos.some((v: any) => !storedArray.includes(String(v.id)));
+        
+        if (hasNewVideo) {
+          setOnboardingStep('welcome');
+          localStorage.setItem(storageKey, videoIdsStr);
+        }
+      } else {
+        // Initial setup for the patient
+        setOnboardingStep('welcome');
+        localStorage.setItem(storageKey, videoIdsStr);
+      }
+    }
+  }, [videos, id]);
 
   const handleRating = async (videoId: string | number, stars: number) => {
     setRatingMap(prev => ({ ...prev, [videoId]: stars }));
@@ -84,8 +110,7 @@ export default function PatientHome() {
     }
   };
 
-  const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
-  const videos = Array.isArray(rawVideos) ? rawVideos : [];
+
 
   // Loading state – wait for API data before selecting a comfort video
   const isLoadingVideos = !liveVideos;

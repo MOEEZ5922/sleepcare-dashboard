@@ -118,15 +118,15 @@ export default function SummaryContent({
   const handleAcceptRecommendation = async () => {
     setGateStatus('accepted');
     await handleOverride('accepted');
-    
+
     // Connected workflow logic
     if (role === 'physician') {
-      const isPathwayAdj = nextAction.type?.toLowerCase().includes('physician') || 
-                           nextAction.type?.toLowerCase().includes('pathway') || 
-                           nextAction.type?.toLowerCase().includes('escalation');
+      const isPathwayAdj = nextAction.type?.toLowerCase().includes('physician') ||
+        nextAction.type?.toLowerCase().includes('pathway') ||
+        nextAction.type?.toLowerCase().includes('escalation');
       if (isPathwayAdj) {
         setActivePathway('alt_therapy');
-        setSelectedTherapy('MAD'); 
+        setSelectedTherapy('MAD');
         setClinicalNotes(`Clinically authorized transition to MAD therapy as recommended by AI.\n\nRationale: ${nextAction.rationale}`);
       } else {
         setActivePathway('app_iah');
@@ -151,7 +151,7 @@ export default function SummaryContent({
         actionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 100);
-    
+
     setTimeout(() => setHighlightActionCenter(false), 5000); // Glow for 5 seconds
   };
 
@@ -164,7 +164,7 @@ export default function SummaryContent({
     setIsSubmitting(true);
     const sigId = "LINDE-AUTH-" + Math.random().toString(36).substring(7).toUpperCase();
     const sigDate = new Date().toLocaleString();
-    
+
     setSignatureId(sigId);
     setSignatureDate(sigDate);
 
@@ -200,7 +200,7 @@ export default function SummaryContent({
     setIsSubmitting(true);
     const sigId = "LINDE-AUTH-" + Math.random().toString(36).substring(7).toUpperCase();
     const sigDate = new Date().toLocaleString();
-    
+
     setSignatureId(sigId);
     setSignatureDate(sigDate);
 
@@ -280,10 +280,10 @@ export default function SummaryContent({
           setRejectReason={setRejectReason}
           onAccept={handleAcceptRecommendation}
           onReject={handleRejectRecommendation}
-          onUndo={() => { 
-            setGateStatus('pending'); 
-            setShowRejectMenu(false); 
-            setRejectReason(''); 
+          onUndo={() => {
+            setGateStatus('pending');
+            setShowRejectMenu(false);
+            setRejectReason('');
             setTechActionHint('');
             // Clear pre-populated content if they click Undo
             if (clinicalNotes.startsWith('Clinically authorized transition')) {
@@ -302,7 +302,7 @@ export default function SummaryContent({
         <div className={`${isCompact ? 'space-y-4' : 'lg:col-span-2 space-y-6'}`}>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-xl p-4 border border-[#E8EEF2] shadow-sm">
-              <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-widest mb-1">Avg Usage</p>
+              <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-widest mb-1">Average Week Usage</p>
               <div className="flex items-end gap-1">
                 <span className="text-2xl font-bold text-[#0A1128]">{usage}</span>
                 <span className="text-[10px] text-[#5A6B7C] pb-1">hrs/night</span>
@@ -362,9 +362,9 @@ export default function SummaryContent({
               {interventionsList.slice(0, 3).map((item: any, idx: number) => (
                 <div key={idx} className="flex items-start gap-4 p-3 bg-[#FAFAFA] rounded-xl border border-[#E8EEF2] hover:border-[#2D9596]/30 transition-all group">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${item.type?.includes('Educational') ? 'bg-[#2D9596]/10 text-[#2D9596]' :
-                      item.outcome === 'Success' ? 'bg-[#6A994E]/10 text-[#6A994E]' :
-                        item.outcome === 'Pending' ? 'bg-[#F4A261]/10 text-[#F4A261]' :
-                          'bg-[#E76F51]/10 text-[#E76F51]'
+                    item.outcome === 'Success' ? 'bg-[#6A994E]/10 text-[#6A994E]' :
+                      item.outcome === 'Pending' ? 'bg-[#F4A261]/10 text-[#F4A261]' :
+                        'bg-[#E76F51]/10 text-[#E76F51]'
                     }`}>
                     {item.type?.includes('Educational') ? <Video className="w-4 h-4" /> :
                       item.outcome === 'Success' ? <CheckCircle className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
@@ -387,15 +387,14 @@ export default function SummaryContent({
         {/* Action Centers */}
         {showActions && (
           <div>
-            <div 
+            <div
               id="action-center-card"
-              className={`bg-white rounded-2xl border-2 transition-all duration-500 ${
-                highlightActionCenter 
-                  ? 'border-[#6A994E] shadow-[0_0_25px_rgba(106,153,78,0.45)] scale-[1.02] ring-4 ring-[#6A994E]/10' 
-                  : role === 'physician' 
-                    ? 'border-[#2D9596] shadow-lg' 
-                    : 'border-[#F4A261] shadow-lg'
-              } p-6`}
+              className={`bg-white rounded-2xl border-2 transition-all duration-500 ${highlightActionCenter
+                ? 'border-[#6A994E] shadow-[0_0_25px_rgba(106,153,78,0.45)] scale-[1.02] ring-4 ring-[#6A994E]/10'
+                : role === 'physician'
+                  ? 'border-[#2D9596] shadow-lg'
+                  : 'border-[#F4A261] shadow-lg'
+                } p-6`}
             >
               {highlightActionCenter && (
                 <div className="mb-4 p-3.5 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-xl animate-in slide-in-from-top duration-300 text-[11px] font-bold text-[#6A994E] flex items-center gap-2">
@@ -493,45 +492,42 @@ export default function SummaryContent({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <button 
+                  <button
                     onClick={() => handleTechAction('Remote Call', 'EX-TEL', 'Remote call initiated via cockpit.')}
                     disabled={isSubmitting}
-                    className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
-                    techActionHint === 'Initiate Call' 
-                      ? 'bg-[#6A994E] shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]' 
+                    className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 transition-all duration-300 ${techActionHint === 'Initiate Call'
+                      ? 'bg-[#6A994E] shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]'
                       : 'bg-[#F4A261] hover:bg-[#e08e4a] disabled:opacity-50'
-                  }`}>
-                    {isSubmitting && techActionHint === 'Initiate Call' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />} 
+                      }`}>
+                    {isSubmitting && techActionHint === 'Initiate Call' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
                     Initiate Call {techActionHint === 'Initiate Call' && '✨'}
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleTechAction('Delivery', 'EX-DISP', 'Asset delivery dispatched via cockpit.')}
                     disabled={isSubmitting}
-                    className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
-                    techActionHint === 'Dispatch Asset' 
-                      ? 'bg-[#6A994E] shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]' 
+                    className={`w-full text-white font-bold py-4 rounded-xl shadow-lg text-sm flex items-center justify-center gap-2 transition-all duration-300 ${techActionHint === 'Dispatch Asset'
+                      ? 'bg-[#6A994E] shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]'
                       : 'bg-[#0A1128] hover:bg-black disabled:opacity-50'
-                  }`}>
-                    {isSubmitting && techActionHint === 'Dispatch Asset' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />} 
+                      }`}>
+                    {isSubmitting && techActionHint === 'Dispatch Asset' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
                     Dispatch Asset {techActionHint === 'Dispatch Asset' && '✨'}
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleTechAction('Visit', 'O7', 'Home visit scheduled via cockpit.')}
                     disabled={isSubmitting}
-                    className={`w-full font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
-                    techActionHint === 'Schedule Visit' 
-                      ? 'bg-[#6A994E] text-white shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]' 
+                    className={`w-full font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all duration-300 ${techActionHint === 'Schedule Visit'
+                      ? 'bg-[#6A994E] text-white shadow-[#6A994E]/20 ring-4 ring-[#6A994E]/30 scale-[1.02]'
                       : 'bg-white border-2 border-[#E8EEF2] text-[#0A1128] hover:bg-[#FAFAFA] disabled:opacity-50'
-                  }`}>
-                    {isSubmitting && techActionHint === 'Schedule Visit' ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Calendar className="w-4 h-4 text-[#F4A261]" />} 
+                      }`}>
+                    {isSubmitting && techActionHint === 'Schedule Visit' ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Calendar className="w-4 h-4 text-[#F4A261]" />}
                     Schedule Visit {techActionHint === 'Schedule Visit' && '✨'}
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleTechAction('Physician Escalation', 'SL-REF', 'Escalated patient to physician for clinical pathway review.')}
                     disabled={isSubmitting}
                     className="w-full bg-white border-2 border-[#E8EEF2] text-[#0A1128] font-bold py-4 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-[#E8EEF2] transition-colors mt-4 disabled:opacity-50"
                   >
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-[#0A1128]" /> : <Stethoscope className="w-4 h-4" />} 
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-[#0A1128]" /> : <Stethoscope className="w-4 h-4" />}
                     Escalate to Physician
                   </button>
                 </div>
