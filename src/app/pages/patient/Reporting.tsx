@@ -40,12 +40,13 @@ export default function PatientReporting() {
     }
   );
 
-  const { data: peerCohort = [], isLoading: loadingCohort } = useApi(
+  const { data: rawPeerCohort, isLoading: loadingCohort } = useApi(
     () => fetchPatientCohort(patientId), {
       dependencies: [patientId],
       cacheKey: `patient-cohort-${patientId}`
     }
   );
+  const peerCohort = Array.isArray(rawPeerCohort) ? rawPeerCohort : [];
 
   const isLoading = loadingSummary || loadingTrends || loadingCohort;
 
