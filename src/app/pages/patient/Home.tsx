@@ -93,7 +93,24 @@ export default function PatientHome() {
 
   // Loading state – wait for API data before selecting a comfort video
   const isLoadingVideos = !liveVideos;
-  const comfortVideo = videos.length > 0 ? (videos.find((v: any) => v.category === 'Mask & Equipment' || v.id === 1) || videos[0]) : null;
+
+  // Prioritize high relevance videos and select the newest one (by created_at), falling back to the first video
+  const comfortVideo = React.useMemo(() => {
+    if (videos.length === 0) return null;
+    const highRelevance = videos.filter((v: any) => v.relevance === 'high');
+    if (highRelevance.length > 0) {
+      const sortedHigh = [...highRelevance].sort((a: any, b: any) => {
+        if (a.created_at && b.created_at) {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+        if (a.created_at) return -1;
+        if (b.created_at) return 1;
+        return 0; // fallback to default backend ordering if no timestamps
+      });
+      return sortedHigh[0];
+    }
+    return videos[0];
+  }, [videos]);
 
   // Derive data from CPAP trends API
   const usageHistory = cpapTrends?.usageHistory || [];
@@ -461,15 +478,15 @@ export default function PatientHome() {
             </div>
 
             <p className="text-xs text-[#5A6B7C] mb-6 leading-relaxed bg-[#FAFAFA] p-3.5 rounded-xl border border-[#E8EEF2]">
-              🛡️ <span className="font-bold text-[#0A1128]">Clinical Tip:</span> To help you sleep deeper tonight, your care team prepared a friendly 60-second comfort guide on fitting your CPAP headgear for a perfect seal.
+              🛡️ <span className="font-bold text-[#0A1128]">Clinical Tip:</span> To help you sleep deeper tonight, your care team prepared a custom guide: <span className="font-semibold text-[#0A1128]">"{comfortVideo?.title || 'Comfort Guide'}"</span> ({comfortVideo?.duration || '1:00'}).
             </p>
 
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => { setActiveVideo(comfortVideo); setOnboardingStep(null); }}
+                onClick={() => { if (comfortVideo) { setActiveVideo(comfortVideo); setOnboardingStep(null); } }}
                 className="w-full bg-[#2D9596] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#2D9596]/15 hover:bg-[#247c7d] transition-all hover:shadow-xl hover:scale-[1.01]"
               >
-                Watch Comfort Tip (1:00)
+                Watch Guide ({comfortVideo?.duration || '1:00'})
               </button>
               <button
                 onClick={() => setOnboardingStep(null)}
