@@ -178,9 +178,11 @@ export interface DirectoryResponse {
 // ─── Helper to ensure ID is in PATxxxx format ────────────────────────────────
 
 function formatPatientId(id: string | number): string {
-  const strId = String(id);
+  const strId = String(id).trim();
   if (strId.startsWith('PAT')) return strId;
-  // If it's a number like 11, convert to PAT0011
+  // If it is a purely numeric string/number, return it unmodified for backend API compatibility
+  if (/^\d+$/.test(strId)) return strId;
+  // Fallback pattern
   return `PAT${strId.padStart(4, '0')}`;
 }
 
