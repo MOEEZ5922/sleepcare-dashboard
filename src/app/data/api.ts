@@ -772,11 +772,21 @@ export interface PatientCohortMember {
 }
 
 export async function fetchClinicianCohort(patientId: string): Promise<ClinicianCohortMember[]> {
-  return apiFetch<ClinicianCohortMember[]>(`/api/patients/${formatPatientId(patientId)}/cohort`);
+  const data = await apiFetch<any>(`/api/patients/${formatPatientId(patientId)}/cohort`);
+  const list = data?.data?.peers || data?.peers || (Array.isArray(data) ? data : []);
+  if (data && (data as any).__isLive) {
+    (list as any).__isLive = true;
+  }
+  return list;
 }
 
 export async function fetchPatientCohort(patientId: string): Promise<PatientCohortMember[]> {
-  return apiFetch<PatientCohortMember[]>(`/api/dashboard/patient/${formatPatientId(patientId)}/reporting/cohort`);
+  const data = await apiFetch<any>(`/api/dashboard/patient/${formatPatientId(patientId)}/reporting/cohort`);
+  const list = data?.data?.peers || data?.peers || (Array.isArray(data) ? data : []);
+  if (data && (data as any).__isLive) {
+    (list as any).__isLive = true;
+  }
+  return list;
 }
 
 export interface ComplianceTrajectoryPoint {
