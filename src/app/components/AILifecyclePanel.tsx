@@ -32,44 +32,44 @@ export default function AILifecyclePanel() {
       name: 'Therapy Dropout Predictor',
       status: 'needs_retraining',
       metricName: 'AUROC',
-      metricValue: 0.812,
-      metricThreshold: 0.850,
+      metricValue: NaN,
+      metricThreshold: NaN,
       driftStatus: 'high',
-      driftValue: 0.28,
-      lastRetrained: '28 days ago'
+      driftValue: NaN,
+      lastRetrained: 'NaN'
     },
     {
       modelId: 'ahi_detector',
       name: 'AHI Anomaly Detector',
       status: 'active',
       metricName: 'F1-Score',
-      metricValue: 0.892,
-      metricThreshold: 0.850,
+      metricValue: NaN,
+      metricThreshold: NaN,
       driftStatus: 'low',
-      driftValue: 0.04,
-      lastRetrained: '5 days ago'
+      driftValue: NaN,
+      lastRetrained: 'NaN'
     },
     {
       modelId: 'leak_classifier',
       name: 'Leak Instability Classifier',
       status: 'active',
       metricName: 'Precision',
-      metricValue: 0.874,
-      metricThreshold: 0.800,
+      metricValue: NaN,
+      metricThreshold: NaN,
       driftStatus: 'moderate',
-      driftValue: 0.14,
-      lastRetrained: '12 days ago'
+      driftValue: NaN,
+      lastRetrained: 'NaN'
     },
     {
       modelId: 'sleep_synthesizer',
       name: 'Wearable Sleep Synthesizer',
       status: 'active',
       metricName: 'R-Squared',
-      metricValue: 0.781,
-      metricThreshold: 0.750,
+      metricValue: NaN,
+      metricThreshold: NaN,
       driftStatus: 'low',
-      driftValue: 0.08,
-      lastRetrained: '18 days ago'
+      driftValue: NaN,
+      lastRetrained: 'NaN'
     }
   ]);
 

@@ -184,9 +184,54 @@ function formatPatientId(id: string | number): string {
   return `PAT${strId.padStart(4, '0')}`;
 }
 
+function makeMockObjectNaN(obj: any): any {
+  return makeMockObjectNaNInternal(obj);
+}
+
+function makeMockObjectNaNInternal(obj: any, parentKey?: string): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => makeMockObjectNaNInternal(item, parentKey));
+  }
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const val = obj[key];
+        
+        // Preserve identifiers, types, structural attributes, and dates/times
+        const isIdentifier = /^(patient_?id|id|device_?id|serial|serial_?number|machine_?serial|model_?id|event_?id|signature_?hash|digital_?seal_?hash)$/i.test(key);
+        const isTimeOrDate = /^(day|date|timestamp|last_?sync|last_?reading|assigned_?date|dob|birth_?date|cpap_?start_?date|therapy_?start_?date|week_?of|night_?date)$/i.test(key);
+        const isStructural = /^(type|category|status|risk_?tier|phase|phase_?label|severity|gender|mask_?type|mask|device_?type|outcome|action|form_?type|issue_?type|role|color|label|direction)$/i.test(key);
+        
+        if (isIdentifier || isStructural) {
+          result[key] = val; // Preserve identifiers and structural properties
+        } else if (isTimeOrDate) {
+          result[key] = val; // Preserve original dates/times to keep timeline/chart continuity
+        } else {
+          // Convert clinical/measurement data to NaN
+          if (typeof val === 'number') {
+            result[key] = NaN;
+          } else if (typeof val === 'string') {
+            result[key] = 'NaN';
+          } else if (typeof val === 'boolean') {
+            result[key] = false;
+          } else if (typeof val === 'object') {
+            result[key] = makeMockObjectNaNInternal(val, key);
+          } else {
+            result[key] = val;
+          }
+        }
+      }
+    }
+    return result;
+  }
+  return obj;
+}
+
 // ─── Generic fetch wrapper with fallback logic ──────────────────────────────
 
-async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       headers: { 'Content-Type': 'application/json' },
@@ -287,6 +332,14 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   }
 }
 
+async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const result = await apiFetchRaw<T>(endpoint, options);
+  if (result && typeof result === 'object' && !(result as any).__isLive) {
+    return makeMockObjectNaN(result) as T;
+  }
+  return result;
+}
+
 // ─── GET Endpoints ───────────────────────────────────────────────────────────
 
 /** List all patients (for Physician Directory) */
@@ -324,7 +377,12 @@ export async function fetchCpapTrends(patientId: string, days = 90): Promise<Cpa
   const data = await apiFetch<any>(`/api/cpap/${formatPatientId(patientId)}?days=${days}`);
 
   // If it's mock data (already formatted to frontend spec), return it directly
-  if (data.usageHistory) return data;
+  if (data.usageHistory) {
+    if (!(data as any).__isLive) {
+      return makeMockObjectNaN(data);
+    }
+    return data;
+  }
 
   // Otherwise, map backend shape to frontend shape
   let streak = 0;
@@ -358,6 +416,8 @@ export async function fetchCpapTrends(patientId: string, days = 90): Promise<Cpa
 
   if ((data as any).__isLive) {
     (result as any).__isLive = true;
+  } else {
+    return makeMockObjectNaN(result);
   }
   return result;
 }
@@ -731,20 +791,20 @@ export interface PeerIntervention {
 }
 
 export const PEER_INTERVENTIONS: PeerIntervention[] = [
-  { type: 'Mask Refit & Adjustments', desc: 'Resolved seal issues and bridge pressure', successRate: 92, gain: '+1.8 hrs/night' },
-  { type: 'Remote Pressure Adjustment', desc: 'Reduced baseline breathing strain', successRate: 80, gain: '+1.4 hrs/night' },
-  { type: 'Coaching Video Guides', desc: 'Self-guided adjustments via mobile videos', successRate: 74, gain: '+1.1 hrs/night' },
+  { type: 'Mask Refit & Adjustments', desc: 'Resolved seal issues and bridge pressure', successRate: NaN, gain: 'NaN' },
+  { type: 'Remote Pressure Adjustment', desc: 'Reduced baseline breathing strain', successRate: NaN, gain: 'NaN' },
+  { type: 'Coaching Video Guides', desc: 'Self-guided adjustments via mobile videos', successRate: NaN, gain: 'NaN' },
 ];
 
 export function calculateComplianceTrajectory(adherenceRate: number): ComplianceTrajectoryPoint[] {
-  const patientScore30 = 82; // Onboarding baseline
-  const patientScore60 = adherenceRate; // Reflects active EMR adherence rate
-  const patientScore90 = patientScore60 < 60 ? Math.max(30, patientScore60 - 8) : Math.min(95, patientScore60 + 5);
+  const patientScore30 = NaN; // Onboarding baseline — NaN until live data
+  const patientScore60 = NaN; // NaN until live adherence rate from backend
+  const patientScore90 = NaN;
 
   return [
-    { name: '30 Days (Onboarding)', 'Cohort Average': 84, 'My Progress': patientScore30 },
-    { name: '60 Days (Acclimation)', 'Cohort Average': 78, 'My Progress': patientScore60 },
-    { name: '90 Days (Maintenance)', 'Cohort Average': 71, 'My Progress': patientScore90 },
+    { name: '30 Days (Onboarding)', 'Cohort Average': NaN, 'My Progress': patientScore30 },
+    { name: '60 Days (Acclimation)', 'Cohort Average': NaN, 'My Progress': patientScore60 },
+    { name: '90 Days (Maintenance)', 'Cohort Average': NaN, 'My Progress': patientScore90 },
   ];
 }
 

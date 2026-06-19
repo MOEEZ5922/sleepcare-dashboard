@@ -400,38 +400,39 @@ export default function UniversalAIAnalysis() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E8EEF2]">
+              {/* Override history — populated from live backend only */}
               <tr className="hover:bg-[#FAFAFA] transition-colors">
-                <td className="p-4 text-[#5A6B7C] font-mono text-xs">2026-04-20</td>
-                <td className="p-4 font-semibold text-[#0A1128]">Increase Pressure (EPR)</td>
+                <td className="p-4 text-[#5A6B7C] font-mono text-xs">NaN</td>
+                <td className="p-4 font-semibold text-[#0A1128]">NaN</td>
                 <td className="p-4">
-                  <span className="inline-block px-2 py-1 bg-[#E76F51]/10 text-[#E76F51] text-xs font-bold rounded-md">
-                    REJECTED
+                  <span className="inline-block px-2 py-1 bg-[#E8EEF2] text-[#5A6B7C] text-xs font-bold rounded-md">
+                    NaN
                   </span>
                 </td>
-                <td className="p-4 text-[#5A6B7C] text-xs italic">PT_REFUSED</td>
-                <td className="p-4 text-[#5A6B7C] text-xs font-medium">Dr. Sarah</td>
+                <td className="p-4 text-[#5A6B7C] text-xs italic">NaN</td>
+                <td className="p-4 text-[#5A6B7C] text-xs font-medium">NaN</td>
               </tr>
               <tr className="hover:bg-[#FAFAFA] transition-colors">
-                <td className="p-4 text-[#5A6B7C] font-mono text-xs">2026-04-05</td>
-                <td className="p-4 font-semibold text-[#0A1128]">Dispatch Educational Video</td>
+                <td className="p-4 text-[#5A6B7C] font-mono text-xs">NaN</td>
+                <td className="p-4 font-semibold text-[#0A1128]">NaN</td>
                 <td className="p-4">
-                  <span className="inline-block px-2 py-1 bg-[#6A994E]/10 text-[#6A994E] text-xs font-bold rounded-md">
-                    ACCEPTED
+                  <span className="inline-block px-2 py-1 bg-[#E8EEF2] text-[#5A6B7C] text-xs font-bold rounded-md">
+                    NaN
                   </span>
                 </td>
-                <td className="p-4 text-[#5A6B7C] text-xs italic">Standard Protocol</td>
-                <td className="p-4 text-[#5A6B7C] text-xs font-medium">Auto-Gate</td>
+                <td className="p-4 text-[#5A6B7C] text-xs italic">NaN</td>
+                <td className="p-4 text-[#5A6B7C] text-xs font-medium">NaN</td>
               </tr>
-              <tr className="hover:bg-[#FAFAFA] transition-colors">
-                <td className="p-4 text-[#5A6B7C] font-mono text-xs">2026-03-22</td>
-                <td className="p-4 font-semibold text-[#0A1128]">Schedule Mask Refit</td>
+              <tr className="hover:bg-[#FAFAA] transition-colors">
+                <td className="p-4 text-[#5A6B7C] font-mono text-xs">NaN</td>
+                <td className="p-4 font-semibold text-[#0A1128]">NaN</td>
                 <td className="p-4">
-                  <span className="inline-block px-2 py-1 bg-[#F4A261]/10 text-[#F4A261] text-xs font-bold rounded-md">
-                    MODIFIED
+                  <span className="inline-block px-2 py-1 bg-[#E8EEF2] text-[#5A6B7C] text-xs font-bold rounded-md">
+                    NaN
                   </span>
                 </td>
-                <td className="p-4 text-[#5A6B7C] text-xs italic">Sent Chinstrap Instead</td>
-                <td className="p-4 text-[#5A6B7C] text-xs font-medium">J. Mitchell</td>
+                <td className="p-4 text-[#5A6B7C] text-xs italic">NaN</td>
+                <td className="p-4 text-[#5A6B7C] text-xs font-medium">NaN</td>
               </tr>
             </tbody>
           </table>

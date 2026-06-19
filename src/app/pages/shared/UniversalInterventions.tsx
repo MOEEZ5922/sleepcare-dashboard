@@ -34,7 +34,8 @@ export default function UniversalInterventions() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<'clinical_log' | 'coaching_videos'>('clinical_log');
 
-  if (!isLive) {
+  // Show spinner only while waiting for the very first response (live or mock)
+  if (!liveInterventions && !liveAuths) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="w-8 h-8 text-teal animate-spin" />
@@ -127,10 +128,9 @@ export default function UniversalInterventions() {
     if (item.tech === 'Auto-Trigger' || item.tech === 'AI-System' || item.type?.includes('System')) deliveryMode = 'Automated';
     if (item.type?.includes('Authorization')) deliveryMode = 'Digital';
     
-    // Mock Delta Usage based on outcome
-    let deltaUsage = '—';
-    if (outcome === 'Success' || outcome === 'Approved' || outcome === 'Done' || outcome === 'Resolved') deltaUsage = `+${(Math.random() * 1.5 + 0.5).toFixed(1)} hrs/night`;
-    if (outcome.includes('Failed') || outcome === 'Cancelled') deltaUsage = `-${(Math.random() * 1.0 + 0.1).toFixed(1)} hrs/night`;
+    // Delta Usage — NaN until live data is available
+    let deltaUsage = 'NaN';
+    if (outcome === 'Pending' || outcome === 'Planned' || outcome.includes('Failed') || outcome === 'Cancelled') deltaUsage = 'NaN';
 
     return {
       ...item,
@@ -202,12 +202,12 @@ export default function UniversalInterventions() {
                  <div className="flex items-center gap-6 text-sm">
                     <div className="text-center">
                        <p className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Avg Watch Rate</p>
-                       <p className="text-xl font-bold text-[#2D9596]">82%</p>
+                       <p className="text-xl font-bold text-[#2D9596]">NaN%</p>
                     </div>
                     <div className="w-px h-10 bg-[#E8EEF2]" />
                     <div className="text-center">
                        <p className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Avg Rating</p>
-                       <p className="text-xl font-bold text-[#F4A261] flex items-center justify-center gap-1">4.5 <Star className="w-4 h-4 fill-[#F4A261]" /></p>
+                       <p className="text-xl font-bold text-[#F4A261] flex items-center justify-center gap-1">NaN <Star className="w-4 h-4 fill-[#F4A261]" /></p>
                     </div>
                  </div>
               </div>
@@ -226,9 +226,9 @@ export default function UniversalInterventions() {
                     </thead>
                     <tbody className="divide-y divide-[#E8EEF2]">
                        {[
-                         { id: 1, title: 'Resolving Mask Leakage', trigger: 'AI Flag: High Leak', time: '< 2 mins', status: 'Watched', watch: 100, rating: 5, date: 'May 10' },
-                         { id: 2, title: 'Understanding REM Rebound', trigger: 'Usage Drop > 2hrs', time: '< 5 mins', status: 'Ignored', watch: 0, rating: null, date: 'May 18' },
-                         { id: 3, title: 'Cleaning Your ResMed', trigger: 'Maintenance Cycle', time: 'Automated', status: 'Watched', watch: 85, rating: 4, date: 'May 20' }
+                         { id: 1, title: 'NaN', trigger: 'NaN', time: 'NaN', status: 'NaN', watch: NaN, rating: null, date: 'NaN' },
+                         { id: 2, title: 'NaN', trigger: 'NaN', time: 'NaN', status: 'NaN', watch: NaN, rating: null, date: 'NaN' },
+                         { id: 3, title: 'NaN', trigger: 'NaN', time: 'NaN', status: 'NaN', watch: NaN, rating: null, date: 'NaN' }
                        ].map(v => (
                          <tr key={v.id} className="hover:bg-[#FAFAFA]/50 transition-colors">
                             <td className="p-4">

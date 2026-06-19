@@ -344,7 +344,7 @@ export default function SummaryContent({
               <div className="bg-[#FAFAFA] p-4 rounded-xl border border-[#E8EEF2] flex items-center justify-between">
                 <div>
                   <p className="text-[10px] text-[#5A6B7C] font-semibold mb-1">Video Watchtime</p>
-                  <p className="text-lg font-bold text-[#2D9596]">{summary?.adherenceRate || 75}% <span className="text-xs font-normal text-[#5A6B7C]">Watched</span></p>
+                  <p className="text-lg font-bold text-[#2D9596]">{summary?.adherenceRate ?? 'NaN'}% <span className="text-xs font-normal text-[#5A6B7C]">Watched</span></p>
                 </div>
                 <div className="w-10 h-10 rounded-full border-4 border-[#E8EEF2] border-t-[#2D9596] flex items-center justify-center transform rotate-45">
                   <div className="w-8 h-8 rounded-full border-4 border-white" />

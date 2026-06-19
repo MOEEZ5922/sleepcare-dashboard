@@ -204,7 +204,8 @@ export default function UniversalSurveys() {
       }
    };
 
-   if (!isLive) {
+   // Show spinner only while waiting for the very first response (live or mock)
+   if (!liveSurveys) {
       return (
          <div className="flex items-center justify-center h-96">
             <Loader2 className="w-8 h-8 text-teal animate-spin" />

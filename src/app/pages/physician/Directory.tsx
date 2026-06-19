@@ -34,9 +34,9 @@ export default function PhysicianDirectory() {
       id: patientId,
       name: p.name || p.patientName || (p.patient ? `${p.patient.first_name || ''} ${p.patient.last_name || ''}`.trim() : '') || 'Patient ' + patientId.replace('PAT', ''),
       gender: p.gender || p.sex || (p.patient?.gender) || 'M',
-      age: age || 65,
+      age: age || NaN,
       status: p.status || 'Active',
-      complianceScore: p.complianceScore || p.adherenceRate || (p.adherence_rate ? Math.round(p.adherence_rate * 100) : 0) || Math.floor(70 + Math.random() * 25),
+      complianceScore: p.complianceScore || p.adherenceRate || (p.adherence_rate ? Math.round(p.adherence_rate * 100) : 0) || NaN,
     };
   });
 
