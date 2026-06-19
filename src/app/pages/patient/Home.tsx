@@ -22,13 +22,9 @@ function getSubtitleUrl(videoUrl: string | null | undefined, lang: 'en' | 'fr'):
     const index = base.lastIndexOf('.');
     if (index !== -1) {
       const withoutExt = base.substring(0, index);
-      if (lang === 'fr' && withoutExt.endsWith('_en')) {
-        return withoutExt.substring(0, withoutExt.length - 3) + '_fr.vtt';
-      }
-      if (lang === 'en' && withoutExt.endsWith('_fr')) {
-        return withoutExt.substring(0, withoutExt.length - 3) + '_en.vtt';
-      }
-      return withoutExt + '.vtt';
+      // Strip any existing language suffix before appending new one
+      const cleanBase = withoutExt.replace(/[._](en|fr)$/, '');
+      return `${cleanBase}.${lang}.vtt`;
     }
   }
   return '';
