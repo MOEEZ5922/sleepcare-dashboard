@@ -98,6 +98,6 @@ export const router = createBrowserRouter([
   },
   {
     path: "/patient",
-    element: <Navigate to="/patient/1/home" replace />,
+    element: <Navigate to="/patient/216753/home" replace />,
   },
 ]);

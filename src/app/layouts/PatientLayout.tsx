@@ -39,7 +39,7 @@ export default function PatientLayout() {
               <div className="flex gap-2">
                 <Link to="/physician" className="px-2 py-1 bg-white/10 text-white text-[10px] font-bold rounded hover:bg-white/20 transition-all uppercase tracking-tighter">MD</Link>
                 <Link to="/technician" className="px-2 py-1 bg-white/10 text-white text-[10px] font-bold rounded hover:bg-white/20 transition-all uppercase tracking-tighter">TECH</Link>
-                <Link to="/patient/1/home" className="px-2 py-1 bg-white/10 text-white text-[10px] font-bold rounded hover:bg-white/20 transition-all uppercase tracking-tighter border border-white/30">PAT</Link>
+                <Link to={`/patient/${id || '216753'}/home`} className="px-2 py-1 bg-white/10 text-white text-[10px] font-bold rounded hover:bg-white/20 transition-all uppercase tracking-tighter border border-white/30">PAT</Link>
               </div>
               <ConnectivityStatus />
             </div>
