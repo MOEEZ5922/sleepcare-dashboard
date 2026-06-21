@@ -74,28 +74,56 @@ export default function PatientHome() {
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
   const videos = Array.isArray(rawVideos) ? rawVideos : [];
 
-  // Onboarding control: only show popup if a new video has been added
+  // Find all unwatched videos assigned to the patient
+  const unwatchedVideos = React.useMemo(() => {
+    return videos.filter((v: any) => !v.watched);
+  }, [videos]);
+
+  // Identify the newest or highest-relevance unwatched video to display in the pop-up
+  const popupVideo = React.useMemo(() => {
+    if (unwatchedVideos.length === 0) return null;
+    return [...unwatchedVideos].sort((a: any, b: any) => {
+      const relA = a.relevance === 'high' ? 1 : 0;
+      const relB = b.relevance === 'high' ? 1 : 0;
+      if (relA !== relB) return relB - relA;
+      return (b.id || 0) - (a.id || 0);
+    })[0];
+  }, [unwatchedVideos]);
+
+  // Show onboarding steps welcome/video only if there is an unwatched video
+  // and the pop-up has not been dismissed for this specific video in the current session
   React.useEffect(() => {
-    if (videos.length > 0) {
-      const videoIdsStr = videos.map((v: any) => String(v.id)).sort().join(',');
-      const storageKey = `seen-videos-${id || '1'}`;
-      const storedIds = localStorage.getItem(storageKey);
-      
-      if (storedIds) {
-        const storedArray = storedIds.split(',');
-        const hasNewVideo = videos.some((v: any) => !storedArray.includes(String(v.id)));
-        
-        if (hasNewVideo) {
-          setOnboardingStep('welcome');
-          localStorage.setItem(storageKey, videoIdsStr);
-        }
-      } else {
-        // Initial setup for the patient
+    if (popupVideo) {
+      const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
+      const wasDismissed = sessionStorage.getItem(key);
+      if (wasDismissed) {
+        setOnboardingStep(null);
+      } else if (onboardingStep === null) {
         setOnboardingStep('welcome');
-        localStorage.setItem(storageKey, videoIdsStr);
       }
+    } else {
+      setOnboardingStep(null);
     }
-  }, [videos, id]);
+  }, [popupVideo?.id, id]);
+
+  const handleGoToDashboard = () => {
+    if (popupVideo) {
+      const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
+      sessionStorage.setItem(key, 'true');
+    }
+    setOnboardingStep(null);
+  };
+
+  const handleWatchGuide = () => {
+    if (popupVideo) {
+      const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
+      sessionStorage.setItem(key, 'true');
+      setActiveVideo(popupVideo);
+      // Auto-rate/log interaction to mark as watched immediately on backend
+      handleRating(popupVideo.id, 5);
+    }
+    setOnboardingStep(null);
+  };
 
   const handleRating = async (videoId: string | number, stars: number) => {
     setRatingMap(prev => ({ ...prev, [videoId]: stars }));
@@ -487,7 +515,7 @@ export default function PatientHome() {
             </p>
 
             <div
-              onClick={() => { setActiveVideo(comfortVideo); setOnboardingStep(null); }}
+              onClick={handleWatchGuide}
               className="relative w-full h-36 bg-gray-100 rounded-2xl mb-5 overflow-hidden group cursor-pointer shadow-sm border border-[#E8EEF2]"
             >
               <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=400" alt="Video thumbnail" className="w-full h-full object-cover opacity-90 group-hover:scale-102 transition-transform duration-500" />
@@ -499,18 +527,18 @@ export default function PatientHome() {
             </div>
 
             <p className="text-xs text-[#5A6B7C] mb-6 leading-relaxed bg-[#FAFAFA] p-3.5 rounded-xl border border-[#E8EEF2]">
-              🛡️ <span className="font-bold text-[#0A1128]">Clinical Tip:</span> To help you sleep deeper tonight, your care team prepared a custom guide: <span className="font-semibold text-[#0A1128]">"{comfortVideo?.title || 'Comfort Guide'}"</span> ({comfortVideo?.duration || '1:00'}).
+              🛡️ <span className="font-bold text-[#0A1128]">Clinical Tip:</span> To help you sleep deeper tonight, your care team prepared a custom guide: <span className="font-semibold text-[#0A1128]">"{popupVideo?.title || 'Comfort Guide'}"</span> ({popupVideo?.duration || '1:00'}).
             </p>
 
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => { if (comfortVideo) { setActiveVideo(comfortVideo); setOnboardingStep(null); } }}
+                onClick={handleWatchGuide}
                 className="w-full bg-[#2D9596] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#2D9596]/15 hover:bg-[#247c7d] transition-all hover:shadow-xl hover:scale-[1.01]"
               >
-                Watch Guide ({comfortVideo?.duration || '1:00'})
+                Watch Guide ({popupVideo?.duration || '1:00'})
               </button>
               <button
-                onClick={() => setOnboardingStep(null)}
+                onClick={handleGoToDashboard}
                 className="w-full bg-[#FAFAFA] text-[#5A6B7C] font-semibold py-3.5 rounded-xl border border-[#E8EEF2] hover:bg-[#E8EEF2]/50 transition-colors"
               >
                 Go to Dashboard
