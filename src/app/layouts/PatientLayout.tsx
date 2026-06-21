@@ -58,8 +58,8 @@ export default function PatientLayout() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E8EEF2] px-2 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50">
-        <div className="flex items-center justify-around max-w-2xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E8EEF2] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50 overflow-x-auto scrollbar-none">
+        <div className="flex items-center justify-between sm:justify-around w-full max-w-2xl mx-auto px-2 py-1 min-w-max md:min-w-0">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
             const Icon = item.icon;
@@ -68,14 +68,14 @@ export default function PatientLayout() {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl transition-all min-w-[80px] ${
+                className={`flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl transition-all flex-1 min-w-[50px] sm:min-w-[80px] ${
                   isActive
                     ? 'text-[#6A994E] bg-[#6A994E]/5'
                     : 'text-[#414D5B] hover:text-[#2D9596]'
                 }`}
               >
-                <Icon className={`w-7 h-7 ${isActive ? 'scale-110' : ''} transition-transform`} />
-                <span className="text-[11px] font-bold uppercase tracking-wider">{item.name}</span>
+                <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isActive ? 'scale-110' : ''} transition-transform`} />
+                <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-center">{item.name}</span>
               </Link>
             );
           })}
