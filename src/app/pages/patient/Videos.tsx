@@ -243,10 +243,17 @@ export default function PatientVideos() {
           >
             <div className="flex gap-4 p-4">
               {/* Thumbnail */}
-                <button type="button" className={`relative w-28 h-20 bg-gradient-to-br ${thumbnailGradients[video.category] || 'from-[#2D9596] to-[#1a7273]'} rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden group`}
+                <button type="button" className="relative w-28 h-20 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden group"
                   onClick={() => handleWatch(video)}
                 >
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                  <video
+                    src={getFullVideoUrl(video.url || video.video_url) + '#t=1'}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/5 transition-colors" />
                   {watchedMap[video.id]
                     ? <CheckCircle className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
                     : <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />

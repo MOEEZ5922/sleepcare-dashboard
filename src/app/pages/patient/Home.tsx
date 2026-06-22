@@ -214,15 +214,21 @@ export default function PatientHome() {
 
       {/* 2-Minute Objective: Action Center */}
       <div className="space-y-4">
-        {/* Persistent AI Trigger (Dynamic based on leak) */}
-        {cpapTrends && cpapTrends.percentileLeak > 20 && (
+        {/* Persistent AI Trigger (Dynamic based on leak and presence of unwatched RPi video) */}
+        {cpapTrends && cpapTrends.percentileLeak > 20 && popupVideo && (
           <div className="bg-gradient-to-br from-[#0A1128] to-[#1E293B] text-white rounded-[2rem] p-8 shadow-2xl relative overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500">
             <div className="flex items-start gap-6">
               <div
-                onClick={() => { if (comfortVideo) setActiveVideo(comfortVideo); }}
+                onClick={() => { if (popupVideo) setActiveVideo(popupVideo); }}
                 className="w-16 h-16 bg-[#F4A261]/20 rounded-[1.25rem] flex items-center justify-center flex-shrink-0 relative overflow-hidden group cursor-pointer shadow-lg"
               >
-                <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=150" alt="Video thumbnail" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-all scale-110 group-hover:scale-100" />
+                <video
+                  src={getFullVideoUrl(popupVideo?.url || popupVideo?.video_url) + '#t=1'}
+                  preload="metadata"
+                  muted
+                  playsInline
+                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-all scale-110 group-hover:scale-100"
+                />
                 <div className="absolute inset-0 bg-[#F4A261]/20 group-hover:bg-transparent transition-all" />
                 <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
               </div>
@@ -234,9 +240,9 @@ export default function PatientHome() {
                 <h3 className="text-xl font-bold mb-4 leading-tight">Your mask had a tiny leak of {cpapTrends.percentileLeak} L/min last night. Let's optimize it for deeper comfort in 60s!</h3>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => { if (comfortVideo) setActiveVideo(comfortVideo); }}
-                    disabled={!comfortVideo}
-                    className={`bg-[#2D9596] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#247c7d] transition-all shadow-lg active:scale-95 text-xs ${comfortVideo ? '' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                    onClick={() => { if (popupVideo) setActiveVideo(popupVideo); }}
+                    disabled={!popupVideo}
+                    className={`bg-[#2D9596] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#247c7d] transition-all shadow-lg active:scale-95 text-xs ${popupVideo ? '' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                   >
                     View Comfort Tip (1 min)
                   </button>
@@ -518,7 +524,13 @@ export default function PatientHome() {
               onClick={handleWatchGuide}
               className="relative w-full h-36 bg-gray-100 rounded-2xl mb-5 overflow-hidden group cursor-pointer shadow-sm border border-[#E8EEF2]"
             >
-              <img src="https://images.unsplash.com/photo-1584515979956-d9f7e5d099f3?auto=format&fit=crop&q=80&w=400" alt="Video thumbnail" className="w-full h-full object-cover opacity-90 group-hover:scale-102 transition-transform duration-500" />
+              <video
+                src={getFullVideoUrl(popupVideo?.url || popupVideo?.video_url) + '#t=1'}
+                preload="metadata"
+                muted
+                playsInline
+                className="w-full h-full object-cover opacity-90 group-hover:scale-102 transition-transform duration-500"
+              />
               <div className="absolute inset-0 bg-[#0A1128]/10 group-hover:bg-[#0A1128]/5 transition-colors flex items-center justify-center">
                 <div className="w-12 h-12 bg-white/95 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform">
                   <Play className="w-5 h-5 text-[#2D9596] ml-1" />
