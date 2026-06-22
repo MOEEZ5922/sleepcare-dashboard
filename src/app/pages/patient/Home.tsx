@@ -74,9 +74,9 @@ export default function PatientHome() {
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
   const videos = Array.isArray(rawVideos) ? rawVideos : [];
 
-  // Find all unwatched videos assigned to the patient
+  // Find all unwatched videos assigned to the patient that are high relevance (popup targets)
   const unwatchedVideos = React.useMemo(() => {
-    return videos.filter((v: any) => !v.watched);
+    return videos.filter((v: any) => !v.watched && v.relevance === 'high');
   }, [videos]);
 
   // Identify the newest or highest-relevance unwatched video to display in the pop-up
