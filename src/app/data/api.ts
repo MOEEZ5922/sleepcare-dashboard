@@ -391,7 +391,7 @@ export async function fetchCpapTrends(patientId: string, days = 90): Promise<Cpa
   // Assume backend returns newest first or unsorted, let's sort newest first to calculate streak
   const sortedSessions = (data.sessions || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   for (let i = 0; i < sortedSessions.length; i++) {
-    if (sortedSessions[i].usage_hours >= 4) streak++;
+    if (sortedSessions[i].usage_hours >= 0.5) streak++;
     else break;
   }
 

@@ -32,7 +32,7 @@ export default function PatientCPAP() {
   const lastNight = usageHistory.length > 0 ? usageHistory[usageHistory.length - 1]?.hours || 0 : 0;
   const percentComplete = Math.min((lastNight / 8) * 100, 100);
   const streak = cpapData.streak || 0;
-  
+
   const hasDataGap = usageHistory.some((d: any) => d.hours === 0) || usageHistory.length < 7;
 
   return (
@@ -173,25 +173,25 @@ export default function PatientCPAP() {
             <Activity className="w-5 h-5 text-[#E76F51]" />
             <h3 className="font-bold text-[#0A1128]">Sleep Events</h3>
           </div>
-          <span className="text-xs font-bold text-[#E76F51]">Goal: &lt;5 /hr</span>
+          <span className="text-xs font-bold text-[#E76F51]">Goal: &lt;30 /night</span>
         </div>
         <p className="text-xs text-[#5A6B7C] mb-6">Fewer events mean deeper, more restful sleep.</p>
-        
+
         <div className="space-y-4">
           {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
             const date = new Date(day.date);
             const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            const isGood = day.ahi < 5;
-            const progress = Math.min((day.ahi / 15) * 100, 100); 
-            
+            const isGood = day.ahi < 30;
+            const progress = Math.min((day.ahi / 30) * 100, 100);
+
             return (
               <div key={index} className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[#5A6B7C] w-24">{dayName}</span>
                 <div className="flex-1 mx-4 h-1.5 bg-[#E8EEF2] rounded-full overflow-hidden flex items-center">
-                   <div 
-                     className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-[#6A994E]' : 'bg-[#E76F51]'}`} 
-                     style={{ width: `${Math.max(progress, 2)}%` }} 
-                   />
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-[#6A994E]' : 'bg-[#E76F51]'}`}
+                    style={{ width: `${Math.max(progress, 2)}%` }}
+                  />
                 </div>
                 <span className={`text-xs font-bold w-12 text-right ${isGood ? 'text-[#6A994E]' : 'text-[#E76F51]'}`}>
                   {day.ahi?.toFixed(1) || '0.0'}
@@ -211,23 +211,23 @@ export default function PatientCPAP() {
           </div>
         </div>
         <p className="text-xs text-[#5A6B7C] mb-6">A steady seal ensures you get the right air pressure.</p>
-        
+
         <div className="space-y-4">
           {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
             const date = new Date(day.date);
             const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             const leak = day.leakRate || 0;
-            const isGood = leak < 24; 
+            const isGood = leak < 24;
             const progress = Math.min((leak / 40) * 100, 100);
-            
+
             return (
               <div key={index} className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[#5A6B7C] w-24">{dayName}</span>
                 <div className="flex-1 mx-4 h-1.5 bg-[#E8EEF2] rounded-full overflow-hidden flex items-center">
-                   <div 
-                     className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-[#F4A261]' : 'bg-[#E76F51]'}`} 
-                     style={{ width: `${Math.max(progress, 2)}%` }} 
-                   />
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-[#F4A261]' : 'bg-[#E76F51]'}`}
+                    style={{ width: `${Math.max(progress, 2)}%` }}
+                  />
                 </div>
                 <span className={`text-xs font-bold w-16 text-right ${isGood ? 'text-[#F4A261]' : 'text-[#E76F51]'}`}>
                   {leak.toFixed(1)} L/m
