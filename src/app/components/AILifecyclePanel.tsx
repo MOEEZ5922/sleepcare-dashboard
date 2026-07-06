@@ -12,6 +12,7 @@ import {
   Gauge, 
   BarChart3 
 } from 'lucide-react';
+import { requestRetraining } from '../data/api';
 
 interface AiModel {
   modelId: string;
@@ -76,11 +77,10 @@ export default function AILifecyclePanel() {
   const [retrainingId, setRetrainingId] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  const handleRetrain = (modelId: string) => {
+  const handleRetrain = async (modelId: string) => {
     setRetrainingId(modelId);
-    
-    // Simulate training progress
-    setTimeout(() => {
+    try {
+      await requestRetraining(modelId);
       setModels(prev => prev.map(model => {
         if (model.modelId === modelId) {
           return {
@@ -94,11 +94,14 @@ export default function AILifecyclePanel() {
         }
         return model;
       }));
-      setRetrainingId(null);
       const modelName = models.find(m => m.modelId === modelId)?.name || 'Model';
       setSuccessToast(`${modelName} retrained successfully!`);
       setTimeout(() => setSuccessToast(null), 4000);
-    }, 3000);
+    } catch (err) {
+      toast.error('Failed to trigger model retraining. Please try again.');
+    } finally {
+      setRetrainingId(null);
+    }
   };
 
   const getDriftColor = (status: 'low' | 'moderate' | 'high') => {

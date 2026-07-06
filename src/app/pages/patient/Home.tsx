@@ -119,8 +119,6 @@ export default function PatientHome() {
       const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
       sessionStorage.setItem(key, 'true');
       setActiveVideo(popupVideo);
-      // Auto-rate/log interaction to mark as watched immediately on backend
-      handleRating(popupVideo.id, 5);
     }
     setOnboardingStep(null);
   };
