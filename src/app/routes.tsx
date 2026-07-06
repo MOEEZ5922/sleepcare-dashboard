@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import RoleSelector from "./pages/RoleSelector";
+import PatientLogin from "./pages/PatientLogin";
 import PhysicianLayout from "./layouts/PhysicianLayout";
 import TechnicianLayout from "./layouts/TechnicianLayout";
 import PatientLayout from "./layouts/PatientLayout";
@@ -97,7 +98,11 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    path: "/login",
+    Component: PatientLogin,
+  },
+  {
     path: "/patient",
-    element: <Navigate to="/patient/216753/home" replace />,
+    element: <Navigate to="/login" replace />,
   },
 ]);

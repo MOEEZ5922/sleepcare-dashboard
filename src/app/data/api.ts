@@ -235,11 +235,29 @@ function makeMockObjectNaNInternal(obj: any, parentKey?: string): any {
 
 async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options?.headers as any) || {})
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       cache: 'no-store',
       ...options,
     });
+
+    if (res.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      window.location.href = '/login';
+      throw new Error(`Unauthorized (401): Session expired — ${endpoint}`);
+    }
+
     if (!res.ok) {
       throw new Error(`API Error ${res.status}: ${res.statusText} — ${endpoint}`);
     }

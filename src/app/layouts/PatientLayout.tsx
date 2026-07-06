@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useParams } from 'react-router';
+import { Outlet, Link, useLocation, useParams, useNavigate } from 'react-router';
 import { Home, Activity, Package, FileText, HelpCircle, Video, Signal, TrendingUp } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 import { useApi } from '../hooks/useApi';
@@ -12,6 +12,14 @@ export default function PatientLayout() {
     dependencies: [id],
     cacheKey: `patient-summary-${id || '1'}`
   });
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    navigate('/login');
+  };
 
   const isLive = !!(summary && (summary as any).__isLive);
   const patientName = (summary?.name || summary?.patient?.name)?.split(' ')[0] || 'Patient';
@@ -35,11 +43,20 @@ export default function PatientLayout() {
         
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-3">
-            <div className="flex flex-col items-end gap-3">
-              <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] tracking-widest font-black uppercase text-white/50 bg-black/10 px-2.5 py-1 rounded-md">SleepCare</span>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-1.5">
                 <Link to="/physician" className="px-2 py-1 bg-white/10 text-white text-[10px] font-bold rounded hover:bg-white/20 transition-all uppercase tracking-tighter">MD</Link>
                 <Link to="/technician" className="px-2 py-1 bg-white/10 text-white text-[10px] font-bold rounded hover:bg-white/20 transition-all uppercase tracking-tighter">TECH</Link>
                 <Link to={`/patient/${id || '216753'}/home`} className="px-2 py-1 bg-white/10 text-white text-[10px] font-bold rounded hover:bg-white/20 transition-all uppercase tracking-tighter border border-white/30">PAT</Link>
+                <button
+                  onClick={handleLogout}
+                  className="px-2.5 py-1 bg-red-600/85 hover:bg-red-700 text-white text-[10px] font-black rounded transition-all uppercase tracking-tighter"
+                >
+                  Sign Out
+                </button>
               </div>
               <ConnectivityStatus />
             </div>
