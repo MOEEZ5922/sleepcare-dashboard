@@ -1,10 +1,10 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { Home, FileText, HelpCircle, ArrowLeft, Settings } from 'lucide-react';
+import { Home, HelpCircle, ArrowLeft, Settings, Users } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 
 const navigation = [
   { name: 'Exception Inbox', href: '/physician', icon: Home },
-  { name: 'Patient Directory', href: '/physician/directory', icon: FileText },
+  { name: 'Patient Directory', href: '/physician/directory', icon: Users },
   { name: 'Help & Protocols', href: '/physician/help', icon: HelpCircle },
 ];
 

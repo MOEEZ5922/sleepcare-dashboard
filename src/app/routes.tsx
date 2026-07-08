@@ -13,7 +13,7 @@ import UniversalSurveys from "./pages/shared/UniversalSurveys";
 import PhysicianCPAP from "./pages/physician/CPAP";
 import PhysicianSummary from "./pages/physician/Summary";
 import PhysicianHelp from "./pages/physician/Help";
-import PhysicianDirectory from "./pages/physician/Directory";
+import PatientDirectory from "./pages/shared/Directory";
 import UniversalAIAnalysis from "./pages/shared/UniversalAIAnalysis";
 import UniversalReporting from "./pages/shared/UniversalReporting";
 import TechnicianHome from "./pages/technician/Home";
@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
     Component: PhysicianLayout,
     children: [
       { index: true, Component: PhysicianHome },
-      { path: "directory", Component: PhysicianDirectory },
+      { path: "directory", Component: PatientDirectory },
       { path: "help", Component: PhysicianHelp },
       {
         path: "patient/:id",
@@ -64,6 +64,7 @@ export const router = createBrowserRouter([
     Component: TechnicianLayout,
     children: [
       { index: true, Component: TechnicianHome },
+      { path: "directory", Component: PatientDirectory },
       { path: "inventory", Component: TechnicianInventory },
       { path: "help", Component: TechnicianHelp },
       {

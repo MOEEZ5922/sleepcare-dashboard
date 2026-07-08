@@ -1,9 +1,10 @@
 import { Outlet, Link, useLocation } from 'react-router';
-import { Home, Package, HelpCircle, ArrowLeft, Settings } from 'lucide-react';
+import { Home, Package, HelpCircle, ArrowLeft, Settings, Users } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 
 const navigation = [
   { name: 'Priority Queue', href: '/technician', icon: Home },
+  { name: 'Patient Directory', href: '/technician/directory', icon: Users },
   { name: 'Inventory Tracker', href: '/technician/inventory', icon: Package },
   { name: 'IT Support', href: '/technician/help', icon: HelpCircle },
 ];

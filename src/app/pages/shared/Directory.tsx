@@ -1,15 +1,18 @@
-import { Search, User, Filter, MoreVertical, Loader2, Signal } from 'lucide-react';
+import { Search, User, Filter, MoreVertical, Loader2, Signal, Users } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { useApi } from '../../hooks/useApi';
 import { fetchPatients, DirectoryResponse } from '../../data/api';
 
-export default function PhysicianDirectory() {
+export default function PatientDirectory() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
+
+  const isTechnician = location.pathname.startsWith('/technician');
   
   const { data: patients, isLoading, error } = useApi<DirectoryResponse>(fetchPatients, {
-    cacheKey: 'physician-directory'
+    cacheKey: 'patient-directory'
   });
 
   const isLive = !!(patients && (patients as any).__isLive);
@@ -32,7 +35,7 @@ export default function PhysicianDirectory() {
       ...p,
       patientId,
       id: patientId,
-      name: p.name || p.patientName || (p.patient ? `${p.patient.first_name || ''} ${p.patient.last_name || ''}`.trim() : '') || 'Patient ' + patientId.replace('PAT', ''),
+      name: p.name || p.patientName || (p.patient ? `${p.patient.first_name || ''} ${p.patient.last_name || ''}`.trim() : '') || 'Patient ' + String(patientId).replace('PAT', ''),
       gender: p.gender || p.sex || (p.patient?.gender) || 'M',
       age: age || NaN,
       status: p.status || 'Active',
@@ -40,10 +43,9 @@ export default function PhysicianDirectory() {
     };
   });
 
-  console.log('Directory hydrated list:', patientList);
   const filteredPatients = patientList.filter((p: any) => 
-    ((p.name || p.patientName || '').toLowerCase()).includes(searchTerm.toLowerCase()) ||
-    ((p.patientId || p.id || '').toLowerCase()).includes(searchTerm.toLowerCase())
+    ((p.name || '').toLowerCase()).includes(searchTerm.toLowerCase()) ||
+    ((p.patientId || '').toLowerCase()).includes(searchTerm.toLowerCase())
   );
 
   if (isLoading && !patients) {
@@ -107,7 +109,7 @@ export default function PhysicianDirectory() {
                 <tr 
                   key={patient.patientId || patient.id} 
                   className="hover:bg-[#FAFAFA] transition-colors cursor-pointer"
-                  onClick={() => navigate(`/physician/patient/${patient.patientId || patient.id}`)}
+                  onClick={() => navigate(isTechnician ? `/technician/patient/${patient.patientId || patient.id}` : `/physician/patient/${patient.patientId || patient.id}`)}
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
