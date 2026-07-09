@@ -202,9 +202,9 @@ function makeMockObjectNaNInternal(obj: any, parentKey?: string): any {
         const val = obj[key];
         
         // Preserve identifiers, types, structural attributes, and dates/times
-        const isIdentifier = /^(patient_?id|id|device_?id|serial|serial_?number|machine_?serial|model_?id|event_?id|signature_?hash|digital_?seal_?hash)$/i.test(key);
-        const isTimeOrDate = /^(day|date|timestamp|last_?sync|last_?reading|assigned_?date|dob|birth_?date|cpap_?start_?date|therapy_?start_?date|week_?of|night_?date)$/i.test(key);
-        const isStructural = /^(type|category|status|risk_?tier|phase|phase_?label|severity|gender|mask_?type|mask|device_?type|outcome|action|form_?type|issue_?type|role|color|label|direction)$/i.test(key);
+        const isIdentifier = /^(patient_?id|id|device_?id|serial|serial_?number|machine_?serial|model_?id|event_?id|signature_?hash|digital_?seal_?hash|delivery_?sequence)$/i.test(key);
+        const isTimeOrDate = /^(day|date|timestamp|last_?sync|last_?reading|assigned_?date|dob|birth_?date|cpap_?start_?date|therapy_?start_?date|week_?of|night_?date|delivery_?date)$/i.test(key);
+        const isStructural = /^(type|category|status|risk_?tier|phase|phase_?label|severity|gender|mask_?type|mask|device_?type|outcome|action|form_?type|issue_?type|role|color|label|direction|mask_?manufacturer|mask_?description)$/i.test(key);
         
         if (isIdentifier || isStructural) {
           result[key] = val; // Preserve identifiers and structural properties
@@ -344,6 +344,28 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
     if (endpoint.includes('/authorizations')) return [] as any;
     if (endpoint.includes('/inventory')) return mock.inventoryItems as any;
     if (endpoint.includes('/devices')) return mock.deviceData as any;
+    if (endpoint.includes('/history') && endpoint.includes('/masks')) {
+      return {
+        patient_id: endpoint.split('/').filter(Boolean).reverse()[1] || '1',
+        total_deliveries: 2,
+        masks: [
+          {
+            delivery_date: "2026-03-24",
+            delivery_sequence: 1,
+            mask_type: "Facial",
+            mask_description: "KIT MASQ. LENA T.M+M FACIAL (x1)",
+            mask_manufacturer: "326"
+          },
+          {
+            delivery_date: null,
+            delivery_sequence: 2,
+            mask_type: null,
+            mask_description: null,
+            mask_manufacturer: null
+          }
+        ]
+      } as any;
+    }
 
     // For POST requests, return a generic success
     if (options?.method === 'POST') return { status: 'success', message: 'Mock submission accepted' } as any;
@@ -545,6 +567,11 @@ export async function fetchAuthorizations(patientId: string): Promise<any[]> {
 /** Get general technician inventory (not patient specific) */
 export async function fetchInventory() {
   return apiFetch(`/api/inventory`);
+}
+
+/** Get mask delivery history for a patient */
+export async function fetchMaskHistory(patientId: string): Promise<any> {
+  return apiFetch<any>(`/api/history/${formatPatientId(patientId)}/masks`);
 }
 
 /** Backend health check */

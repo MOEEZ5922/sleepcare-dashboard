@@ -1,7 +1,7 @@
 import { useParams } from 'react-router';
 import { Package, MapPin, Truck, CheckCircle, Activity, Battery, Smartphone, Watch, Wifi, HeartPulse, Signal, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchInterventions, fetchDevices } from '../../data/api';
+import { fetchInterventions, fetchDevices, fetchMaskHistory } from '../../data/api';
 
 export default function PatientInterventions() {
   const { id } = useParams();
@@ -15,11 +15,34 @@ export default function PatientInterventions() {
     cacheKey: `devices-${id || '1'}`
   });
 
+  const { data: maskHistory, isLoading: isLoadingMasks } = useApi(() => fetchMaskHistory(id || '1'), {
+    dependencies: [id],
+    cacheKey: `mask-history-${id || '1'}`
+  });
+
   const isLive = !!(liveInterventions && (liveInterventions as any).__isLive);
   const delivery = (liveInterventions as any)?.patient?.upcomingDelivery || (liveInterventions as any)?.upcomingDelivery || null;
   const devices = Array.isArray(liveDevices) ? liveDevices : [];
 
-  if ((isLoadingInt || isLoadingDev) && !liveInterventions) {
+  const formatNullValue = (val: any) => {
+    if (val === null || val === undefined || val === '' || val === 0 || val === '0') {
+      return '—';
+    }
+    return val;
+  };
+
+  const formatDateValue = (dateStr: any) => {
+    if (!dateStr || dateStr === '0') return '—';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return '—';
+    }
+  };
+
+  if ((isLoadingInt || isLoadingDev || isLoadingMasks) && !liveInterventions) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="w-8 h-8 text-[#2D9596] animate-spin" />
@@ -108,6 +131,58 @@ export default function PatientInterventions() {
         <p className="text-[#5A6B7C] text-sm">No pending deliveries for this patient.</p>
       </div>
       )}
+
+      {/* Mask Delivery History */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
+        <h3 className="text-[#0A1128] font-semibold mb-2 flex items-center gap-2">
+          <Package className="w-5 h-5 text-[#2D9596]" />
+          Mask Delivery History
+        </h3>
+        <p className="text-sm text-[#5A6B7C] mb-6">
+          Historical log of all CPAP mask replacement shipments dispatched to this profile.
+        </p>
+
+        {maskHistory?.masks && maskHistory.masks.length > 0 ? (
+          <div className="overflow-x-auto border border-[#E8EEF2] rounded-xl">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#FAFAFA] border-b border-[#E8EEF2]">
+                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Sequence</th>
+                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Delivery Date</th>
+                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Mask Type</th>
+                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Manufacturer</th>
+                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Description</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E8EEF2]">
+                {maskHistory.masks.map((mask: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-[#FAFAFA]/50 transition-colors text-xs text-[#0A1128]">
+                    <td className="p-3 font-semibold">
+                      {formatNullValue(mask.delivery_sequence)}
+                    </td>
+                    <td className="p-3">
+                      {formatDateValue(mask.delivery_date)}
+                    </td>
+                    <td className="p-3 font-medium">
+                      {formatNullValue(mask.mask_type)}
+                    </td>
+                    <td className="p-3">
+                      {formatNullValue(mask.mask_manufacturer)}
+                    </td>
+                    <td className="p-3 text-[#5A6B7C] italic">
+                      {formatNullValue(mask.mask_description)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-[#FAFAFA] rounded-xl p-6 text-center border border-[#E8EEF2]">
+            <p className="text-[#5A6B7C] text-xs">No historical mask deliveries recorded.</p>
+          </div>
+        )}
+      </div>
 
       {/* Biomarker Wearables */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border-2 border-[#E8EEF2]">
