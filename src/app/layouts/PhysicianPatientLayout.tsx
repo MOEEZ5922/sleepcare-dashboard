@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation, useParams } from 'react-router';
 import { ArrowLeft, Signal, Loader2, Brain, Activity, AlertTriangle, ShieldCheck, Calendar } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 import { useApi } from '../hooks/useApi';
-import { fetchPatientSummary } from '../data/api';
+import { fetchPatientSummary, PatientSummary } from '../data/api';
 
 export default function PhysicianPatientLayout() {
   const location = useLocation();
@@ -39,13 +39,22 @@ export default function PhysicianPatientLayout() {
     );
   }
 
-  const patient = summary || {
+  const patient: PatientSummary = summary || {
+    patientId: id || '1',
     name: 'Unknown Patient',
+    status: 'Unknown',
+    adherenceRate: 0,
+    currentAHI: 0,
+    averageHours: 0,
+    percentileLeak: 0,
     gender: '—',
     dob: '—',
     therapyStartDate: new Date().toISOString(),
     maskType: '—',
-    riskScore: 0
+    riskScore: 0,
+    phone: null,
+    email: null,
+    is_lisa_user: null
   };
 
   return (
@@ -67,10 +76,17 @@ export default function PhysicianPatientLayout() {
         </div>
         
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 flex-wrap">
             <div>
               <p className="text-xs text-[#5A6B7C] mb-1">Patient Profile</p>
-              <p className="font-semibold text-[#0A1128]">{patient.name}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-[#0A1128]">{patient.name}</p>
+                {patient.is_lisa_user && (
+                  <span className="text-[9px] font-extrabold text-[#6A994E] bg-[#6A994E]/10 border border-[#6A994E]/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                    LISA User
+                  </span>
+                )}
+              </div>
             </div>
             <div className="w-px h-10 bg-[#E8EEF2]" />
             <div>
@@ -78,6 +94,18 @@ export default function PhysicianPatientLayout() {
               <p className="text-[#0A1128]">{patient.gender}, {patient.dob}</p>
             </div>
             <div className="w-px h-10 bg-[#E8EEF2]" />
+            {(patient.email || patient.phone) && (
+              <>
+                <div>
+                  <p className="text-xs text-[#5A6B7C] mb-1">Contact Info</p>
+                  <p className="text-xs text-[#0A1128] font-medium leading-tight">
+                    {patient.phone && <span className="block">{patient.phone}</span>}
+                    {patient.email && <span className="block text-[#5A6B7C]">{patient.email}</span>}
+                  </p>
+                </div>
+                <div className="w-px h-10 bg-[#E8EEF2]" />
+              </>
+            )}
             <div>
               <p className="text-xs text-[#5A6B7C] mb-1">Therapy Timeline</p>
               <p className="text-[#0A1128]">Started: {new Date(patient.therapyStartDate || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>

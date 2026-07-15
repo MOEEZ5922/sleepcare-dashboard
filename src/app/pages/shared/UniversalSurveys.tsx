@@ -177,6 +177,7 @@ export default function UniversalSurveys() {
    const [selectedForm, setSelectedForm] = useState('');
    const [formNote, setFormNote] = useState('');
    const [isSubmitting, setIsSubmitting] = useState(false);
+   const [viewMode, setViewMode] = useState<'grouped' | 'itemized'>('grouped');
 
    const availableForms = [
       { id: 'comfort', name: 'Mask Comfort & Fit Check', type: 'Behavioral' },
@@ -553,19 +554,128 @@ export default function UniversalSurveys() {
 
                {/* 6. Technician Field Observations & Logs */}
                <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b border-[#E8EEF2] pb-4">
                      <div>
                         <h3 className="text-lg font-bold text-[#0A1128] flex items-center gap-2">
                            <CheckCircle className="w-5 h-5 text-[#F4A261]" /> Technician Field Observations & Logs
                         </h3>
                         <p className="text-sm text-[#5A6B7C] mt-1">Cross-disciplinary tracking and logs registered by field support</p>
                      </div>
-                     <span className="text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 px-2.5 py-1 border border-[#F4A261]/20 rounded-lg uppercase">
-                        Field Logs ({technicianLogs.length})
-                     </span>
+                     <div className="flex items-center gap-3">
+                        {liveSurveys?.visits && liveSurveys.visits.length > 0 && (
+                           <div className="flex bg-[#E8EEF2] p-1 rounded-lg shrink-0">
+                              <button
+                                 onClick={() => setViewMode('grouped')}
+                                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                    viewMode === 'grouped'
+                                       ? 'bg-white text-[#0A1128] shadow-sm'
+                                       : 'text-[#5A6B7C] hover:text-[#0A1128]'
+                                 }`}
+                              >
+                                 Grouped By Visit
+                              </button>
+                              <button
+                                 onClick={() => setViewMode('itemized')}
+                                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                    viewMode === 'itemized'
+                                       ? 'bg-white text-[#0A1128] shadow-sm'
+                                       : 'text-[#5A6B7C] hover:text-[#0A1128]'
+                                 }`}
+                              >
+                                 Itemized ({technicianLogs.length})
+                              </button>
+                           </div>
+                        )}
+                        <span className="text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 px-2.5 py-1 border border-[#F4A261]/20 rounded-lg uppercase shrink-0">
+                           Field Logs ({viewMode === 'grouped' && liveSurveys?.visits ? liveSurveys.visits.length : technicianLogs.length})
+                        </span>
+                     </div>
                   </div>
 
-                  {technicianLogs.length > 0 ? (
+                  {viewMode === 'grouped' && liveSurveys?.visits && liveSurveys.visits.length > 0 ? (
+                     <div className="space-y-6">
+                        {liveSurveys.visits.map((visit: any, vIdx: number) => {
+                           const pctCompleted = visit.total_questions > 0 
+                              ? Math.round((visit.completed_answers / visit.total_questions) * 100)
+                              : 0;
+
+                           return (
+                              <div key={vIdx} className="bg-[#FAFAFA] border border-[#E8EEF2] rounded-2xl overflow-hidden shadow-sm hover:border-[#F4A261]/30 transition-all">
+                                 {/* Visit Header */}
+                                 <div className="bg-[#0A1128] text-white p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                                    <div>
+                                       <div className="flex items-center gap-3">
+                                          <span className="text-xl">📋</span>
+                                          <h4 className="font-bold text-base">{visit.questionnaire_name}</h4>
+                                          <span className="text-[10px] uppercase font-bold bg-[#F4A261] px-2 py-0.5 rounded text-white tracking-widest shrink-0">
+                                             ID: {visit.questionnaire_id}
+                                          </span>
+                                       </div>
+                                       <p className="text-xs text-white/70 mt-1">
+                                          Technician Visit Form • Date: {new Date(visit.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                       </p>
+                                    </div>
+                                    <div className="text-right flex items-center gap-3 self-end sm:self-auto">
+                                       <div className="text-right">
+                                          <span className="text-[9px] uppercase font-bold text-white/50 tracking-wider block">Completeness</span>
+                                          <span className="text-sm font-bold">{visit.completed_answers} / {visit.total_questions} answers</span>
+                                       </div>
+                                       <div className="w-12 h-12 rounded-full border-4 border-white/20 flex items-center justify-center font-bold text-xs relative overflow-hidden" style={{ borderColor: pctCompleted >= 80 ? '#6A994E' : '#F4A261' }}>
+                                          {pctCompleted}%
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 {/* Visit Details Table */}
+                                 <div className="p-6">
+                                    <h5 className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-4">Questionnaire Responses</h5>
+                                    <div className="overflow-x-auto">
+                                       <table className="w-full text-left border-collapse text-xs">
+                                          <thead>
+                                             <tr className="border-b border-[#E8EEF2] text-[#5A6B7C] font-bold uppercase tracking-wider pb-2">
+                                                <th className="pb-2 w-12">ID</th>
+                                                <th className="pb-2">Question Context</th>
+                                                <th className="pb-2 w-32 text-center">Status</th>
+                                                <th className="pb-2 pl-4">Answer Value</th>
+                                             </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-[#E8EEF2]">
+                                             {(visit.answers || []).map((ans: any, aIdx: number) => {
+                                                const isCompleted = ans.completion_status === 'completed';
+                                                return (
+                                                   <tr key={aIdx} className="hover:bg-[#FAFAFA]/50 transition-colors">
+                                                      <td className="py-3 font-semibold text-[#5A6B7C]">{ans.question_id}</td>
+                                                      <td className="py-3 font-bold text-[#0A1128]">{ans.question_text || '—'}</td>
+                                                      <td className="py-3 text-center">
+                                                         <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                                            isCompleted 
+                                                               ? 'bg-[#6A994E]/10 text-[#6A994E] border border-[#6A994E]/20' 
+                                                               : 'bg-[#E76F51]/10 text-[#E76F51] border border-[#E76F51]/20'
+                                                         }`}>
+                                                            {ans.completion_status}
+                                                         </span>
+                                                      </td>
+                                                      <td className="py-3 pl-4">
+                                                         {isCompleted ? (
+                                                            <span className="font-bold text-[#0A1128] bg-white border border-[#E8EEF2] px-2.5 py-1 rounded inline-block shadow-sm">
+                                                               {ans.answer_value}
+                                                            </span>
+                                                         ) : (
+                                                            <span className="text-[#5A6B7C] italic opacity-50">—</span>
+                                                         )}
+                                                      </td>
+                                                   </tr>
+                                                );
+                                             })}
+                                          </tbody>
+                                       </table>
+                                    </div>
+                                 </div>
+                              </div>
+                           );
+                        })}
+                     </div>
+                  ) : technicianLogs.length > 0 ? (
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {technicianLogs.map((log: any, idx: number) => (
                            <div key={idx} className="bg-[#FAFAFA] border border-[#E8EEF2] p-5 rounded-xl hover:border-[#F4A261]/30 transition-all hover:shadow-sm">

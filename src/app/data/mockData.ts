@@ -8,6 +8,9 @@ export const patientInfo = {
   address: "22 Rue de la Paix, 75002 Paris",
   machineSerial: "CPAP-2024-8745",
   maskType: "AirFit F20 - Medium",
+  phone: "+33 1 42 61 50 00",
+  email: "sarah.mitchell@example.com",
+  is_lisa_user: true,
 };
 
 // Physician Exception-Based Inbox Data
@@ -230,7 +233,7 @@ export const technicianEvents = [
 
 export const cpapData = {
   currentAHI: 12.4,
-  percentileLeak: 38.5,
+  percentileLeak: 18.5,
   averageHours: 1.2,
   lastMaskChange: "2026-03-15",
   currentMask: "AirFit N20 (Nasal)",
@@ -240,14 +243,15 @@ export const cpapData = {
     max: 14,
     current: 10.5,
   },
+  leak_field: "leaks95",
   usageHistory: [
-    { date: "2026-04-08", hours: 7.2, ahi: 3.8, leakRate: 14.2 },
-    { date: "2026-04-09", hours: 6.5, ahi: 4.1, leakRate: 19.8 },
-    { date: "2026-04-10", hours: 7.8, ahi: 3.2, leakRate: 12.4 },
-    { date: "2026-04-11", hours: 5.2, ahi: 5.8, leakRate: 28.4 },
-    { date: "2026-04-12", hours: 7.5, ahi: 3.9, leakRate: 15.6 },
-    { date: "2026-04-13", hours: 6.9, ahi: 4.2, leakRate: 22.1 },
-    { date: "2026-04-14", hours: 7.1, ahi: 3.6, leakRate: 18.5 },
+    { date: "2026-04-08", hours: 7.2, ahi: 3.8, leakRate: 14.2, leaks95: 18.5, leaks90: 14.2, leaks0: 2.1, leaks_large_pct: 0.0 },
+    { date: "2026-04-09", hours: 6.5, ahi: 4.1, leakRate: 19.8, leaks95: 23.4, leaks90: 19.8, leaks0: 3.0, leaks_large_pct: 0.0 },
+    { date: "2026-04-10", hours: 7.8, ahi: 3.2, leakRate: 12.4, leaks95: 16.2, leaks90: 12.4, leaks0: 1.8, leaks_large_pct: 0.0 },
+    { date: "2026-04-11", hours: 5.2, ahi: 5.8, leakRate: 28.4, leaks95: 32.8, leaks90: 28.4, leaks0: 5.2, leaks_large_pct: 2.5 },
+    { date: "2026-04-12", hours: 7.5, ahi: 3.9, leakRate: 15.6, leaks95: 19.8, leaks90: 15.6, leaks0: 2.4, leaks_large_pct: 0.0 },
+    { date: "2026-04-13", hours: 6.9, ahi: 4.2, leakRate: 22.1, leaks95: 26.5, leaks90: 22.1, leaks0: 4.1, leaks_large_pct: 0.8 },
+    { date: "2026-04-14", hours: 7.1, ahi: 3.6, leakRate: 18.5, leaks95: 22.9, leaks90: 18.5, leaks0: 3.5, leaks_large_pct: 0.0 },
   ],
   thirtyDayTrend: Array.from({ length: 30 }, (_, i) => ({
     day: i + 1,
@@ -431,6 +435,117 @@ export const surveyData = {
       { name: "2-Week Follow-Up", completed: "2026-03-15", score: "Complete" },
     ],
   },
+  total_visits: 2,
+  visits: [
+    {
+      date: "2026-03-23 08:33:40+00:00",
+      questionnaire_id: "410",
+      questionnaire_name: "Q VST PPC",
+      total_questions: 21,
+      completed_answers: 9,
+      answers: [
+        {
+          question_id: "2425",
+          question_text: "5 IAH résiduel (Residual AHI):",
+          answer_value: "0,70",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2426",
+          question_text: "Fuite médiane (Median Leak):",
+          answer_value: "14,20",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2427",
+          question_text: "Observance moyenne (Average Adherence):",
+          answer_value: "6,50",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2428",
+          question_text: "Satisfaction Patient:",
+          answer_value: "Très satisfait",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2429",
+          question_text: "Target Pressure (Pression cible):",
+          answer_value: "10,5",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2430",
+          question_text: "Type de masque:",
+          answer_value: "Nasal",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2431",
+          question_text: "Remplacez le filtre:",
+          answer_value: "Oui",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2432",
+          question_text: "Nettoyage hebdomadaire fait:",
+          answer_value: "Oui",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2433",
+          question_text: "Heures d'utilisation hier soir:",
+          answer_value: "7,1",
+          completion_status: "completed"
+        },
+        {
+          question_id: "2434",
+          question_text: "Remarques Additionnelles:",
+          answer_value: null,
+          completion_status: "missing"
+        }
+      ]
+    },
+    {
+      date: "2026-02-15 10:12:00+00:00",
+      questionnaire_id: "408",
+      questionnaire_name: "Q VST PPC Init",
+      total_questions: 15,
+      completed_answers: 5,
+      answers: [
+        {
+          question_id: "1201",
+          question_text: "Target Pressure Setting:",
+          answer_value: "10,0",
+          completion_status: "completed"
+        },
+        {
+          question_id: "1202",
+          question_text: "Mask Sealed Correctly:",
+          answer_value: "Oui",
+          completion_status: "completed"
+        },
+        {
+          question_id: "1203",
+          question_text: "Patient Acclimation Rating:",
+          answer_value: "Bien",
+          completion_status: "completed"
+        },
+        {
+          question_id: "1204",
+          question_text: "Machine Serial Check:",
+          answer_value: "Vérifié",
+          completion_status: "completed"
+        },
+        {
+          question_id: "1205",
+          question_text: "Humidificateur installé:",
+          answer_value: "Oui",
+          completion_status: "completed"
+        }
+      ]
+    }
+  ]
 };
 
 export const aiData = {

@@ -45,6 +45,19 @@ export default function UniversalCPAP({ role = 'physician' }: { role?: 'physicia
   // Data Gap Detection (Simulated for this demo)
   const hasDataGap = usageHistory.some((d: any) => d.hours === 0) || usageHistory.length < 7;
 
+  const leakField = cpap.leakField || 'leaks90';
+  const isLargePct = leakField === 'leaks_large_pct';
+  const leakLabel = isLargePct
+    ? 'Large Leak %'
+    : leakField === 'leaks95'
+    ? '95th% Leak Rate'
+    : leakField === 'leaks90'
+    ? '90th% Leak Rate'
+    : 'Median Leak (Leaks 0)';
+
+  const leakUnit = isLargePct ? '%' : 'L/min';
+  const isGoodSeal = isLargePct ? cpap.percentileLeak < 10 : leakField === 'leaks0' ? cpap.percentileLeak < 10 : cpap.percentileLeak < 24;
+
   return (
     <div className="p-8 space-y-6 animate-in fade-in duration-500">
       {/* Header & Live Status */}
@@ -116,7 +129,7 @@ export default function UniversalCPAP({ role = 'physician' }: { role?: 'physicia
         <div className="bg-white rounded-2xl p-6 border border-[#E8EEF2] shadow-sm">
           <p className="text-sm text-[#5A6B7C] mb-1">Current AHI</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-[#0A1128]">{cpap.currentAHI}</span>
+            <span className="text-4xl font-bold text-[#0A1128]">{cpap.currentAHI?.toFixed(1) ?? '0.0'}</span>
             <span className="text-xs text-[#5A6B7C] font-medium">events/hr</span>
           </div>
           <div className={`mt-4 flex items-center gap-1.5 text-xs font-bold ${cpap.currentAHI < 5 ? 'text-[#6A994E]' : 'text-[#E76F51]'}`}>
@@ -127,14 +140,14 @@ export default function UniversalCPAP({ role = 'physician' }: { role?: 'physicia
 
         {/* Mask Leak */}
         <div className="bg-white rounded-2xl p-6 border border-[#E8EEF2] shadow-sm">
-          <p className="text-sm text-[#5A6B7C] mb-1">90th% Leak Rate</p>
+          <p className="text-sm text-[#5A6B7C] mb-1">{leakLabel}</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-[#0A1128]">{cpap.percentileLeak}</span>
-            <span className="text-xs text-[#5A6B7C] font-medium">L/min</span>
+            <span className="text-4xl font-bold text-[#0A1128]">{cpap.percentileLeak?.toFixed(1) ?? '0.0'}</span>
+            <span className="text-xs text-[#5A6B7C] font-medium">{leakUnit}</span>
           </div>
-          <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-[#2D9596]">
+          <div className={`mt-4 flex items-center gap-1.5 text-xs font-bold ${isGoodSeal ? 'text-[#2D9596]' : 'text-[#E76F51]'}`}>
             <Wind className="w-4 h-4" />
-            {cpap.percentileLeak < 24 ? 'GOOD SEAL' : 'HIGH LEAKAGE'}
+            {isGoodSeal ? 'GOOD SEAL' : 'HIGH LEAKAGE'}
           </div>
         </div>
 
@@ -233,7 +246,7 @@ export default function UniversalCPAP({ role = 'physician' }: { role?: 'physicia
             <div className="flex items-center gap-4 text-xs font-medium text-[#5A6B7C]">
                <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 bg-[#F4A261] rounded-full opacity-50" />
-                  <span>90th Percentile Leak (L/min)</span>
+                  <span>{leakLabel} ({leakUnit})</span>
                </div>
             </div>
           </div>
@@ -306,6 +319,55 @@ export default function UniversalCPAP({ role = 'physician' }: { role?: 'physicia
             </div>
           </div>
         )}
+
+        {/* Detailed Session History Table */}
+        <div className="bg-white rounded-2xl p-6 border border-[#E8EEF2] shadow-sm lg:col-span-2 animate-in fade-in duration-700">
+          <div className="flex items-center justify-between mb-6 border-b border-[#E8EEF2] pb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-[#2D9596]" />
+              <h3 className="font-bold text-[#0A1128]">Detailed Session History</h3>
+            </div>
+            <span className="text-xs font-semibold text-[#5A6B7C]">
+              Active leak column: <span className="font-bold text-[#2D9596] uppercase">{leakField}</span>
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#E8EEF2] text-[10px] font-bold text-[#5A6B7C] uppercase tracking-wider bg-[#FAFAFA]">
+                  <th className="p-3">Date</th>
+                  <th className="p-3 text-right">AHI (events/hr)</th>
+                  <th className="p-3 text-right">Usage (hrs)</th>
+                  <th className={`p-3 text-right ${leakField === 'leaks95' ? 'bg-[#2D9596]/5 text-[#2D9596] font-bold' : ''}`}>Leaks 95 (L/min)</th>
+                  <th className={`p-3 text-right ${leakField === 'leaks90' ? 'bg-[#2D9596]/5 text-[#2D9596] font-bold' : ''}`}>Leaks 90 (L/min)</th>
+                  <th className={`p-3 text-right ${leakField === 'leaks0' ? 'bg-[#2D9596]/5 text-[#2D9596] font-bold' : ''}`}>Leaks 0 (L/min)</th>
+                  <th className={`p-3 text-right ${leakField === 'leaks_large_pct' ? 'bg-[#2D9596]/5 text-[#2D9596] font-bold' : ''}`}>Large Leak (%)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E8EEF2] text-sm">
+                {[...usageHistory].reverse().map((s: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-[#FAFAFA]/50 transition-colors">
+                    <td className="p-3 font-medium text-[#0A1128]">{new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                    <td className="p-3 text-right font-semibold text-[#0A1128]">{s.ahi?.toFixed(1) ?? '0.0'}</td>
+                    <td className="p-3 text-right font-semibold text-[#0A1128]">{s.hours?.toFixed(1)} hrs</td>
+                    <td className={`p-3 text-right ${leakField === 'leaks95' ? 'bg-[#2D9596]/5 font-bold text-[#2D9596]' : 'text-[#5A6B7C] opacity-40'}`}>
+                      {leakField === 'leaks95' ? `${s.leaks95?.toFixed(1) ?? '—'}` : '—'}
+                    </td>
+                    <td className={`p-3 text-right ${leakField === 'leaks90' ? 'bg-[#2D9596]/5 font-bold text-[#2D9596]' : 'text-[#5A6B7C] opacity-40'}`}>
+                      {leakField === 'leaks90' ? `${s.leaks90?.toFixed(1) ?? '—'}` : '—'}
+                    </td>
+                    <td className={`p-3 text-right ${leakField === 'leaks0' ? 'bg-[#2D9596]/5 font-bold text-[#2D9596]' : 'text-[#5A6B7C] opacity-40'}`}>
+                      {leakField === 'leaks0' ? `${s.leaks0?.toFixed(1) ?? '—'}` : '—'}
+                    </td>
+                    <td className={`p-3 text-right ${leakField === 'leaks_large_pct' ? 'bg-[#2D9596]/5 font-bold text-[#2D9596]' : 'text-[#5A6B7C] opacity-40'}`}>
+                      {leakField === 'leaks_large_pct' ? `${s.leaks_large_pct?.toFixed(1) ?? '—'}%` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
       </div>
     </div>

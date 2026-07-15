@@ -33,6 +33,9 @@ export interface PatientSummary {
   machineSerial?: string;
   interventions?: any[];
   patient?: any; // Nested patient object used in some endpoints
+  phone?: string | null;
+  email?: string | null;
+  is_lisa_user?: boolean | null;
 }
 
 export interface WeeklyAnalysis {
@@ -65,12 +68,17 @@ export interface CpapTrends {
   currentAHI: number;
   percentileLeak: number;
   streak: number;
+  leakField?: string;
   usageHistory: {
     date: string;
     hours: number;
     ahi?: number;
     leakRate?: number;
     pressure90?: number;
+    leaks95?: number | null;
+    leaks90?: number | null;
+    leaks0?: number | null;
+    leaks_large_pct?: number | null;
   }[];
   pressureSettings?: {
     min: number;
@@ -169,6 +177,8 @@ export interface SurveyResponse {
     };
     history: any[];
   };
+  visits?: any[];
+  totalVisits?: number;
 }
 
 export interface DirectoryResponse {
@@ -290,6 +300,19 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
         { id: 'Peer Sleeper #2201', age: 51, mask: 'AirFit', dropoutRisk: 8, complianceScore: 96, riskTier: 'LOW', phase: 'Maintenance', latestAction: 'Routine filters swap' },
       ] as any;
     }
+    if (endpoint.includes('/api/patients/')) {
+      const parts = endpoint.split('/');
+      const id = parts[parts.length - 1] || parts[parts.length - 2];
+      if (id && id.startsWith('PAT')) {
+        return {
+          ...mock.patientInfo,
+          patient_id: id,
+          phone: "+33 1 42 61 50 00",
+          email: "sarah.mitchell@example.com",
+          is_lisa_user: true
+        } as any;
+      }
+    }
     if (endpoint.includes('/api/patients')) return {
       count: 2,
       patients: [
@@ -391,7 +414,27 @@ export async function fetchPatients(limit = 20): Promise<DirectoryResponse> {
 
 /** Get a single patient's summary (header cockpit) */
 export async function fetchPatientSummary(patientId: string): Promise<PatientSummary> {
-  return apiFetch<PatientSummary>(`/api/dashboard/patient/${formatPatientId(patientId)}/summary`);
+  const patientIdFormatted = formatPatientId(patientId);
+  try {
+    const [summary, patientDetails] = await Promise.all([
+      apiFetch<any>(`/api/dashboard/patient/${patientIdFormatted}/summary`),
+      apiFetch<any>(`/api/patients/${patientIdFormatted}`).catch(() => ({}))
+    ]);
+
+    const result: PatientSummary = {
+      ...summary,
+      phone: patientDetails?.phone !== undefined ? patientDetails.phone : (summary?.phone || null),
+      email: patientDetails?.email !== undefined ? patientDetails.email : (summary?.email || null),
+      is_lisa_user: patientDetails?.is_lisa_user !== undefined ? patientDetails.is_lisa_user : (summary?.is_lisa_user || null)
+    };
+
+    if ((summary as any)?.__isLive || (patientDetails as any)?.__isLive) {
+      (result as any).__isLive = true;
+    }
+    return result;
+  } catch (err) {
+    return apiFetch<PatientSummary>(`/api/dashboard/patient/${patientIdFormatted}/summary`);
+  }
 }
 
 /** Get the Physician Exception Inbox (urgent + annual reviews) */
@@ -418,12 +461,22 @@ export async function fetchTriageEvents(limit = 30): Promise<any[]> {
 export async function fetchCpapTrends(patientId: string, days = 90): Promise<CpapTrends> {
   const data = await apiFetch<any>(`/api/cpap/${formatPatientId(patientId)}?days=${days}`);
 
+  const leakField = data.leak_field || data.leakField || 'leaks90';
+
   // If it's mock data (already formatted to frontend spec), return it directly
   if (data.usageHistory) {
+    const formatted = {
+      ...data,
+      leakField,
+      usageHistory: data.usageHistory.map((s: any) => ({
+        ...s,
+        leakRate: s[leakField] !== undefined && s[leakField] !== null ? s[leakField] : (s.leakRate || 0)
+      }))
+    };
     if (!(data as any).__isLive) {
-      return makeMockObjectNaN(data);
+      return makeMockObjectNaN(formatted);
     }
-    return data;
+    return formatted;
   }
 
   // Otherwise, map backend shape to frontend shape
@@ -435,25 +488,36 @@ export async function fetchCpapTrends(patientId: string, days = 90): Promise<Cpa
     else break;
   }
 
+  const mappedHistory = sortedSessions.map((s: any) => {
+    const item: any = {
+      date: s.date,
+      hours: s.usage_hours,
+      ahi: s.ahi ?? 0.0,
+      pressure90: s.pressure90,
+      leaks95: s.leaks95,
+      leaks90: s.leaks90,
+      leaks0: s.leaks0,
+      leaks_large_pct: s.leaks_large_pct ?? 0.0
+    };
+    item.leakRate = s[leakField] !== undefined && s[leakField] !== null ? s[leakField] : (s.leaks95 || s.leaks90 || 0);
+    return item;
+  }).reverse();
+
   const result: CpapTrends = {
     averageHours: data.avg_usage_hours || 0,
-    currentAHI: sortedSessions[0]?.ahi || 0,
-    percentileLeak: sortedSessions[0]?.leaks95 || sortedSessions[0]?.leaks90 || 0,
+    currentAHI: sortedSessions[0]?.ahi ?? 0.0,
+    percentileLeak: sortedSessions[0]?.[leakField] !== undefined && sortedSessions[0]?.[leakField] !== null
+      ? sortedSessions[0][leakField]
+      : (sortedSessions[0]?.leaks95 || sortedSessions[0]?.leaks90 || 0),
     streak: streak,
+    leakField: leakField,
     // Map pressure settings if available, or fallback to latest session's pressure90
     pressureSettings: {
       min: data.pressure_min || 4,
       max: data.pressure_max || 20,
       current: sortedSessions[0]?.pressure90 || 0
     },
-    // Reverse to return oldest first for chronological charts
-    usageHistory: sortedSessions.map((s: any) => ({
-      date: s.date,
-      hours: s.usage_hours,
-      ahi: s.ahi,
-      leakRate: s.leaks95 || s.leaks90 || 0,
-      pressure90: s.pressure90
-    })).reverse()
+    usageHistory: mappedHistory
   };
 
   if ((data as any).__isLive) {
@@ -516,6 +580,11 @@ export async function fetchInterventions(patientId: string): Promise<any[]> {
   return mapped;
 }
 
+/** Get a single patient's raw details */
+export async function fetchPatient(patientId: string): Promise<any> {
+  return apiFetch<any>(`/api/patients/${formatPatientId(patientId)}`);
+}
+
 /** Get survey data for a patient */
 export async function fetchSurveys(patientId: string): Promise<SurveyResponse> {
   const patientIdFormatted = formatPatientId(patientId);
@@ -527,6 +596,7 @@ export async function fetchSurveys(patientId: string): Promise<SurveyResponse> {
 
     // Map live visits or fallback mock patient history to checklist format
     let patientHistory = [];
+    const visits = monitoringData?.visits || [];
     if (Array.isArray(monitoringData?.visits)) {
       patientHistory = monitoringData.visits.map((v: any) => ({
         name: v.questionnaire_name || 'Comfort Check-In',
@@ -539,9 +609,46 @@ export async function fetchSurveys(patientId: string): Promise<SurveyResponse> {
       patientHistory = medicalData.patient.history;
     }
 
+    const technicianSurveysMapped = visits.flatMap((visit: any) => {
+      return (visit.answers || [])
+        .filter((ans: any) => ans.completion_status === 'completed')
+        .map((ans: any) => ({
+          id: ans.question_id,
+          name: ans.question_text || 'Technician Observation',
+          date: visit.date ? visit.date.split(' ')[0] : '—',
+          type: visit.questionnaire_name || 'Operational Form',
+          notes: ans.answer_value || '—',
+          icon: '🔧'
+        }));
+    });
+
+    let physicianSurveysMapped = [];
+    if (medicalData && typeof medicalData === 'object' && medicalData.surveys) {
+      physicianSurveysMapped = Object.entries(medicalData.surveys).map(([key, surveyObj]: [string, any]) => {
+        const history = Array.isArray(surveyObj.history) ? surveyObj.history : [];
+        return {
+          id: key,
+          name: key,
+          score: typeof surveyObj.score === 'number' ? surveyObj.score : 0,
+          risk: surveyObj.severity || (surveyObj.score > 10 ? 'Elevated' : 'Normal'),
+          dateTaken: history[0]?.date || '—',
+          isOverdue: false,
+          daysOverdue: 0,
+          history: history.map((h: any) => ({
+            date: h.date,
+            score: h.score
+          }))
+        };
+      });
+    } else if (Array.isArray(medicalData?.physician)) {
+      physicianSurveysMapped = medicalData.physician;
+    } else if (Array.isArray(medicalData)) {
+      physicianSurveysMapped = medicalData;
+    }
+
     const result: SurveyResponse = {
-      physician: medicalData?.physician || (Array.isArray(medicalData) ? medicalData : []),
-      technician: monitoringData?.technician || (Array.isArray(monitoringData) ? monitoringData : []),
+      physician: physicianSurveysMapped,
+      technician: technicianSurveysMapped.length > 0 ? technicianSurveysMapped : (monitoringData?.technician || []),
       calendar: monitoringData?.calendar || medicalData?.calendar || [],
       patient: {
         next: monitoringData?.patient?.next || medicalData?.patient?.next || {
@@ -551,7 +658,9 @@ export async function fetchSurveys(patientId: string): Promise<SurveyResponse> {
           persistence: { status: 'pending' }
         },
         history: patientHistory
-      }
+      },
+      visits: visits,
+      totalVisits: monitoringData?.total_visits || visits.length
     };
 
     if ((monitoringData as any)?.__isLive || (medicalData as any)?.__isLive) {
@@ -569,8 +678,8 @@ export async function fetchWeeklyAnalysis(patientId: string): Promise<WeeklyAnal
 }
 
 /** Get video content for a patient */
-export async function fetchVideos(patientId: string): Promise<any[]> {
-  return apiFetch<any[]>(`/api/videos/${formatPatientId(patientId)}`);
+export async function fetchVideos(patientId: string): Promise<any> {
+  return apiFetch<any>(`/api/videos/${formatPatientId(patientId)}`);
 }
 
 /** Get clinical authorizations for a patient */

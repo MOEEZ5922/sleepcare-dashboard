@@ -216,9 +216,12 @@ export default function PatientCPAP() {
           {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
             const date = new Date(day.date);
             const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const leakField = cpapData.leakField || 'leaks90';
             const leak = day.leakRate || 0;
-            const isGood = leak < 24;
-            const progress = Math.min((leak / 40) * 100, 100);
+            const isGood = leakField === 'leaks_large_pct' ? leak < 10 : leakField === 'leaks0' ? leak < 10 : leak < 24;
+            const unit = leakField === 'leaks_large_pct' ? '%' : 'L/m';
+            const scaleMax = leakField === 'leaks_large_pct' ? 20 : leakField === 'leaks0' ? 20 : 40;
+            const progress = Math.min((leak / scaleMax) * 100, 100);
 
             return (
               <div key={index} className="flex items-center justify-between">
@@ -230,7 +233,7 @@ export default function PatientCPAP() {
                   />
                 </div>
                 <span className={`text-xs font-bold w-16 text-right ${isGood ? 'text-[#F4A261]' : 'text-[#E76F51]'}`}>
-                  {leak.toFixed(1)} L/m
+                  {leak.toFixed(1)}{unit}
                 </span>
               </div>
             );
