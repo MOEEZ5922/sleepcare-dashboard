@@ -525,18 +525,32 @@ export async function fetchSurveys(patientId: string): Promise<SurveyResponse> {
       apiFetch<any>(`/api/surveys/${patientIdFormatted}/medical`).catch(() => ({ physician: [] }))
     ]);
 
+    // Map live visits or fallback mock patient history to checklist format
+    let patientHistory = [];
+    if (Array.isArray(monitoringData?.visits)) {
+      patientHistory = monitoringData.visits.map((v: any) => ({
+        name: v.questionnaire_name || 'Comfort Check-In',
+        completed: v.date,
+        score: 'Complete'
+      }));
+    } else if (monitoringData?.patient?.history) {
+      patientHistory = monitoringData.patient.history;
+    } else if (medicalData?.patient?.history) {
+      patientHistory = medicalData.patient.history;
+    }
+
     const result: SurveyResponse = {
       physician: medicalData?.physician || (Array.isArray(medicalData) ? medicalData : []),
       technician: monitoringData?.technician || (Array.isArray(monitoringData) ? monitoringData : []),
       calendar: monitoringData?.calendar || medicalData?.calendar || [],
-      patient: monitoringData?.patient || medicalData?.patient || {
-        next: {
+      patient: {
+        next: monitoringData?.patient?.next || medicalData?.patient?.next || {
           name: 'Health Survey',
           dueDate: new Date().toISOString(),
           questions: 8,
           persistence: { status: 'pending' }
         },
-        history: []
+        history: patientHistory
       }
     };
 

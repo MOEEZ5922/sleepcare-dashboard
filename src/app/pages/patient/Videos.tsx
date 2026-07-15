@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
 import { Play, Star, CheckCircle, Clock, BookOpen, Wrench, Lightbulb, Plane, ChevronRight, Signal, Loader2, X } from 'lucide-react';
-import { useApi } from '../../hooks/useApi';
+import { useApi, clearApiCache } from '../../hooks/useApi';
 import { fetchVideos, submitVideoInteraction, getFullVideoUrl } from '../../data/api';
 
 const categoryIcons: { [key: string]: React.ReactNode } = {
@@ -114,30 +114,30 @@ export default function PatientVideos() {
   const handleWatch = async (video: any) => {
     setActiveVideo(video);
     setWatchedMap(prev => ({ ...prev, [video.id]: true }));
-    if (isLive) {
-      try {
-        await submitVideoInteraction(id || '1', video.id, {
-          watched: true,
-          watch_duration_seconds: 120 // Demo value
-        });
-      } catch (err) {
-        console.error('Failed to log video watch');
-      }
+    try {
+      await submitVideoInteraction(id || '1', video.id, {
+        watched: true,
+        watch_duration_seconds: 120 // Demo value
+      });
+      clearApiCache(`videos-${id || '1'}`);
+      refetchVideos();
+    } catch (err) {
+      console.error('Failed to log video watch');
     }
   };
 
   const handleRating = async (videoId: string | number, stars: number) => {
     setRatingMap(prev => ({ ...prev, [videoId]: stars }));
-    if (isLive) {
-      try {
-        await submitVideoInteraction(id || '1', videoId, {
-          watched: true,
-          rating: stars,
-          watch_duration_seconds: 120
-        });
-      } catch (err) {
-        console.error('Failed to log video rating');
-      }
+    try {
+      await submitVideoInteraction(id || '1', videoId, {
+        watched: true,
+        rating: stars,
+        watch_duration_seconds: 120
+      });
+      clearApiCache(`videos-${id || '1'}`);
+      refetchVideos();
+    } catch (err) {
+      console.error('Failed to log video rating');
     }
   };
 

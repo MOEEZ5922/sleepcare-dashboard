@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Moon, Flame, ChevronRight, Package, FileText, Sparkles, Video, HelpCircle, X, AlertCircle, Play, Signal, Loader2, Star } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { useApi } from '../../hooks/useApi';
+import { useApi, clearApiCache } from '../../hooks/useApi';
 import {
   fetchPatientSummary,
   fetchCpapTrends,
@@ -61,6 +61,11 @@ export default function PatientHome() {
     }, 3000);
     return () => clearInterval(interval);
   }, [refetchSummary, refetchTrends, refetchSurveys, refetchVideos]);
+
+  // Set visited dashboard flag in localStorage on mount
+  React.useEffect(() => {
+    localStorage.setItem(`has-visited-dashboard-${id || '1'}`, 'true');
+  }, [id]);
 
   const isLive = !!(summary && (summary as any).__isLive);
 
@@ -131,6 +136,8 @@ export default function PatientHome() {
         rating: stars,
         watch_duration_seconds: 120
       });
+      clearApiCache(`videos-${id || '1'}`);
+      refetchVideos();
     } catch (err) {
       console.error('Failed to log video rating');
     }

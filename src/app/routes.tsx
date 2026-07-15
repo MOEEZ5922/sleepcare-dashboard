@@ -31,6 +31,7 @@ import PatientVideos from "./pages/patient/Videos";
 import PatientHelp from "./pages/patient/Help";
 import PatientInterventions from "./pages/patient/Interventions";
 import PatientReporting from "./pages/patient/Reporting";
+import PatientInvitation from "./pages/patient/Invitation";
 
 export const router = createBrowserRouter([
   {
@@ -88,7 +89,7 @@ export const router = createBrowserRouter([
     path: "/patient/:id",
     Component: PatientLayout,
     children: [
-      { index: true, Component: PatientHome },
+      { index: true, Component: PatientInvitation },
       { path: "home", Component: PatientHome },
       { path: "cpap", Component: PatientCPAP },
       { path: "interventions", Component: PatientInterventions },

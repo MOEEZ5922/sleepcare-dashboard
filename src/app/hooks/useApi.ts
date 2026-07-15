@@ -12,6 +12,15 @@ interface UseApiOptions<T> {
 // Global in-memory cache store
 const apiCache: Record<string, { data: any; timestamp: number }> = {};
 
+/** Invalidates cache entries globally or for a specific key */
+export function clearApiCache(key?: string) {
+  if (key) {
+    delete apiCache[key];
+  } else {
+    Object.keys(apiCache).forEach(k => delete apiCache[k]);
+  }
+}
+
 /**
  * Custom hook to handle API calls with loading, error, and data states.
  * Supports caching using options.cacheKey and options.cacheTime.

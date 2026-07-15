@@ -1,7 +1,7 @@
 import { useParams } from 'react-router';
 import { FileText, Clock, CheckCircle, ChevronRight, ChevronLeft, Signal, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import { useApi } from '../../hooks/useApi';
+import { useApi, clearApiCache } from '../../hooks/useApi';
 import { fetchSurveys, submitSurveyResponse, SurveyResponse } from '../../data/api';
 
 const surveyQuestions = [
@@ -94,6 +94,7 @@ export default function PatientSurveys() {
             }))
           };
           await submitSurveyResponse(id || '1', 'health-survey', payload);
+          clearApiCache(`surveys-${id || '1'}`);
         } catch (err) {
           console.error('Failed to submit survey');
         }

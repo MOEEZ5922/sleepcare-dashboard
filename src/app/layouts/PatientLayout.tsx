@@ -22,7 +22,8 @@ export default function PatientLayout() {
   };
 
   const isLive = !!(summary && (summary as any).__isLive);
-  const patientName = (summary?.name || summary?.patient?.name)?.split(' ')[0] || 'Patient';
+  const rawName = summary?.name || summary?.patient?.name;
+  const patientName = (rawName && rawName !== 'NaN') ? rawName.split(' ')[0] : 'Patient';
 
   const navigation = [
     { name: 'Home', href: `/patient/${id}/home`, icon: Home },
