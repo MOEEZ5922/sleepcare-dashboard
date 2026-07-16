@@ -1,4 +1,5 @@
-import { Outlet, Link, useLocation } from 'react-router';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { useEffect } from 'react';
 import { Home, Package, HelpCircle, ArrowLeft, Settings, Users } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 
@@ -11,6 +12,14 @@ const navigation = [
 
 export default function TechnicianLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const role = localStorage.getItem('role');
+    if (role !== 'technician') {
+      navigate('/technician/login');
+    }
+  }, [navigate]);
 
   return (
     <div className="h-screen flex bg-[#FAFAFA]">

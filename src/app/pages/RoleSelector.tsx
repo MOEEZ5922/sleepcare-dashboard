@@ -65,10 +65,10 @@ export default function RoleSelector() {
 
             <div className="w-full">
               <Link
-                to="/technician"
+                to="/technician/login"
                 className="w-full py-4 bg-[#F4A261] hover:bg-[#e78e47] text-white text-center rounded-xl font-bold text-sm block shadow-md shadow-[#F4A261]/20 transition-all active:scale-98"
               >
-                Enter Technician Workbench
+                Sign In to Technician Workbench
               </Link>
             </div>
           </div>
@@ -89,10 +89,10 @@ export default function RoleSelector() {
 
             <div className="w-full">
               <Link
-                to="/physician"
+                to="/physician/login"
                 className="w-full py-4 bg-[#2D9596] hover:bg-[#227e80] text-white text-center rounded-xl font-bold text-sm block shadow-md shadow-[#2D9596]/20 transition-all active:scale-98"
               >
-                Enter Physician Portal
+                Sign In to Physician Portal
               </Link>
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function RoleSelector() {
         </div>
 
         <div className="text-center mt-16 text-white/50 text-xs font-semibold">
-          <p>Linde SleepCare Ecosystem • Showcase Environment</p>
+          <p>Linde SleepCare Ecosystem</p>
         </div>
       </div>
 

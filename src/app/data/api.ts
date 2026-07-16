@@ -246,6 +246,10 @@ function makeMockObjectNaNInternal(obj: any, parentKey?: string): any {
 async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {
     const token = localStorage.getItem('token');
+    if (!token && !endpoint.includes('/api/auth/')) {
+      throw new Error('No auth token available');
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...((options?.headers as any) || {})
@@ -262,9 +266,16 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
     });
 
     if (res.status === 401) {
+      const role = localStorage.getItem('role') || 'patient';
       localStorage.removeItem('token');
       localStorage.removeItem('role');
-      window.location.href = '/login';
+      if (role === 'physician') {
+        window.location.href = '/physician/login';
+      } else if (role === 'technician') {
+        window.location.href = '/technician/login';
+      } else {
+        window.location.href = '/login';
+      }
       throw new Error(`Unauthorized (401): Session expired — ${endpoint}`);
     }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { User, Lock, Loader2, ArrowLeft } from 'lucide-react';
-import lindeLogoImg from '../../assets/LindeLogo.png';
+import lindeLogoImg from '../../../assets/LindeLogo.png';
 
 export default function PatientLogin() {
   const navigate = useNavigate();
@@ -9,7 +9,6 @@ export default function PatientLogin() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +19,6 @@ export default function PatientLogin() {
 
     setLoading(true);
     setErrorMsg(null);
-    setInfoMsg(null);
 
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -28,7 +26,11 @@ export default function PatientLogin() {
       const response = await fetch(`${baseUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password: password.trim() }),
+        body: JSON.stringify({
+          role: 'patient',
+          user_id: username.trim(),
+          password: password.trim()
+        }),
       });
 
       if (response.ok) {
@@ -44,12 +46,13 @@ export default function PatientLogin() {
 
         // Route based on role returned, or fallback to patient ID
         const userRole = data.role?.toLowerCase() || 'patient';
+        const internalId = data.internal_id || username.trim();
         if (userRole === 'physician') {
           navigate('/physician');
         } else if (userRole === 'technician') {
           navigate('/technician');
         } else {
-          navigate(`/patient/${username.trim()}/home`);
+          navigate(`/patient/${internalId}/home`);
         }
         return;
       }
@@ -58,42 +61,13 @@ export default function PatientLogin() {
       const data = await response.json().catch(() => ({}));
       const detail = data.detail || `Authentication failed (Status ${response.status})`;
 
-      // If it's a demo shortcut using the pre-filled demo password, allow bypass for the sandbox
-      if (password.trim() === 'demo-pass-123' && /^\d+$/.test(username.trim())) {
-        setInfoMsg('Accessing demo sandbox. Logging you in...');
-        setTimeout(() => {
-          localStorage.setItem('role', 'patient');
-          localStorage.removeItem('token'); // Clear token so fallback data is active
-          navigate(`/patient/${username.trim()}/home`);
-        }, 1500);
-        return;
-      }
-
       setErrorMsg(detail === 'Invalid credentials' ? 'Invalid Patient ID or Password.' : detail);
       setLoading(false);
     } catch (err: any) {
       console.warn('Backend login network query failed', err);
-      
-      // Connection / CORS / offline issues
-      const isNumeric = /^\d+$/.test(username.trim());
-      if (password.trim() === 'demo-pass-123' || (isNumeric && password.trim() === 'demo-pass-123')) {
-        setInfoMsg('Authentication service offline. Accessing local database...');
-        setTimeout(() => {
-          localStorage.setItem('role', 'patient');
-          localStorage.removeItem('token');
-          navigate(`/patient/${username.trim()}/home`);
-        }, 1500);
-      } else {
-        setErrorMsg('Unable to connect to the authentication service. Please check your internet or try again later.');
-        setLoading(false);
-      }
+      setErrorMsg('Unable to connect to the authentication service. Please check your internet or try again later.');
+      setLoading(false);
     }
-  };
-
-  const handlePreFill = (id: string) => {
-    setUsername(id);
-    setPassword('demo-pass-123');
-    setErrorMsg(null);
   };
 
   return (
@@ -123,11 +97,6 @@ export default function PatientLogin() {
         {errorMsg && (
           <div className="bg-[#E76F51]/10 border-l-4 border-[#E76F51] text-[#E76F51] p-3 rounded-lg text-xs font-bold mb-5">
             {errorMsg}
-          </div>
-        )}
-        {infoMsg && (
-          <div className="bg-[#6A994E]/10 border-l-4 border-[#6A994E] text-[#6A994E] p-3 rounded-lg text-xs font-bold mb-5 animate-pulse">
-            {infoMsg}
           </div>
         )}
 
@@ -182,24 +151,16 @@ export default function PatientLogin() {
           </button>
         </form>
 
-        {/* Demo Shortcut Accounts */}
-        <div className="mt-8 pt-6 border-t border-[#E8EEF2]">
-          <span className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-3 text-center">Demo Quick-Fill</span>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {['216753', '217942', '218038'].map(id => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => handlePreFill(id)}
-                disabled={loading}
-                className="bg-[#FAFAFA] hover:bg-[#E8EEF2] text-[#003867] font-bold text-xs px-3 py-1.5 rounded-lg border border-[#E8EEF2] transition-colors"
-              >
-                ID: {id}
-              </button>
-            ))}
-          </div>
+        <div className="mt-5 text-center text-xs font-semibold text-[#5A6B7C]">
+          Don't have an account?{' '}
+          <button 
+            type="button" 
+            onClick={() => navigate('/signup')}
+            className="text-[#018EC6] hover:underline font-bold"
+          >
+            Sign Up
+          </button>
         </div>
-
       </div>
 
       <style>{`

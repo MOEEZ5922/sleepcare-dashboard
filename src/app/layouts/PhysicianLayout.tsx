@@ -1,4 +1,5 @@
-import { Outlet, Link, useLocation } from 'react-router';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { useEffect } from 'react';
 import { Home, HelpCircle, ArrowLeft, Settings, Users } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 
@@ -10,6 +11,16 @@ const navigation = [
 
 export default function PhysicianLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const role = localStorage.getItem('role');
+    const token = localStorage.getItem('token');
+    // If not demo credentials bypass and no token, or role is wrong, redirect
+    if (role !== 'physician') {
+      navigate('/physician/login');
+    }
+  }, [navigate]);
 
   return (
     <div className="h-screen flex bg-[#FAFAFA]">
