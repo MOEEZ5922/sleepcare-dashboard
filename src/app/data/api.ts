@@ -331,7 +331,7 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
     if (endpoint.includes('/physician/queue')) return mock.physicianQueue as any;
     if (endpoint.includes('/technician/queue')) return mock.technicianQueue as any;
     if (endpoint.includes('/technician/events')) return mock.technicianEvents as any;
-    if (endpoint.includes('/api/cpap/')) return mock.cpapData as any;
+    if (endpoint.includes('/api/cpap/')) return { usageHistory: [], averageHours: 0, streak: 0, currentAHI: 0, percentileLeak: 0, leakField: 'leaks90', pressureSettings: { min: 4, max: 20, current: 0 } } as any;
     if (endpoint.includes('/withings')) return {
       readings: mock.biomarkerData.hrv.map((h, i) => ({
         timestamp: new Date(Date.now() - (30 - i) * 86400000).toISOString(),
@@ -376,11 +376,11 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
     }
     if (endpoint.includes('/interventions')) return (mock.technicianQueue[0]?.interventionHistory || []) as any;
     if (endpoint.includes('/analysis/weekly')) return mock.aiWeeklyState as any;
-    if (endpoint.includes('/surveys')) return mock.surveyData as any;
+    if (endpoint.includes('/surveys')) return { patient: { history: [], next: null }, physician: [], technician: [], calendar: [], visits: [], totalVisits: 0 } as any;
     if (endpoint.includes('/videos')) return mock.videoData.patient as any;
     if (endpoint.includes('/authorizations')) return [] as any;
     if (endpoint.includes('/inventory')) return mock.inventoryItems as any;
-    if (endpoint.includes('/devices')) return mock.deviceData as any;
+    if (endpoint.includes('/devices')) return [] as any;
     if (endpoint.includes('/history') && endpoint.includes('/masks')) {
       return {
         patient_id: endpoint.split('/').filter(Boolean).reverse()[1] || '1',
@@ -584,7 +584,8 @@ export async function fetchSleepData(patientId: string): Promise<{ nights: Somno
 /** Get biomarker devices assigned to a patient */
 export async function fetchDevices(patientId: string): Promise<DeviceInfo[]> {
   const data = await apiFetch<any>(`/api/devices/patient/${formatPatientId(patientId)}`);
-  const devices = data.devices || data || [];
+  // Do NOT fall back to mock data — if the API returns 0 devices, show an empty state
+  const devices = data.devices || (Array.isArray(data) ? data : []);
   if (data && (data as any).__isLive) {
     (devices as any).__isLive = true;
   }

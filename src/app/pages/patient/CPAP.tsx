@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Moon, Flame, Signal, Loader2, AlertTriangle, Activity, Wind } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
@@ -5,6 +6,12 @@ import { fetchCpapTrends } from '../../data/api';
 
 export default function PatientCPAP() {
   const { id } = useParams();
+
+  // Set visited sleep flag in localStorage on mount
+  useEffect(() => {
+    localStorage.setItem(`has-visited-sleep-${id || '1'}`, 'true');
+  }, [id]);
+
   const { data: cpapData, isLoading, error } = useApi(() => fetchCpapTrends(id || '1', 7), {
     dependencies: [id],
     cacheKey: `cpap-trends-7-${id || '1'}`

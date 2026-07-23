@@ -45,6 +45,12 @@ function getSubtitleUrl(videoUrl: string | null | undefined, lang: 'en' | 'fr'):
 
 export default function PatientVideos() {
   const { id } = useParams();
+
+  // Set visited videos flag in localStorage on mount
+  useEffect(() => {
+    localStorage.setItem(`has-visited-videos-${id || '1'}`, 'true');
+  }, [id]);
+
   const { data: liveVideos, isLoading, error, refetch: refetchVideos } = useApi(() => fetchVideos(id || '1'), {
     dependencies: [id],
     cacheKey: `videos-${id || '1'}`
@@ -114,6 +120,7 @@ export default function PatientVideos() {
   const handleWatch = async (video: any) => {
     setActiveVideo(video);
     setWatchedMap(prev => ({ ...prev, [video.id]: true }));
+    localStorage.setItem(`has-watched-video-${id || '1'}`, 'true');
     try {
       await submitVideoInteraction(id || '1', video.id, {
         watched: true,
@@ -128,6 +135,7 @@ export default function PatientVideos() {
 
   const handleRating = async (videoId: string | number, stars: number) => {
     setRatingMap(prev => ({ ...prev, [videoId]: stars }));
+    localStorage.setItem(`has-watched-video-${id || '1'}`, 'true');
     try {
       await submitVideoInteraction(id || '1', videoId, {
         watched: true,

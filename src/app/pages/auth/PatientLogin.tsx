@@ -52,7 +52,7 @@ export default function PatientLogin() {
         } else if (userRole === 'technician') {
           navigate('/technician');
         } else {
-          navigate(`/patient/${internalId}/home`);
+          navigate(`/patient/${internalId}`);
         }
         return;
       }

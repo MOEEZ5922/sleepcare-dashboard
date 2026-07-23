@@ -1,6 +1,6 @@
 import { useParams } from 'react-router';
 import { FileText, Clock, CheckCircle, ChevronRight, ChevronLeft, Signal, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApi, clearApiCache } from '../../hooks/useApi';
 import { fetchSurveys, submitSurveyResponse, SurveyResponse } from '../../data/api';
 
@@ -57,6 +57,12 @@ const surveyQuestions = [
 
 export default function PatientSurveys() {
   const { id } = useParams();
+
+  // Set visited surveys flag in localStorage on mount
+  useEffect(() => {
+    localStorage.setItem(`has-visited-surveys-${id || '1'}`, 'true');
+  }, [id]);
+
   const { data: liveSurveys, isLoading, error } = useApi<SurveyResponse>(() => fetchSurveys(id || '1'), {
     dependencies: [id],
     cacheKey: `surveys-${id || '1'}`

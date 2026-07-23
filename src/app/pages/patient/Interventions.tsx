@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Package, MapPin, Truck, CheckCircle, Activity, Battery, Smartphone, Watch, Wifi, HeartPulse, Signal, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
@@ -5,6 +6,12 @@ import { fetchInterventions, fetchDevices, fetchMaskHistory } from '../../data/a
 
 export default function PatientInterventions() {
   const { id } = useParams();
+
+  // Set visited equipment flag in localStorage on mount
+  useEffect(() => {
+    localStorage.setItem(`has-visited-equipment-${id || '1'}`, 'true');
+  }, [id]);
+
   const { data: liveInterventions, isLoading: isLoadingInt, error: intError } = useApi(() => fetchInterventions(id || '1'), {
     dependencies: [id],
     cacheKey: `interventions-${id || '1'}`
@@ -25,7 +32,7 @@ export default function PatientInterventions() {
   const devices = Array.isArray(liveDevices) ? liveDevices : [];
 
   const formatNullValue = (val: any) => {
-    if (val === null || val === undefined || val === '' || val === 0 || val === '0') {
+    if (val === null || val === undefined || val === '' || val === 0 || val === '0' || (typeof val === 'number' && isNaN(val))) {
       return '—';
     }
     return val;
@@ -195,117 +202,37 @@ export default function PatientInterventions() {
         </p>
         
         <div className="space-y-3">
-          {/* 1. Hexoskin */}
-          <div className="flex items-center justify-between bg-[#FAFAFA] border border-[#E8EEF2] p-4 rounded-xl hover:border-[#2D9596]/30 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#2D9596]/10 rounded-lg flex items-center justify-center text-[#2D9596]">
-                <Activity className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-[#0A1128] text-sm">Hexoskin Smart Shirt</p>
-                <div className="flex items-center gap-2 text-[10px] text-[#5A6B7C] mt-0.5">
-                  <span className="flex items-center gap-1 text-[#6A994E]"><CheckCircle className="w-3 h-3" /> Connected</span>
-                  <span>•</span>
-                  <span>Worn 7.5 hrs last night</span>
+          {devices.length > 0 ? (
+            devices.map((device: any, idx: number) => (
+              <div key={device.id || idx} className="flex items-center justify-between bg-[#FAFAFA] border border-[#E8EEF2] p-4 rounded-xl hover:border-[#2D9596]/30 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-[#2D9596]/10 rounded-lg flex items-center justify-center text-[#2D9596]">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-[#0A1128] text-sm">{device.name || 'Unnamed Sensor'}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-[#5A6B7C] mt-0.5">
+                      <span className="flex items-center gap-1 text-[#6A994E]"><CheckCircle className="w-3 h-3" /> {device.status || 'Connected'}</span>
+                      <span>•</span>
+                      <span>{device.category || device.type || 'Biomarker Sensor'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-1 justify-end">
+                    <Battery className="w-4 h-4 text-[#6A994E]" />
+                    <span className="text-sm font-bold text-[#0A1128]">{device.battery || '—'}</span>
+                  </div>
+                  <p className="text-[10px] text-[#5A6B7C] mt-0.5">{device.last_sync_human || device.lastSync ? `Synced ${device.last_sync_human || device.lastSync}` : '—'}</p>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="bg-[#FAFAFA] border border-[#E8EEF2] p-6 rounded-xl text-center text-[#5A6B7C]">
+              <Activity className="w-8 h-8 opacity-20 mx-auto mb-2" />
+              <p className="text-xs font-semibold">No connected biomarker sensors assigned to your profile.</p>
             </div>
-            <div className="text-right">
-              <div className="flex items-center gap-1 justify-end">
-                <Battery className="w-4 h-4 text-[#6A994E]" />
-                <span className="text-sm font-bold text-[#0A1128]">82%</span>
-              </div>
-              <p className="text-[10px] text-[#5A6B7C] mt-0.5">Synced 2h ago</p>
-            </div>
-          </div>
-
-          {/* 2. Somno-Art Band */}
-          <div className="flex items-center justify-between bg-[#FAFAFA] border border-[#E8EEF2] p-4 rounded-xl hover:border-[#2D9596]/30 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#0A1128]/5 rounded-lg flex items-center justify-center text-[#0A1128]">
-                <Watch className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-[#0A1128] text-sm">Somno-Art Band</p>
-                <div className="flex items-center gap-2 text-[10px] text-[#5A6B7C] mt-0.5">
-                  <span className="flex items-center gap-1 text-[#6A994E]"><CheckCircle className="w-3 h-3" /> Connected</span>
-                  <span>•</span>
-                  <span>Sleep Staging Active</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="flex items-center gap-1 justify-end">
-                <Battery className="w-4 h-4 text-[#F4A261]" />
-                <span className="text-sm font-bold text-[#0A1128]">45%</span>
-              </div>
-              <p className="text-[10px] text-[#5A6B7C] mt-0.5">Synced 8h ago</p>
-            </div>
-          </div>
-
-          {/* 3. Withings ScanWatch */}
-          <div className="flex items-center justify-between bg-[#FAFAFA] border border-[#E8EEF2] p-4 rounded-xl hover:border-[#2D9596]/30 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#0A1128]/5 rounded-lg flex items-center justify-center text-[#0A1128]">
-                <Watch className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-[#0A1128] text-sm">Withings ScanWatch</p>
-                <div className="flex items-center gap-2 text-[10px] text-[#5A6B7C] mt-0.5">
-                  <span className="flex items-center gap-1 text-[#6A994E]"><CheckCircle className="w-3 h-3" /> Connected</span>
-                  <span>•</span>
-                  <span>Heart Rate / SpO2 Tracker</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="flex items-center gap-1 justify-end">
-                <Battery className="w-4 h-4 text-[#6A994E]" />
-                <span className="text-sm font-bold text-[#0A1128]">90%</span>
-              </div>
-              <p className="text-[10px] text-[#5A6B7C] mt-0.5">Synced 1h ago</p>
-            </div>
-          </div>
-
-          {/* 4. Withings BPM Core */}
-          <div className="flex items-center justify-between bg-[#FAFAFA] border border-[#E8EEF2] p-4 rounded-xl hover:border-[#2D9596]/30 transition-colors opacity-70">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#E8EEF2] rounded-lg flex items-center justify-center text-[#5A6B7C]">
-                <HeartPulse className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-[#0A1128] text-sm">Withings BPM Core</p>
-                <div className="flex items-center gap-2 text-[10px] text-[#5A6B7C] mt-0.5">
-                  <span className="flex items-center gap-1 text-[#F4A261]"><Wifi className="w-3 h-3" /> Pairing Required</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <button className="text-xs font-bold text-[#2D9596] bg-[#2D9596]/10 px-3 py-1.5 rounded-lg hover:bg-[#2D9596]/20 transition-colors">
-                Setup Device
-              </button>
-            </div>
-          </div>
-
-          {/* 5. Masimo MightySat Rx */}
-          <div className="flex items-center justify-between bg-[#FAFAFA] border border-[#E8EEF2] p-4 rounded-xl hover:border-[#2D9596]/30 transition-colors opacity-70">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#E8EEF2] rounded-lg flex items-center justify-center text-[#5A6B7C]">
-                <Activity className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-[#0A1128] text-sm">Masimo MightySat Rx</p>
-                <div className="flex items-center gap-2 text-[10px] text-[#5A6B7C] mt-0.5">
-                  <span>Not configured for your therapy plan</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <button className="text-xs font-bold text-[#5A6B7C] bg-[#E8EEF2] px-3 py-1.5 rounded-lg opacity-50 cursor-not-allowed">
-                Unavailable
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

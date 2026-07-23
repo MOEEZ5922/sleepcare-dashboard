@@ -38,7 +38,7 @@ export default function PatientSignup() {
         body: JSON.stringify({
           role: 'patient',
           user_id: userId.trim(),
-          name: name.trim(),
+          full_name: name.trim(),
           password: password.trim()
         }),
       });
@@ -78,9 +78,9 @@ export default function PatientSignup() {
       <div className="absolute -right-20 -top-20 w-96 h-96 bg-[#018EC6]/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-white/10 relative z-10 animate-[fadeIn_0.5s_ease-out]">
-        
+
         {/* Back Button */}
-        <button 
+        <button
           onClick={() => navigate('/login')}
           className="absolute left-6 top-6 text-[#5A6B7C] hover:text-[#003867] transition-colors flex items-center gap-1.5 text-xs font-bold"
         >
@@ -193,8 +193,8 @@ export default function PatientSignup() {
 
         <div className="mt-6 text-center text-xs font-semibold text-[#5A6B7C]">
           Already have an account?{' '}
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => navigate('/login')}
             className="text-[#018EC6] hover:underline font-bold"
           >

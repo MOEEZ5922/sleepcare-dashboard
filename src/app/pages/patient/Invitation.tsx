@@ -40,22 +40,47 @@ export default function PatientInvitation() {
 
   const isLoading = isSumLoading || isCpapLoading || isSurveyLoading || isVideoLoading || isDevicesLoading;
 
-  // Track dashboard visits using state sync'd with local storage
+  // Track page visits using state sync'd with local storage
   const [hasVisitedDashboard, setHasVisitedDashboard] = React.useState(() => {
     return localStorage.getItem(`has-visited-dashboard-${id || '1'}`) === 'true';
   });
+  const [hasVisitedSleep, setHasVisitedSleep] = React.useState(() => {
+    return localStorage.getItem(`has-visited-sleep-${id || '1'}`) === 'true';
+  });
+  const [hasVisitedEquipment, setHasVisitedEquipment] = React.useState(() => {
+    return localStorage.getItem(`has-visited-equipment-${id || '1'}`) === 'true';
+  });
+  const [hasVisitedSurveys, setHasVisitedSurveys] = React.useState(() => {
+    return localStorage.getItem(`has-visited-surveys-${id || '1'}`) === 'true';
+  });
+  const [hasVisitedVideos, setHasVisitedVideos] = React.useState(() => {
+    return localStorage.getItem(`has-visited-videos-${id || '1'}`) === 'true';
+  });
+  const [hasWatchedVideoLocal, setHasWatchedVideoLocal] = React.useState(() => {
+    return localStorage.getItem(`has-watched-video-${id || '1'}`) === 'true';
+  });
 
-  // Dynamic values based on backend response
+  // Dynamic values based on backend response + page visited checks
   const firstName = (summary?.name && summary.name !== 'NaN') ? summary.name.split(' ')[0] : 'Friend';
-  const hasSleepStats = (cpapTrends?.usageHistory?.length || 0) > 0;
-  const hasSurveysHistory = (surveyData?.patient?.history?.length || 0) > 0;
+  
+  const hasSleepStatsData = (cpapTrends?.usageHistory?.length || 0) > 0;
+  const isSleepCompleted = hasSleepStatsData && hasVisitedSleep;
+
+  const hasSurveysHistoryData = (surveyData?.patient?.history?.length || 0) > 0;
+  const isSurveysCompleted = hasSurveysHistoryData && hasVisitedSurveys;
+
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
-  const hasWatchedVideo = Array.isArray(rawVideos) ? rawVideos.some((v: any) => v.watched) : false;
+  const hasWatchedVideoData = Array.isArray(rawVideos) 
+    ? (rawVideos.some((v: any) => v.watched) || hasWatchedVideoLocal) 
+    : hasWatchedVideoLocal;
+  const isVideosCompleted = hasWatchedVideoData && hasVisitedVideos;
+
   const deviceList = Array.isArray(liveDevices) ? liveDevices : ((liveDevices as any)?.devices || []);
-  const hasConnectedSensors = deviceList.length > 0;
+  const hasConnectedSensorsData = deviceList.length > 0;
+  const isEquipmentCompleted = hasConnectedSensorsData && hasVisitedEquipment;
 
   // Automatically route to main dashboard on logins only when ALL onboarding checklist items are completed
-  const allStepsCompleted = hasVisitedDashboard && hasWatchedVideo && hasSleepStats && hasConnectedSensors && hasSurveysHistory;
+  const allStepsCompleted = hasVisitedDashboard && isVideosCompleted && isSleepCompleted && isEquipmentCompleted && isSurveysCompleted;
 
   React.useEffect(() => {
     if (!isLoading && allStepsCompleted) {
@@ -101,8 +126,8 @@ export default function PatientInvitation() {
       subtitle: 'Coaching Library',
       description: 'Review breathing or mask-fitting educational videos tailored to support your therapy comfort.',
       icon: Video,
-      completed: hasWatchedVideo,
-      actionLabel: hasWatchedVideo ? 'Watch More Guides' : 'Watch Guide Video',
+      completed: isVideosCompleted,
+      actionLabel: isVideosCompleted ? 'Watch More Guides' : 'Watch Guide Video',
       path: 'videos',
       color: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20'
     },
@@ -112,7 +137,7 @@ export default function PatientInvitation() {
       subtitle: 'Therapy Sleep Tracker',
       description: 'Review your average CPAP usage, mask leak percentages, and consistency trends from last night.',
       icon: Activity,
-      completed: hasSleepStats,
+      completed: isSleepCompleted,
       actionLabel: 'View Sleep Stats',
       path: 'cpap',
       color: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20'
@@ -123,7 +148,7 @@ export default function PatientInvitation() {
       subtitle: 'Equipment & Supplies',
       description: 'Verify Hexoskin/Somno-Art sensor connectivity and check if there are pending mask replacement dispatches.',
       icon: Package,
-      completed: hasConnectedSensors,
+      completed: isEquipmentCompleted,
       actionLabel: 'Verify Hardware',
       path: 'interventions',
       color: 'bg-amber-500/10 text-amber-600 border-amber-500/20'
@@ -134,8 +159,8 @@ export default function PatientInvitation() {
       subtitle: 'Care Team Surveys',
       description: 'Log issues like mask discomfort, nose irritation, or pressure issues directly for your sleep therapist.',
       icon: FileText,
-      completed: hasSurveysHistory,
-      actionLabel: hasSurveysHistory ? 'View Survey Log' : 'Complete Survey',
+      completed: isSurveysCompleted,
+      actionLabel: isSurveysCompleted ? 'View Survey Log' : 'Complete Survey',
       path: 'surveys',
       color: 'bg-rose-500/10 text-rose-600 border-rose-500/20'
     }
