@@ -14,7 +14,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchPatientSummary, fetchCpapTrends, fetchClinicianCohort, ClinicianCohortMember, calculateComplianceTrajectory, PEER_INTERVENTIONS } from '../../data/api';
+import { fetchPatientSummary, fetchCpapTrends, fetchClinicianCohort, ClinicianCohortMember, calculateComplianceTrajectory, fetchPeerInterventions } from '../../data/api';
 
 // ─── Peer Cohort Types & Configs ──────────────────────────────────────────────
 
@@ -92,15 +92,15 @@ export default function UniversalReporting() {
       let valB = 0;
 
       if (sortColumn === 'riskTier') {
-        valA = TIER_CONFIGS[a.riskTier as RiskTier].sortValue;
-        valB = TIER_CONFIGS[b.riskTier as RiskTier].sortValue;
+        valA = TIER_CONFIGS[a.riskTier as RiskTier]?.sortValue || 0;
+        valB = TIER_CONFIGS[b.riskTier as RiskTier]?.sortValue || 0;
         if (valA === valB) {
-          valA = a.dropoutRisk;
-          valB = b.dropoutRisk;
+          valA = a.dropoutRisk || 0;
+          valB = b.dropoutRisk || 0;
         }
       } else if (sortColumn === 'dropoutRisk') {
-        valA = a.dropoutRisk;
-        valB = b.dropoutRisk;
+        valA = a.dropoutRisk || 0;
+        valB = b.dropoutRisk || 0;
       }
 
       if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
@@ -116,7 +116,13 @@ export default function UniversalReporting() {
     return calculateComplianceTrajectory(summary?.adherenceRate || 45);
   }, [summary]);
 
-  const peerInterventions = PEER_INTERVENTIONS;
+  const { data: rawPeerInterventions } = useApi(
+    () => fetchPeerInterventions(patientId), {
+      dependencies: [patientId],
+      cacheKey: `peer-interventions-${patientId}`
+    }
+  );
+  const peerInterventions = Array.isArray(rawPeerInterventions) ? rawPeerInterventions : [];
 
   if (isLoading && !summary) {
     return (

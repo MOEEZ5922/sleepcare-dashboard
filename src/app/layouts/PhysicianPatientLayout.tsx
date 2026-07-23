@@ -108,7 +108,11 @@ export default function PhysicianPatientLayout() {
             )}
             <div>
               <p className="text-xs text-[#5A6B7C] mb-1">Therapy Timeline</p>
-              <p className="text-[#0A1128]">Started: {new Date(patient.therapyStartDate || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+              <p className="text-[#0A1128]">
+                Started: {patient.therapyStartDate && !isNaN(Date.parse(patient.therapyStartDate))
+                  ? new Date(patient.therapyStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : 'NaN'}
+              </p>
             </div>
             <div className="w-px h-10 bg-[#E8EEF2]" />
             <div>

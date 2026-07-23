@@ -8,7 +8,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchPatientSummary, fetchCpapTrends, fetchPatientCohort, PatientCohortMember, calculateComplianceTrajectory, PEER_INTERVENTIONS } from '../../data/api';
+import { fetchPatientSummary, fetchCpapTrends, fetchPatientCohort, PatientCohortMember, calculateComplianceTrajectory, fetchPeerInterventions } from '../../data/api';
 
 type RiskTier = 'CRITICAL' | 'HIGH' | 'ELEVATED' | 'STABLE' | 'LOW';
 
@@ -48,14 +48,20 @@ export default function PatientReporting() {
   );
   const peerCohort = Array.isArray(rawPeerCohort) ? rawPeerCohort : [];
 
+  const { data: rawPeerInterventions } = useApi(
+    () => fetchPeerInterventions(patientId), {
+      dependencies: [patientId],
+      cacheKey: `patient-peer-interventions-${patientId}`
+    }
+  );
+  const peerInterventions = Array.isArray(rawPeerInterventions) ? rawPeerInterventions : [];
+
   const isLoading = loadingSummary || loadingTrends || loadingCohort;
 
   // Generate comparative 30/60/90 Days Adherence Data
   const complianceChartData = useMemo(() => {
     return calculateComplianceTrajectory(summary?.adherenceRate || 45);
   }, [summary]);
-
-  const peerInterventions = PEER_INTERVENTIONS;
 
   if (isLoading && !summary) {
     return (
@@ -137,7 +143,7 @@ export default function PatientReporting() {
 
         <div className="divide-y divide-[#E8EEF2]">
           {peerCohort.map((p, idx) => {
-            const tc = TIER_CONFIGS[p.riskTier as RiskTier] || TIER_CONFIGS.LOW;
+            const tc = p.riskTier && TIER_CONFIGS[p.riskTier as RiskTier] ? TIER_CONFIGS[p.riskTier as RiskTier] : null;
             return (
               <div key={idx} className="py-4 flex justify-between items-center first:pt-0 last:pb-0">
                 <div>
@@ -145,8 +151,8 @@ export default function PatientReporting() {
                   <p className="text-[10px] text-[#5A6B7C] font-semibold uppercase">{p.phase} Phase · {p.mask}</p>
                 </div>
                 <div className="text-right">
-                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${tc.bg} ${tc.text}`}>
-                    {tc.patientFriendly}
+                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${tc ? `${tc.bg} ${tc.text}` : 'bg-gray-100 text-gray-500'}`}>
+                    {tc ? tc.patientFriendly : 'NaN'}
                   </span>
                   <p className="text-xs font-bold text-[#0A1128] mt-1.5">{p.complianceScore}% sleep nights</p>
                 </div>

@@ -211,17 +211,13 @@ function makeMockObjectNaNInternal(obj: any, parentKey?: string): any {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const val = obj[key];
         
-        // Preserve identifiers, types, structural attributes, and dates/times
-        const isIdentifier = /^(patient_?id|id|device_?id|serial|serial_?number|machine_?serial|model_?id|event_?id|signature_?hash|digital_?seal_?hash|delivery_?sequence)$/i.test(key);
-        const isTimeOrDate = /^(day|date|timestamp|last_?sync|last_?reading|assigned_?date|dob|birth_?date|cpap_?start_?date|therapy_?start_?date|week_?of|night_?date|delivery_?date)$/i.test(key);
-        const isStructural = /^(type|category|status|risk_?tier|phase|phase_?label|severity|gender|mask_?type|mask|device_?type|outcome|action|form_?type|issue_?type|role|color|label|direction|mask_?manufacturer|mask_?description)$/i.test(key);
+        // Preserve ONLY routing identifiers (patient_id, id)
+        const isIdentifier = /^(patient_?id|id)$/i.test(key);
         
-        if (isIdentifier || isStructural) {
-          result[key] = val; // Preserve identifiers and structural properties
-        } else if (isTimeOrDate) {
-          result[key] = val; // Preserve original dates/times to keep timeline/chart continuity
+        if (isIdentifier) {
+          result[key] = val; // Preserve identifiers so navigation/routing functions
         } else {
-          // Convert clinical/measurement data to NaN
+          // Convert all non-live mock data to clear NaN values
           if (typeof val === 'number') {
             result[key] = NaN;
           } else if (typeof val === 'string') {
@@ -371,6 +367,13 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
       total: mock.biomarkerData.deepSleep.length,
     } as any;
     if (endpoint.includes('/biomarkers')) return mock.biomarkerData as any;
+    if (endpoint.includes('/reporting/interventions')) {
+      return [
+        { type: 'Mask Refit & Adjustments', desc: 'Resolved seal issues and bridge pressure', successRate: 85, gain: '+1.4 hrs/night' },
+        { type: 'Remote Pressure Adjustment', desc: 'Reduced baseline breathing strain', successRate: 78, gain: '+0.9 hrs/night' },
+        { type: 'Coaching Video Guides', desc: 'Self-guided adjustments via mobile videos', successRate: 92, gain: '+1.1 hrs/night' },
+      ] as any;
+    }
     if (endpoint.includes('/interventions')) return (mock.technicianQueue[0]?.interventionHistory || []) as any;
     if (endpoint.includes('/analysis/weekly')) return mock.aiWeeklyState as any;
     if (endpoint.includes('/surveys')) return mock.surveyData as any;
@@ -423,29 +426,43 @@ export async function fetchPatients(limit = 20): Promise<DirectoryResponse> {
   return apiFetch<DirectoryResponse>(`/api/patients/?limit=${limit}`);
 }
 
-/** Get a single patient's summary (header cockpit) */
 export async function fetchPatientSummary(patientId: string): Promise<PatientSummary> {
   const patientIdFormatted = formatPatientId(patientId);
-  try {
-    const [summary, patientDetails] = await Promise.all([
-      apiFetch<any>(`/api/dashboard/patient/${patientIdFormatted}/summary`),
-      apiFetch<any>(`/api/patients/${patientIdFormatted}`).catch(() => ({}))
-    ]);
 
-    const result: PatientSummary = {
-      ...summary,
-      phone: patientDetails?.phone !== undefined ? patientDetails.phone : (summary?.phone || null),
-      email: patientDetails?.email !== undefined ? patientDetails.email : (summary?.email || null),
-      is_lisa_user: patientDetails?.is_lisa_user !== undefined ? patientDetails.is_lisa_user : (summary?.is_lisa_user || null)
-    };
+  const [summary, patientDetails] = await Promise.all([
+    apiFetch<any>(`/api/dashboard/patient/${patientIdFormatted}/summary`).catch(() => ({} as any)),
+    apiFetch<any>(`/api/patients/${patientIdFormatted}`).catch(() => ({} as any))
+  ]);
 
-    if ((summary as any)?.__isLive || (patientDetails as any)?.__isLive) {
-      (result as any).__isLive = true;
-    }
+  const isLive = !!((summary as any)?.__isLive || (patientDetails as any)?.__isLive);
+
+  const patientName = patientDetails?.name 
+    || (patientDetails?.first_name || patientDetails?.last_name ? `${patientDetails.first_name || ''} ${patientDetails.last_name || ''}`.trim() : null)
+    || summary?.name;
+
+  const result: PatientSummary = {
+    patientId: patientIdFormatted,
+    name: patientName,
+    status: summary?.status || 'Active',
+    adherenceRate: summary?.adherenceRate ?? summary?.adherence_rate,
+    currentAHI: summary?.currentAHI ?? summary?.current_ahi,
+    averageHours: summary?.averageHours ?? summary?.avg_usage_hours,
+    percentileLeak: summary?.percentileLeak ?? summary?.percentile_leak,
+    gender: patientDetails?.gender || summary?.gender,
+    dob: patientDetails?.birth_date || patientDetails?.dob || summary?.dob,
+    therapyStartDate: patientDetails?.cpap_start_date || summary?.therapyStartDate,
+    maskType: patientDetails?.device_type || summary?.maskType,
+    riskScore: summary?.riskScore,
+    phone: patientDetails?.phone ?? summary?.phone ?? null,
+    email: patientDetails?.email ?? summary?.email ?? null,
+    is_lisa_user: patientDetails?.is_lisa_user ?? summary?.is_lisa_user ?? null
+  };
+
+  if (isLive) {
+    (result as any).__isLive = true;
     return result;
-  } catch (err) {
-    return apiFetch<PatientSummary>(`/api/dashboard/patient/${patientIdFormatted}/summary`);
   }
+  return makeMockObjectNaN(result) as PatientSummary;
 }
 
 /** Get the Physician Exception Inbox (urgent + annual reviews) */
@@ -981,11 +998,14 @@ export interface PeerIntervention {
   gain: string;
 }
 
-export const PEER_INTERVENTIONS: PeerIntervention[] = [
-  { type: 'Mask Refit & Adjustments', desc: 'Resolved seal issues and bridge pressure', successRate: 85, gain: '+1.4 hrs/night' },
-  { type: 'Remote Pressure Adjustment', desc: 'Reduced baseline breathing strain', successRate: 78, gain: '+0.9 hrs/night' },
-  { type: 'Coaching Video Guides', desc: 'Self-guided adjustments via mobile videos', successRate: 92, gain: '+1.1 hrs/night' },
-];
+export async function fetchPeerInterventions(patientId: string): Promise<PeerIntervention[]> {
+  const data = await apiFetch<any>(`/api/dashboard/patient/${formatPatientId(patientId)}/reporting/interventions`);
+  const list = Array.isArray(data) ? data : (data?.interventions || []);
+  if (data && (data as any).__isLive) {
+    (list as any).__isLive = true;
+  }
+  return list;
+}
 
 export function calculateComplianceTrajectory(adherenceRate: number): ComplianceTrajectoryPoint[] {
   const rate = typeof adherenceRate === 'number' && !isNaN(adherenceRate) ? adherenceRate : 45;

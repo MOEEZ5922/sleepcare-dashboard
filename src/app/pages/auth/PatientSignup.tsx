@@ -6,6 +6,7 @@ import lindeLogoImg from '../../../assets/LindeLogo.png';
 export default function PatientSignup() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState('');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -14,7 +15,7 @@ export default function PatientSignup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!userId.trim() || !name.trim() || !password.trim() || !confirmPassword.trim()) {
       setErrorMsg('Please fill in all fields.');
       return;
     }
@@ -37,6 +38,7 @@ export default function PatientSignup() {
         body: JSON.stringify({
           role: 'patient',
           user_id: userId.trim(),
+          name: name.trim(),
           password: password.trim()
         }),
       });
@@ -105,9 +107,26 @@ export default function PatientSignup() {
         )}
 
         {/* Register Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-2">Patient ID / User ID</label>
+            <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-1.5">Full Name</label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
+                <User className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Sarah Mitchell"
+                className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-1.5">Patient ID / User ID</label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
                 <User className="w-4 h-4" />
@@ -116,8 +135,8 @@ export default function PatientSignup() {
                 type="text"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
-                placeholder="e.g. 164551"
-                className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-3 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                placeholder="e.g. 999999001"
+                className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
                 disabled={loading}
               />
             </div>
