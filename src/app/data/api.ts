@@ -427,8 +427,9 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // ─── GET Endpoints ───────────────────────────────────────────────────────────
 
 /** List all patients (for Physician Directory) */
-export async function fetchPatients(limit = 20): Promise<DirectoryResponse> {
-  return apiFetch<DirectoryResponse>(`/api/patients/?limit=${limit}`);
+export async function fetchPatients(limit?: number): Promise<DirectoryResponse> {
+  const query = limit ? `?limit=${limit}` : '';
+  return apiFetch<DirectoryResponse>(`/api/patients/${query}`);
 }
 
 export async function fetchPatientSummary(patientId: string): Promise<PatientSummary> {

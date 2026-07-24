@@ -1,4 +1,4 @@
-import { Search, User, Filter, MoreVertical, Loader2, Signal, Users } from 'lucide-react';
+import { Search, User, Filter, MoreVertical, Loader2, Signal, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { useApi } from '../../hooks/useApi';
@@ -8,6 +8,8 @@ export default function PatientDirectory() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   const isTechnician = location.pathname.startsWith('/technician');
   
@@ -48,6 +50,12 @@ export default function PatientDirectory() {
     ((p.patientId || '').toLowerCase()).includes(searchTerm.toLowerCase())
   );
 
+  const totalPatients = filteredPatients.length;
+  const totalPages = Math.max(1, Math.ceil(totalPatients / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalPatients);
+  const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
+
   if (isLoading && !patients) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -74,7 +82,10 @@ export default function PatientDirectory() {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Search patients (e.g. PAT0001)..."
               className="pl-10 pr-4 py-2 bg-white border border-[#E8EEF2] rounded-lg focus:outline-none focus:border-[#2D9596] text-sm w-64 shadow-sm"
             />
@@ -98,14 +109,14 @@ export default function PatientDirectory() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E8EEF2]">
-            {filteredPatients.length === 0 ? (
+            {paginatedPatients.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-[#5A6B7C]">
                   {searchTerm ? 'No patients found matching your search.' : 'No patients found in directory.'}
                 </td>
               </tr>
             ) : (
-              filteredPatients.map((patient: any) => (
+              paginatedPatients.map((patient: any) => (
                 <tr 
                   key={patient.patientId || patient.id} 
                   className="hover:bg-[#FAFAFA] transition-colors cursor-pointer"
@@ -151,7 +162,72 @@ export default function PatientDirectory() {
             )}
           </tbody>
         </table>
+
+        {/* Pagination Footer */}
+        {totalPatients > 0 && (
+          <div className="px-6 py-4 bg-[#FAFAFA] border-t border-[#E8EEF2] flex items-center justify-between">
+            <p className="text-xs text-[#5A6B7C]">
+              Showing <span className="font-semibold text-[#0A1128]">{startIndex + 1}</span> to{' '}
+              <span className="font-semibold text-[#0A1128]">{endIndex}</span> of{' '}
+              <span className="font-semibold text-[#0A1128]">{totalPatients}</span> patients
+            </p>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-3 py-1.5 border border-[#E8EEF2] rounded-lg text-xs font-medium text-[#5A6B7C] hover:bg-white hover:text-[#0A1128] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                Previous
+              </button>
+
+              <div className="flex items-center gap-1 px-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((page) => {
+                    return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                  })
+                  .reduce<(number | string)[]>((acc, page, idx, array) => {
+                    if (idx > 0 && page - (array[idx - 1] as number) > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(page);
+                    return acc;
+                  }, [])
+                  .map((item, index) =>
+                    typeof item === 'number' ? (
+                      <button
+                        key={item}
+                        onClick={() => setCurrentPage(item)}
+                        className={`w-7 h-7 rounded-lg text-xs font-semibold transition-colors ${
+                          currentPage === item
+                            ? 'bg-[#2D9596] text-white'
+                            : 'text-[#5A6B7C] hover:bg-[#E8EEF2]'
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ) : (
+                      <span key={`ellipsis-${index}`} className="px-1 text-xs text-[#5A6B7C]">
+                        ...
+                      </span>
+                    )
+                  )}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                className="flex items-center gap-1 px-3 py-1.5 border border-[#E8EEF2] rounded-lg text-xs font-medium text-[#5A6B7C] hover:bg-white hover:text-[#0A1128] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
