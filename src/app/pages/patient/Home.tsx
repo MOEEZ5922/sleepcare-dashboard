@@ -75,8 +75,29 @@ export default function PatientHome() {
   const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'video' | null>(null);
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
   const [currentClipIndex, setCurrentClipIndex] = useState<number>(0);
+  const [ttffMs, setTtffMs] = useState<number | null>(null);
+  const videoClickTimeRef = React.useRef<number>(0);
   const [ratingMap, setRatingMap] = useState<{ [id: string | number]: number | null }>({});
   const watchDurationMapRef = React.useRef<{ [id: string | number]: number }>({});
+
+  const handleWatch = async (video: any) => {
+    videoClickTimeRef.current = performance.now();
+    setTtffMs(null);
+    setActiveVideo(video);
+    setCurrentClipIndex(0);
+
+    const currentSeconds = watchDurationMapRef.current[video.id] || video.watch_duration_seconds || 0;
+    try {
+      await submitVideoInteraction(id || '1', video.id, {
+        watched: true,
+        watch_duration_seconds: currentSeconds
+      });
+      clearApiCache(`videos-${id || '1'}`);
+      refetchVideos();
+    } catch (err) {
+      console.error('Failed to log video watch');
+    }
+  };
 
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
   const videos = React.useMemo(() => {
@@ -163,20 +184,7 @@ export default function PatientHome() {
     if (popupVideo) {
       const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
       sessionStorage.setItem(key, 'true');
-      setActiveVideo(popupVideo);
-      setCurrentClipIndex(0);
-
-      const currentSeconds = watchDurationMapRef.current[popupVideo.id] || popupVideo.watch_duration_seconds || 0;
-      try {
-        await submitVideoInteraction(id || '1', popupVideo.id, {
-          watched: true,
-          watch_duration_seconds: currentSeconds
-        });
-        clearApiCache(`videos-${id || '1'}`);
-        refetchVideos();
-      } catch (err) {
-        console.error('Failed to log video watch');
-      }
+      await handleWatch(popupVideo);
     }
     setOnboardingStep(null);
   };
@@ -278,7 +286,7 @@ export default function PatientHome() {
           <div className="bg-gradient-to-br from-[#0A1128] to-[#1E293B] text-white rounded-[2rem] p-8 shadow-2xl relative overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500">
             <div className="flex items-start gap-6">
               <div
-                onClick={() => { if (popupVideo) setActiveVideo(popupVideo); }}
+                onClick={() => { if (popupVideo) handleWatch(popupVideo); }}
                 className="w-16 h-16 bg-[#F4A261]/20 rounded-[1.25rem] flex items-center justify-center flex-shrink-0 relative overflow-hidden group cursor-pointer shadow-lg"
               >
                 <video
@@ -299,7 +307,7 @@ export default function PatientHome() {
                 <h3 className="text-xl font-bold mb-4 leading-tight">Your mask had a tiny leak of {cpapTrends.percentileLeak} L/min last night. Let's optimize it for deeper comfort in 60s!</h3>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => { if (popupVideo) setActiveVideo(popupVideo); }}
+                    onClick={() => { if (popupVideo) handleWatch(popupVideo); }}
                     disabled={!popupVideo}
                     className={`bg-[#2D9596] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#247c7d] transition-all shadow-lg active:scale-95 text-xs ${popupVideo ? '' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                   >
@@ -655,9 +663,17 @@ export default function PatientHome() {
               {/* Modal Header */}
               <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
                 <div>
-                  <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block mb-1">
-                    {activeVideo.category || 'Video'} {isPackage ? `• PART ${currentClipIndex + 1} OF ${activeVideo.parsedClips.length}` : ''}
-                  </span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block">
+                      {activeVideo.category || 'Video'} {isPackage ? `• PART ${currentClipIndex + 1} OF ${activeVideo.parsedClips.length}` : ''}
+                    </span>
+                    {ttffMs !== null && (
+                      <span className="bg-[#2D9596]/10 border border-[#2D9596]/30 text-[#2D9596] text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#2D9596] animate-ping" />
+                        KPI • {ttffMs} ms
+                      </span>
+                    )}
+                  </div>
                   <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">
                     {activeVideo.title || 'Comfort Tip'} {isPackage && currentClip?.title ? `— ${currentClip.title}` : ''}
                   </h3>
@@ -672,11 +688,25 @@ export default function PatientHome() {
 
               {/* Video Canvas */}
               <div className="relative bg-black aspect-video flex items-center justify-center">
+                {/* On-Demand Quality KPI Badge */}
+                {ttffMs !== null && (
+                  <div className="absolute top-3 left-3 z-20 bg-black/80 backdrop-blur-md border border-[#2D9596]/50 text-white text-[10px] font-mono font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-in fade-in duration-300 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-[#2D9596] animate-ping" />
+                    <span>KPI • On-Demand TTFF: <strong className="text-[#2D9596] font-extrabold">{ttffMs} ms</strong></span>
+                  </div>
+                )}
                 <video
                   key={`${activeVideo.id}-${currentClipIndex}`}
                   className="w-full h-full"
                   controls
                   autoPlay
+                  onPlaying={() => {
+                    if (videoClickTimeRef.current > 0 && ttffMs === null) {
+                      const elapsed = Math.round(performance.now() - videoClickTimeRef.current);
+                      setTtffMs(elapsed);
+                      console.log(`[KPI] Backend -> Mobile Time-to-First-Frame (TTFF): ${elapsed} ms`);
+                    }
+                  }}
                   onEnded={handleEnded}
                   onTimeUpdate={(e) => {
                     const currentTime = Math.round(e.currentTarget.currentTime || 0);

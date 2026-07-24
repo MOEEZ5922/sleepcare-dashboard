@@ -122,6 +122,7 @@ export default function PatientVideos() {
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const [watchedMap, setWatchedMap] = useState<{ [id: string | number]: boolean }>({});
   const [ratingMap, setRatingMap] = useState<{ [id: string | number]: number | null }>({});
+  const watchDurationMapRef = React.useRef<{ [id: string | number]: number }>({});
 
   useEffect(() => {
     if (videos.length > 0) {
@@ -150,7 +151,7 @@ export default function PatientVideos() {
     ? libraryVideos
     : libraryVideos.filter((v: any) => v.category === activeFilter);
 
-  const watchDurationMapRef = React.useRef<{ [id: string | number]: number }>({});
+  // watchDurationMapRef moved up to satisfy Rules of Hooks
 
   const handleWatch = async (video: any) => {
     videoClickTimeRef.current = performance.now();
@@ -479,7 +480,6 @@ export default function PatientVideos() {
                       elapsedSec
                     );
                   }}
-                  crossOrigin="anonymous"
                   src={getFullVideoUrl(mediaUrl || 'https://www.w3schools.com/html/mov_bbb.mp4') + '?cb=' + (activeVideo.id || '1') + '-' + currentClipIndex}
                 >
                   <track 
