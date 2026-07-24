@@ -457,8 +457,10 @@ export async function fetchPatientSummary(patientId: string): Promise<PatientSum
     gender: patientDetails?.gender || summary?.gender,
     dob: patientDetails?.birth_date || patientDetails?.dob || summary?.dob,
     therapyStartDate: patientDetails?.cpap_start_date || summary?.therapyStartDate,
-    maskType: patientDetails?.device_type || summary?.maskType,
+    maskType: summary?.maskType || summary?.mask_type || patientDetails?.mask_type || patientDetails?.maskType || patientDetails?.device_type,
     riskScore: summary?.riskScore,
+    address: patientDetails?.address || summary?.address,
+    machineSerial: patientDetails?.machine_serial || patientDetails?.machineSerial || patientDetails?.device_serial || summary?.machine_serial || summary?.machineSerial,
     phone: patientDetails?.phone ?? summary?.phone ?? null,
     email: patientDetails?.email ?? summary?.email ?? null,
     is_lisa_user: patientDetails?.is_lisa_user ?? summary?.is_lisa_user ?? null
