@@ -24,6 +24,7 @@ export interface PatientSummary {
   currentAHI: number;
   averageHours: number;
   percentileLeak: number;
+  leakField?: string;
   // Demographic/Clinical metadata
   gender?: string;
   dob?: string;
@@ -454,6 +455,7 @@ export async function fetchPatientSummary(patientId: string): Promise<PatientSum
     currentAHI: summary?.currentAHI ?? summary?.current_ahi,
     averageHours: summary?.averageHours ?? summary?.avg_usage_hours,
     percentileLeak: summary?.percentileLeak ?? summary?.percentile_leak,
+    leakField: summary?.leak_field || summary?.leakField || patientDetails?.leak_field || patientDetails?.leakField,
     gender: patientDetails?.gender || summary?.gender,
     dob: patientDetails?.birth_date || patientDetails?.dob || summary?.dob,
     therapyStartDate: patientDetails?.cpap_start_date || summary?.therapyStartDate,

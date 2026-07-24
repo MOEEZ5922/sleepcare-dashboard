@@ -258,6 +258,16 @@ export default function SummaryContent({
   const currentAHI = trends?.currentAHI || summary?.currentAHI || 0;
   const usage = trends?.averageHours || summary?.averageHours || 0;
   const leak = trends?.percentileLeak || summary?.percentileLeak || 0;
+  const leakField = trends?.leakField || summary?.leakField || (summary as any)?.leak_field || 'leaks95';
+  const isLargePct = leakField === 'leaks_large_pct';
+  const leakLabel = isLargePct
+    ? 'Large Leak (%)'
+    : leakField === 'leaks90'
+    ? 'Leak (90%)'
+    : leakField === 'leaks0'
+    ? 'Leak (Median)'
+    : 'Leak (95%)';
+  const leakUnit = isLargePct ? '%' : 'L/min';
   const interventionsList = Array.isArray(interventionsData) ? interventionsData : (summary?.interventions || []);
 
 
@@ -316,10 +326,10 @@ export default function SummaryContent({
               </div>
             </div>
             <div className="bg-white rounded-xl p-4 border border-[#E8EEF2] shadow-sm">
-              <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-widest mb-1">Leak (95%)</p>
+              <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-widest mb-1">{leakLabel}</p>
               <div className="flex items-end gap-1">
                 <span className="text-2xl font-bold text-[#0A1128]">{leak}</span>
-                <span className="text-[10px] text-[#5A6B7C] pb-1">L/min</span>
+                <span className="text-[10px] text-[#5A6B7C] pb-1">{leakUnit}</span>
               </div>
             </div>
           </div>
