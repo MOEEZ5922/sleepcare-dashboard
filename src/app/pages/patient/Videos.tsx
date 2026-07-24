@@ -66,6 +66,9 @@ export default function PatientVideos() {
 
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
   const [currentClipIndex, setCurrentClipIndex] = useState<number>(0);
+  const [ttffMs, setTtffMs] = useState<number | null>(null);
+  const [ttffMap, setTtffMap] = useState<{ [id: string | number]: number }>({});
+  const videoClickTimeRef = React.useRef<number>(0);
 
   const isLive = !!(liveVideos && (liveVideos as any).__isLive);
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
@@ -150,6 +153,8 @@ export default function PatientVideos() {
   const watchDurationMapRef = React.useRef<{ [id: string | number]: number }>({});
 
   const handleWatch = async (video: any) => {
+    videoClickTimeRef.current = performance.now();
+    setTtffMs(null);
     setActiveVideo(video);
     setCurrentClipIndex(0);
     setWatchedMap(prev => ({ ...prev, [video.id]: true }));
@@ -229,13 +234,18 @@ export default function PatientVideos() {
               >
                 <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="bg-white/20 text-white text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
                       {video.triggerReason}
                     </span>
                     {watchedMap[video.id] && (
                       <span className="bg-white/20 text-white text-[10px] px-2.5 py-1 rounded-full font-bold flex items-center gap-1 uppercase tracking-wider">
                         <CheckCircle className="w-3 h-3" /> Watched
+                      </span>
+                    )}
+                    {ttffMap[video.id] !== undefined && (
+                      <span className="bg-[#0A1128]/40 border border-white/30 text-white text-[10px] font-mono px-2.5 py-1 rounded-full font-bold flex items-center gap-1 uppercase tracking-wider shadow-sm animate-in fade-in">
+                        ⚡ On-Demand TTFF: {ttffMap[video.id]} ms
                       </span>
                     )}
                   </div>
@@ -310,9 +320,16 @@ export default function PatientVideos() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5 uppercase tracking-wider ${categoryColors[video.category] || 'bg-[#E8EEF2] text-[#5A6B7C]'}`}>
-                  {categoryIcons[video.category]}
-                  {video.category}
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <div className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${categoryColors[video.category] || 'bg-[#E8EEF2] text-[#5A6B7C]'}`}>
+                    {categoryIcons[video.category]}
+                    {video.category}
+                  </div>
+                  {ttffMap[video.id] !== undefined && (
+                    <div className="inline-flex items-center gap-1 bg-[#2D9596]/10 border border-[#2D9596]/30 text-[#2D9596] text-[10px] font-mono font-bold px-2 py-0.5 rounded-md">
+                      <span>⚡ On-Demand TTFF: {ttffMap[video.id]} ms</span>
+                    </div>
+                  )}
                 </div>
                 <h4 className="text-[#0A1128] font-bold text-sm mb-2 line-clamp-2 leading-snug">{video.title}</h4>
 
@@ -400,9 +417,17 @@ export default function PatientVideos() {
               {/* Modal Header */}
               <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
                 <div>
-                  <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block mb-1">
-                    {activeVideo.category} {isPackage ? `• PART ${currentClipIndex + 1} OF ${activeVideo.parsedClips.length}` : ''}
-                  </span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block">
+                      {activeVideo.category} {isPackage ? `• PART ${currentClipIndex + 1} OF ${activeVideo.parsedClips.length}` : ''}
+                    </span>
+                    {ttffMs !== null && (
+                      <span className="bg-[#2D9596]/10 border border-[#2D9596]/30 text-[#2D9596] text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#2D9596] animate-ping" />
+                        KPI • {ttffMs} ms
+                      </span>
+                    )}
+                  </div>
                   <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">
                     {activeVideo.title} {isPackage && currentClip?.title ? `— ${currentClip.title}` : ''}
                   </h3>
@@ -417,11 +442,28 @@ export default function PatientVideos() {
 
               {/* Video Canvas */}
               <div className="relative bg-black aspect-video flex items-center justify-center">
+                {/* On-Demand Quality KPI Badge */}
+                {ttffMs !== null && (
+                  <div className="absolute top-3 left-3 z-20 bg-black/80 backdrop-blur-md border border-[#2D9596]/50 text-white text-[10px] font-mono font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-in fade-in duration-300 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-[#2D9596] animate-ping" />
+                    <span>KPI • On-Demand TTFF: <strong className="text-[#2D9596] font-extrabold">{ttffMs} ms</strong></span>
+                  </div>
+                )}
                 <video 
                   key={`${activeVideo.id}-${currentClipIndex}`}
                   className="w-full h-full" 
                   controls 
                   autoPlay
+                  onPlaying={() => {
+                    if (videoClickTimeRef.current > 0 && ttffMs === null) {
+                      const elapsed = Math.round(performance.now() - videoClickTimeRef.current);
+                      setTtffMs(elapsed);
+                      if (activeVideo?.id) {
+                        setTtffMap(prev => ({ ...prev, [activeVideo.id]: elapsed }));
+                      }
+                      console.log(`[KPI] Backend -> Mobile Time-to-First-Frame (TTFF): ${elapsed} ms`);
+                    }
+                  }}
                   onEnded={handleEnded}
                   onTimeUpdate={(e) => {
                     const currentTime = Math.round(e.currentTarget.currentTime || 0);
