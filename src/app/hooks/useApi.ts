@@ -74,7 +74,7 @@ export function useApi<T>(
     setError(null);
   }
 
-  const fetchData = useCallback(async (force = false) => {
+  const fetchData = useCallback(async (force = false, silent = false) => {
     // If not a forced refresh, check cache first
     if (cacheKey && !force) {
       const entry = apiCache[cacheKey];
@@ -86,7 +86,9 @@ export function useApi<T>(
       }
     }
 
-    setIsLoading(true);
+    if (!silent) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const result = await apiCallRef.current();
@@ -108,8 +110,8 @@ export function useApi<T>(
     fetchData(false);
   }, [fetchData, serializedDeps]); // Refetches when dependencies serialize value changes
 
-  const refetch = useCallback(() => {
-    return fetchData(true);
+  const refetch = useCallback((silent = false) => {
+    return fetchData(true, silent);
   }, [fetchData]);
 
   return { data, isLoading, error, refetch, setData };

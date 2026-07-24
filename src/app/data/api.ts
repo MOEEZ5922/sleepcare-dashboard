@@ -1,6 +1,7 @@
 import * as mock from './mockData';
 
 const BASE_URL = import.meta.env.VITE_API_URL || '';
+export const DISABLE_MOCKS = import.meta.env.VITE_DISABLE_MOCKS === 'true';
 
 /** Resolves video URLs that may be relative or absolute from the video storage server */
 export function getFullVideoUrl(url: string | null | undefined): string {
@@ -284,6 +285,10 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
     }
     return data;
   } catch (error) {
+    if (DISABLE_MOCKS) {
+      console.error(`[STRICT BACKEND MODE] API request failed for: ${endpoint}`, error);
+      throw error;
+    }
     console.warn(`Falling back to mock data for: ${endpoint}`, error);
 
     // Map endpoints to mock data
@@ -594,19 +599,22 @@ export async function fetchDevices(patientId: string): Promise<DeviceInfo[]> {
 
 /** Get intervention history for a patient */
 export async function fetchInterventions(patientId: string): Promise<any[]> {
-  const data = await apiFetch<any>(`/api/interventions/${formatPatientId(patientId)}`);
-  const list = data.interventions || (Array.isArray(data) ? data : []);
+  try {
+    const data = await apiFetch<any>(`/api/interventions/${formatPatientId(patientId)}`);
+    const list = data.interventions || (Array.isArray(data) ? data : []);
 
-  // Ensure every item has a 'type' field (mapping from backend 'job_category' if needed)
-  const mapped = list.map((item: any) => ({
-    ...item,
-    type: item.type || item.job_category || 'Intervention'
-  }));
+    const mapped = list.map((item: any) => ({
+      ...item,
+      type: item.type || item.job_category || 'Intervention'
+    }));
 
-  if (data && (data as any).__isLive) {
-    (mapped as any).__isLive = true;
+    if (data && (data as any).__isLive) {
+      (mapped as any).__isLive = true;
+    }
+    return mapped;
+  } catch {
+    return [];
   }
-  return mapped;
 }
 
 /** Get a single patient's raw details */
@@ -723,7 +731,11 @@ export async function fetchInventory() {
 
 /** Get mask delivery history for a patient */
 export async function fetchMaskHistory(patientId: string): Promise<any> {
-  return apiFetch<any>(`/api/history/${formatPatientId(patientId)}/masks`);
+  try {
+    return await apiFetch<any>(`/api/history/${formatPatientId(patientId)}/masks`);
+  } catch {
+    return { masks: [] };
+  }
 }
 
 /** Backend health check */

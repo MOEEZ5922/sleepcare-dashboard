@@ -56,10 +56,10 @@ export default function PatientVideos() {
     cacheKey: `videos-${id || '1'}`
   });
 
-  // Poll videos from cloud DB every 3 seconds during the demo
+  // Silent background polling: check for newly assigned videos every 3s WITHOUT screen reload/flickering
   useEffect(() => {
     const interval = setInterval(() => {
-      refetchVideos();
+      refetchVideos(true);
     }, 3000);
     return () => clearInterval(interval);
   }, [refetchVideos]);
