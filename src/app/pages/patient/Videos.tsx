@@ -136,12 +136,16 @@ export default function PatientVideos() {
   }
 
   const recommended = videos.filter((v: any) => v.relevance === 'high');
+  const libraryVideos = recommended.length > 0
+    ? videos.filter((v: any) => v.relevance !== 'high')
+    : videos;
+
   const watchedCount = Object.values(watchedMap).filter(Boolean).length;
-  const categories = ['All', ...Array.from(new Set(videos.map((v: any) => v.category)))];
+  const categories = ['All', ...Array.from(new Set(libraryVideos.map((v: any) => v.category)))];
 
   const filtered = activeFilter === 'All'
-    ? videos
-    : videos.filter((v: any) => v.category === activeFilter);
+    ? libraryVideos
+    : libraryVideos.filter((v: any) => v.category === activeFilter);
 
   const watchDurationMapRef = React.useRef<{ [id: string | number]: number }>({});
 
