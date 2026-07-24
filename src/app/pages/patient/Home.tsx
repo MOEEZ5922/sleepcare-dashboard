@@ -74,10 +74,50 @@ export default function PatientHome() {
   const [surveyResponse, setSurveyResponse] = useState<string | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'video' | null>(null);
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
+  const [currentClipIndex, setCurrentClipIndex] = useState<number>(0);
   const [ratingMap, setRatingMap] = useState<{ [id: string | number]: number | null }>({});
+  const watchDurationMapRef = React.useRef<{ [id: string | number]: number }>({});
 
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
-  const videos = Array.isArray(rawVideos) ? rawVideos : [];
+  const videos = React.useMemo(() => {
+    const list = Array.isArray(rawVideos) ? rawVideos : [];
+    return list.map((v: any) => {
+      let parsedClips: any[] = [];
+      if (v.clips) {
+        if (typeof v.clips === 'string') {
+          try {
+            parsedClips = JSON.parse(v.clips);
+          } catch {
+            parsedClips = [];
+          }
+        } else if (Array.isArray(v.clips)) {
+          parsedClips = v.clips;
+        }
+      }
+
+      const videoType = v.video_type || (parsedClips.length > 0 ? 'package' : 'single');
+
+      let duration_s = v.duration_s;
+      if (videoType === 'package' && parsedClips.length > 0 && (!duration_s || duration_s === 0)) {
+        duration_s = parsedClips.reduce((acc: number, c: any) => acc + (c.duration_s || 0), 0);
+      }
+
+      let duration = v.duration;
+      if (!duration && typeof duration_s === 'number') {
+        const minutes = Math.floor(duration_s / 60);
+        const seconds = duration_s % 60;
+        duration = `${minutes}:${String(seconds).padStart(2, '0')}`;
+      }
+
+      return {
+        ...v,
+        videoType,
+        parsedClips,
+        duration_s,
+        duration: duration || '3:00',
+      };
+    });
+  }, [rawVideos]);
 
   // Find all unwatched videos assigned to the patient that are high relevance (popup targets)
   const unwatchedVideos = React.useMemo(() => {
@@ -119,22 +159,36 @@ export default function PatientHome() {
     setOnboardingStep(null);
   };
 
-  const handleWatchGuide = () => {
+  const handleWatchGuide = async () => {
     if (popupVideo) {
       const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
       sessionStorage.setItem(key, 'true');
       setActiveVideo(popupVideo);
+      setCurrentClipIndex(0);
+
+      const currentSeconds = watchDurationMapRef.current[popupVideo.id] || popupVideo.watch_duration_seconds || 0;
+      try {
+        await submitVideoInteraction(id || '1', popupVideo.id, {
+          watched: true,
+          watch_duration_seconds: currentSeconds
+        });
+        clearApiCache(`videos-${id || '1'}`);
+        refetchVideos();
+      } catch (err) {
+        console.error('Failed to log video watch');
+      }
     }
     setOnboardingStep(null);
   };
 
   const handleRating = async (videoId: string | number, stars: number) => {
     setRatingMap(prev => ({ ...prev, [videoId]: stars }));
+    const currentSeconds = watchDurationMapRef.current[videoId] || (activeVideo?.id === videoId ? activeVideo?.duration_s || 0 : 0);
     try {
       await submitVideoInteraction(id || '1', videoId, {
         watched: true,
         rating: stars,
-        watch_duration_seconds: 120
+        watch_duration_seconds: currentSeconds
       });
       clearApiCache(`videos-${id || '1'}`);
       refetchVideos();
@@ -530,7 +584,7 @@ export default function PatientHome() {
               className="relative w-full h-36 bg-gray-100 rounded-2xl mb-5 overflow-hidden group cursor-pointer shadow-sm border border-[#E8EEF2]"
             >
               <video
-                src={getFullVideoUrl(popupVideo?.url || popupVideo?.video_url) + '#t=1'}
+                src={getFullVideoUrl((popupVideo?.videoType === 'package' && popupVideo?.parsedClips?.length > 0 ? popupVideo.parsedClips[0].url : popupVideo?.url) || popupVideo?.video_url) + '#t=1'}
                 preload="metadata"
                 muted
                 playsInline
@@ -566,80 +620,126 @@ export default function PatientHome() {
       )}
 
       {/* Premium Video Player Modal */}
-      {activeVideo && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#0A1128]/85 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300 flex flex-col">
+      {activeVideo && (() => {
+        const isPackage = activeVideo.videoType === 'package' && activeVideo.parsedClips?.length > 0;
+        const currentClip = isPackage
+          ? activeVideo.parsedClips[currentClipIndex] || activeVideo.parsedClips[0]
+          : activeVideo;
+        const mediaUrl = currentClip?.url || currentClip?.video_url || activeVideo.url || activeVideo.video_url;
 
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
-              <div>
-                <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block mb-1">
-                  {activeVideo.category || 'Video'}
-                </span>
-                <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">{activeVideo.title || 'Comfort Tip'}</h3>
+        const handleEnded = () => {
+          if (isPackage && currentClipIndex < activeVideo.parsedClips.length - 1) {
+            setCurrentClipIndex(prev => prev + 1);
+          }
+        };
+
+        const handleCloseModal = async () => {
+          const finalSec = watchDurationMapRef.current[activeVideo.id] || 0;
+          if (finalSec > 0) {
+            try {
+              await submitVideoInteraction(id || '1', activeVideo.id, {
+                watched: true,
+                watch_duration_seconds: finalSec
+              });
+              clearApiCache(`videos-${id || '1'}`);
+              refetchVideos();
+            } catch (e) {}
+          }
+          setActiveVideo(null);
+        };
+
+        return (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#0A1128]/85 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300 flex flex-col">
+
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
+                <div>
+                  <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block mb-1">
+                    {activeVideo.category || 'Video'} {isPackage ? `• PART ${currentClipIndex + 1} OF ${activeVideo.parsedClips.length}` : ''}
+                  </span>
+                  <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">
+                    {activeVideo.title || 'Comfort Tip'} {isPackage && currentClip?.title ? `— ${currentClip.title}` : ''}
+                  </h3>
+                </div>
+                <button
+                  onClick={handleCloseModal}
+                  className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => setActiveVideo(null)}
-                className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            {/* Video Canvas */}
-            <div className="relative bg-black aspect-video flex items-center justify-center">
-              <video
-                key={activeVideo.id}
-                className="w-full h-full"
-                controls
-                autoPlay
-                crossOrigin="anonymous"
-                src={getFullVideoUrl(activeVideo.url || activeVideo.video_url || '') + '?cb=' + (activeVideo.id || '1')}
-              >
-                <track
-                  src={activeVideo.vtt_en_url || activeVideo.subtitles_en || getSubtitleUrl(activeVideo.url || activeVideo.video_url, 'en')}
-                  kind="subtitles"
-                  srcLang="en"
-                  label="English"
-                  default
-                />
-                <track
-                  src={activeVideo.vtt_fr_url || activeVideo.subtitles_fr || getSubtitleUrl(activeVideo.url || activeVideo.video_url, 'fr')}
-                  kind="subtitles"
-                  srcLang="fr"
-                  label="Français"
-                />
-                Your browser does not support the video tag.
-              </video>
-            </div>
-
-            {/* Quick Feedback Action */}
-            <div className="p-5 bg-[#FAFAFA] border-t border-[#E8EEF2] text-center space-y-3">
-              <p className="text-xs font-bold text-[#0A1128]">Was this coaching tip helpful?</p>
-              <div className="flex justify-center gap-1.5">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => handleRating(activeVideo.id, star)}
-                    className="p-1 hover:scale-110 transition-transform"
-                  >
-                    <Star
-                      className="w-6 h-6 transition-colors"
-                      fill={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : 'none'}
-                      stroke={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : '#CBD5E1'}
-                    />
-                  </button>
-                ))}
+              {/* Video Canvas */}
+              <div className="relative bg-black aspect-video flex items-center justify-center">
+                <video
+                  key={`${activeVideo.id}-${currentClipIndex}`}
+                  className="w-full h-full"
+                  controls
+                  autoPlay
+                  onEnded={handleEnded}
+                  onTimeUpdate={(e) => {
+                    const currentTime = Math.round(e.currentTarget.currentTime || 0);
+                    let elapsedSec = currentTime;
+                    if (isPackage && activeVideo.parsedClips?.length > 0) {
+                      const prevClipsDuration = activeVideo.parsedClips
+                        .slice(0, currentClipIndex)
+                        .reduce((acc: number, c: any) => acc + (c.duration_s || 0), 0);
+                      elapsedSec += prevClipsDuration;
+                    }
+                    watchDurationMapRef.current[activeVideo.id] = Math.max(
+                      watchDurationMapRef.current[activeVideo.id] || 0,
+                      elapsedSec
+                    );
+                  }}
+                  crossOrigin="anonymous"
+                  src={getFullVideoUrl(mediaUrl || '') + '?cb=' + (activeVideo.id || '1') + '-' + currentClipIndex}
+                >
+                  <track
+                    src={currentClip?.vtt_en_url || currentClip?.subtitles_en || activeVideo.vtt_en_url || getSubtitleUrl(mediaUrl, 'en')}
+                    kind="subtitles"
+                    srcLang="en"
+                    label="English"
+                    default
+                  />
+                  <track
+                    src={currentClip?.vtt_fr_url || currentClip?.subtitles_fr || activeVideo.vtt_fr_url || getSubtitleUrl(mediaUrl, 'fr')}
+                    kind="subtitles"
+                    srcLang="fr"
+                    label="Français"
+                  />
+                  Your browser does not support the video tag.
+                </video>
               </div>
-              {ratingMap[activeVideo.id] && (
-                <p className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider animate-pulse">
-                  ✓ Feedback logged to care portal
-                </p>
-              )}
+
+              {/* Quick Feedback Action */}
+              <div className="p-5 bg-[#FAFAFA] border-t border-[#E8EEF2] text-center space-y-3">
+                <p className="text-xs font-bold text-[#0A1128]">Was this coaching tip helpful?</p>
+                <div className="flex justify-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => handleRating(activeVideo.id, star)}
+                      className="p-1 hover:scale-110 transition-transform"
+                    >
+                      <Star
+                        className="w-6 h-6 transition-colors"
+                        fill={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : 'none'}
+                        stroke={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : '#CBD5E1'}
+                      />
+                    </button>
+                  ))}
+                </div>
+                {ratingMap[activeVideo.id] && (
+                  <p className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider animate-pulse">
+                    ✓ Feedback logged to care portal
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
