@@ -143,15 +143,19 @@ export default function PatientVideos() {
     ? videos
     : videos.filter((v: any) => v.category === activeFilter);
 
+  const watchDurationMapRef = React.useRef<{ [id: string | number]: number }>({});
+
   const handleWatch = async (video: any) => {
     setActiveVideo(video);
     setCurrentClipIndex(0);
     setWatchedMap(prev => ({ ...prev, [video.id]: true }));
     localStorage.setItem(`has-watched-video-${id || '1'}`, 'true');
+
+    const currentSeconds = watchDurationMapRef.current[video.id] || video.watch_duration_seconds || 0;
     try {
       await submitVideoInteraction(id || '1', video.id, {
         watched: true,
-        watch_duration_seconds: video.duration_s || 120
+        watch_duration_seconds: currentSeconds
       });
       clearApiCache(`videos-${id || '1'}`);
       refetchVideos();
@@ -163,11 +167,13 @@ export default function PatientVideos() {
   const handleRating = async (videoId: string | number, stars: number) => {
     setRatingMap(prev => ({ ...prev, [videoId]: stars }));
     localStorage.setItem(`has-watched-video-${id || '1'}`, 'true');
+
+    const currentSeconds = watchDurationMapRef.current[videoId] || (activeVideo?.id === videoId ? activeVideo?.duration_s || 0 : 0);
     try {
       await submitVideoInteraction(id || '1', videoId, {
         watched: true,
         rating: stars,
-        watch_duration_seconds: 120
+        watch_duration_seconds: currentSeconds
       });
       clearApiCache(`videos-${id || '1'}`);
       refetchVideos();
@@ -369,6 +375,21 @@ export default function PatientVideos() {
           }
         };
 
+        const handleCloseModal = async () => {
+          const finalSec = watchDurationMapRef.current[activeVideo.id] || 0;
+          if (finalSec > 0) {
+            try {
+              await submitVideoInteraction(id || '1', activeVideo.id, {
+                watched: true,
+                watch_duration_seconds: finalSec
+              });
+              clearApiCache(`videos-${id || '1'}`);
+              refetchVideos();
+            } catch (e) {}
+          }
+          setActiveVideo(null);
+        };
+
         return (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#0A1128]/85 backdrop-blur-md animate-in fade-in duration-300">
             <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300">
@@ -383,7 +404,7 @@ export default function PatientVideos() {
                   </h3>
                 </div>
                 <button 
-                  onClick={() => setActiveVideo(null)}
+                  onClick={handleCloseModal}
                   className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors"
                 >
                   <X className="w-4 h-4" />
@@ -398,6 +419,20 @@ export default function PatientVideos() {
                   controls 
                   autoPlay
                   onEnded={handleEnded}
+                  onTimeUpdate={(e) => {
+                    const currentTime = Math.round(e.currentTarget.currentTime || 0);
+                    let elapsedSec = currentTime;
+                    if (isPackage && activeVideo.parsedClips?.length > 0) {
+                      const prevClipsDuration = activeVideo.parsedClips
+                        .slice(0, currentClipIndex)
+                        .reduce((acc: number, c: any) => acc + (c.duration_s || 0), 0);
+                      elapsedSec += prevClipsDuration;
+                    }
+                    watchDurationMapRef.current[activeVideo.id] = Math.max(
+                      watchDurationMapRef.current[activeVideo.id] || 0,
+                      elapsedSec
+                    );
+                  }}
                   crossOrigin="anonymous"
                   src={getFullVideoUrl(mediaUrl || 'https://www.w3schools.com/html/mov_bbb.mp4') + '?cb=' + (activeVideo.id || '1') + '-' + currentClipIndex}
                 >
