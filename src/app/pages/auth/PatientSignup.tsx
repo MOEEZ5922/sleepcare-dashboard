@@ -1,21 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { User, Lock, Loader2, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { User, Lock, Loader2, ArrowLeft, ShieldCheck, AlertTriangle, AlertCircle, X } from 'lucide-react';
 import lindeLogoImg from '../../../assets/LindeLogo.png';
 
 export default function PatientSignup() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showNameExistsModal, setShowNameExistsModal] = useState(false);
+  const [nameExistsDetail, setNameExistsDetail] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId.trim() || !name.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!userId.trim() || !firstName.trim() || !lastName.trim() || !password.trim() || !confirmPassword.trim()) {
       setErrorMsg('Please fill in all fields.');
       return;
     }
@@ -38,7 +41,8 @@ export default function PatientSignup() {
         body: JSON.stringify({
           role: 'patient',
           user_id: userId.trim(),
-          full_name: name.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
           password: password.trim()
         }),
       });
@@ -54,7 +58,19 @@ export default function PatientSignup() {
       // Handle server error responses
       const data = await response.json().catch(() => ({}));
       const detail = data.detail || `Registration failed (Status ${response.status})`;
-      setErrorMsg(detail);
+
+      // Check if this is the "name already exists" validation error
+      if (
+        typeof detail === 'string' &&
+        (detail.toLowerCase().includes('already exists for this patient') ||
+          detail.toLowerCase().includes('a name already exists') ||
+          detail.toLowerCase().includes('please enter your name exactly as'))
+      ) {
+        setNameExistsDetail(detail);
+        setShowNameExistsModal(true);
+      } else {
+        setErrorMsg(detail);
+      }
       setLoading(false);
     } catch (err: any) {
       console.warn('Backend registration failed', err);
@@ -77,7 +93,7 @@ export default function PatientSignup() {
       <div className="absolute -left-20 -bottom-20 w-96 h-96 bg-[#018EC6]/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -right-20 -top-20 w-96 h-96 bg-[#018EC6]/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-white/10 relative z-10 animate-[fadeIn_0.5s_ease-out]">
+      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8 border border-white/10 relative z-10 animate-[fadeIn_0.5s_ease-out]">
 
         {/* Back Button */}
         <button
@@ -88,16 +104,28 @@ export default function PatientSignup() {
         </button>
 
         {/* Logo and Header */}
-        <div className="text-center mt-6 mb-8">
+        <div className="text-center mt-6 mb-6">
           <img src={lindeLogoImg} alt="Linde Logo" className="h-10 mx-auto mb-4 object-contain" />
           <h2 className="text-xl font-black text-[#003867] uppercase tracking-wider">Create Account</h2>
           <p className="text-xs text-[#5A6B7C] mt-1 font-semibold">Register your SleepCare patient portal</p>
         </div>
 
+        {/* Important Identity Warning Banner */}
+        <div className="bg-[#F4A261]/10 border border-[#F4A261]/30 rounded-2xl p-4 mb-5 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-[#E76F51] shrink-0 mt-0.5" />
+          <div className="text-xs text-[#0A1128] leading-relaxed">
+            <span className="font-extrabold text-[#E76F51] block uppercase tracking-wider mb-0.5 text-[10px]">
+              Important Medical Record Notice
+            </span>
+            The name you enter will be permanently recorded and linked to your medical file. Please verify its accuracy before submitting.
+          </div>
+        </div>
+
         {/* Messages */}
         {errorMsg && (
-          <div className="bg-[#E76F51]/10 border-l-4 border-[#E76F51] text-[#E76F51] p-3 rounded-lg text-xs font-bold mb-5">
-            {errorMsg}
+          <div className="bg-[#E76F51]/10 border-l-4 border-[#E76F51] text-[#E76F51] p-3 rounded-lg text-xs font-bold mb-5 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>{errorMsg}</div>
           </div>
         )}
         {successMsg && (
@@ -108,20 +136,39 @@ export default function PatientSignup() {
 
         {/* Register Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-1.5">Full Name</label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
-                <User className="w-4 h-4" />
-              </span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Sarah Mitchell"
-                className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
-                disabled={loading}
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-1.5">First Name</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
+                  <User className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="e.g. Jean"
+                  className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-1.5">Last Name</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
+                  <User className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="e.g. Dupont"
+                  className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                  disabled={loading}
+                />
+              </div>
             </div>
           </div>
 
@@ -135,7 +182,7 @@ export default function PatientSignup() {
                 type="text"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
-                placeholder="e.g. 999999001"
+                placeholder="e.g. 190723"
                 className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
                 disabled={loading}
               />
@@ -203,6 +250,45 @@ export default function PatientSignup() {
         </div>
 
       </div>
+
+      {/* Name Already Exists Error Modal */}
+      {showNameExistsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1128]/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-200 relative">
+            <button
+              onClick={() => setShowNameExistsModal(false)}
+              className="absolute right-5 top-5 w-8 h-8 rounded-full bg-[#FAFAFA] border border-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:text-[#0A1128] transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-[#E76F51]/10 flex items-center justify-center mb-4 text-[#E76F51]">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-lg font-bold text-[#0A1128] mb-2">
+              Identity Match Required
+            </h3>
+
+            <p className="text-xs sm:text-sm text-[#414D5B] leading-relaxed mb-4">
+              A name is already registered for this patient in our database. Please enter your name <strong>EXACTLY</strong> as recorded in the Linde database to maintain consistency with your medical record.
+            </p>
+
+            {nameExistsDetail && (
+              <div className="bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-3 text-xs font-mono text-[#5A6B7C] mb-6 break-words">
+                {nameExistsDetail}
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowNameExistsModal(false)}
+              className="w-full py-3.5 bg-[#003867] hover:bg-[#002b50] text-white rounded-xl font-bold text-sm shadow-md transition-all"
+            >
+              I Understand, Let Me Re-enter
+            </button>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeIn {
