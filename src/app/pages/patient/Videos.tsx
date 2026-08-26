@@ -299,25 +299,25 @@ export default function PatientVideos() {
           >
             <div className="flex gap-4 p-4">
               {/* Thumbnail */}
-                <button type="button" className="relative w-28 h-20 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden group"
-                  onClick={() => handleWatch(video)}
-                >
-                  <video
-                    src={getFullVideoUrl((video.videoType === 'package' && video.parsedClips?.length > 0 ? video.parsedClips[0].url : video.url) || video.video_url) + '#t=1'}
-                    preload="metadata"
-                    muted
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/5 transition-colors" />
-                  {watchedMap[video.id]
-                    ? <CheckCircle className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
-                    : <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
-                  }
-                  <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
-                    {video.duration}
-                  </div>
-                </button>
+              <button type="button" className="relative w-28 h-20 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden group"
+                onClick={() => handleWatch(video)}
+              >
+                <video
+                  src={getFullVideoUrl((video.videoType === 'package' && video.parsedClips?.length > 0 ? video.parsedClips[0].url : video.url) || video.video_url) + '#t=1'}
+                  preload="metadata"
+                  muted
+                  playsInline
+                  className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/5 transition-colors" />
+                {watchedMap[video.id]
+                  ? <CheckCircle className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
+                  : <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
+                }
+                <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                  {video.duration}
+                </div>
+              </button>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
@@ -407,7 +407,7 @@ export default function PatientVideos() {
               });
               clearApiCache(`videos-${id || '1'}`);
               refetchVideos();
-            } catch (e) {}
+            } catch (e) { }
           }
           setActiveVideo(null);
         };
@@ -433,7 +433,7 @@ export default function PatientVideos() {
                     {activeVideo.title} {isPackage && currentClip?.title ? `— ${currentClip.title}` : ''}
                   </h3>
                 </div>
-                <button 
+                <button
                   onClick={handleCloseModal}
                   className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors"
                 >
@@ -450,11 +450,12 @@ export default function PatientVideos() {
                     <span>KPI • On-Demand TTFF: <strong className="text-[#2D9596] font-extrabold">{ttffMs} ms</strong></span>
                   </div>
                 )}
-                <video 
+                <video
                   key={`${activeVideo.id}-${currentClipIndex}`}
-                  className="w-full h-full" 
-                  controls 
+                  className="w-full h-full"
+                  controls
                   autoPlay
+                  crossOrigin="anonymous"
                   onPlaying={() => {
                     if (videoClickTimeRef.current > 0 && ttffMs === null) {
                       const elapsed = Math.round(performance.now() - videoClickTimeRef.current);
@@ -482,18 +483,18 @@ export default function PatientVideos() {
                   }}
                   src={getFullVideoUrl(mediaUrl || 'https://www.w3schools.com/html/mov_bbb.mp4') + '?cb=' + (activeVideo.id || '1') + '-' + currentClipIndex}
                 >
-                  <track 
-                    src={currentClip?.vtt_en_url || currentClip?.subtitles_en || activeVideo.vtt_en_url || getSubtitleUrl(mediaUrl, 'en')} 
-                    kind="subtitles" 
-                    srcLang="en" 
-                    label="English" 
-                    default 
+                  <track
+                    src={currentClip?.vtt_en_url || currentClip?.subtitles_en || activeVideo.vtt_en_url || getSubtitleUrl(mediaUrl, 'en')}
+                    kind="subtitles"
+                    srcLang="en"
+                    label="English"
+                    default
                   />
-                  <track 
-                    src={currentClip?.vtt_fr_url || currentClip?.subtitles_fr || activeVideo.vtt_fr_url || getSubtitleUrl(mediaUrl, 'fr')} 
-                    kind="subtitles" 
-                    srcLang="fr" 
-                    label="Français" 
+                  <track
+                    src={currentClip?.vtt_fr_url || currentClip?.subtitles_fr || activeVideo.vtt_fr_url || getSubtitleUrl(mediaUrl, 'fr')}
+                    kind="subtitles"
+                    srcLang="fr"
+                    label="Français"
                   />
                   Your browser does not support the video tag.
                 </video>
