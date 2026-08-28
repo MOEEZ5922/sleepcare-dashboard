@@ -6,7 +6,7 @@ export default function TechnicianHelp() {
   const [activeTab, setActiveTab] = useState<'support' | 'lifecycle'>('support');
 
   return (
-    <div className="p-8 max-w-4xl space-y-6">
+    <div className="p-8 w-full space-y-6">
       <div>
         <h2 className="text-2xl text-[#0A1128] font-semibold">Technician IT & Support</h2>
         <p className="text-xs text-[#5A6B7C] mt-1">Linde Operations & AI Health Portal</p>

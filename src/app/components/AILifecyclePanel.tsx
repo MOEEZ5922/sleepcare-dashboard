@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { 
   Brain, 
@@ -12,7 +12,7 @@ import {
   Gauge, 
   BarChart3 
 } from 'lucide-react';
-import { requestRetraining } from '../data/api';
+import { fetchModels, requestRetraining } from '../data/api';
 
 interface AiModel {
   modelId: string;
@@ -27,78 +27,66 @@ interface AiModel {
 }
 
 export default function AILifecyclePanel() {
-  const [models, setModels] = useState<AiModel[]>([
-    {
-      modelId: 'dropout_predictor',
-      name: 'Therapy Dropout Predictor',
-      status: 'needs_retraining',
-      metricName: 'AUROC',
-      metricValue: NaN,
-      metricThreshold: NaN,
-      driftStatus: 'high',
-      driftValue: NaN,
-      lastRetrained: 'NaN'
-    },
-    {
-      modelId: 'ahi_detector',
-      name: 'AHI Anomaly Detector',
-      status: 'active',
-      metricName: 'F1-Score',
-      metricValue: NaN,
-      metricThreshold: NaN,
-      driftStatus: 'low',
-      driftValue: NaN,
-      lastRetrained: 'NaN'
-    },
-    {
-      modelId: 'leak_classifier',
-      name: 'Leak Instability Classifier',
-      status: 'active',
-      metricName: 'Precision',
-      metricValue: NaN,
-      metricThreshold: NaN,
-      driftStatus: 'moderate',
-      driftValue: NaN,
-      lastRetrained: 'NaN'
-    },
-    {
-      modelId: 'sleep_synthesizer',
-      name: 'Wearable Sleep Synthesizer',
-      status: 'active',
-      metricName: 'R-Squared',
-      metricValue: NaN,
-      metricThreshold: NaN,
-      driftStatus: 'low',
-      driftValue: NaN,
-      lastRetrained: 'NaN'
-    }
-  ]);
-
+  const [models, setModels] = useState<AiModel[]>([]);
+  const [loading, setLoading] = useState(true);
   const [retrainingId, setRetrainingId] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  const loadModels = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      const data = await fetchModels();
+      if (Array.isArray(data)) {
+        setModels(data);
+      }
+    } catch (err) {
+      console.warn('Failed to load ML models from backend', err);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadModels();
+  }, []);
+
+  // Live polling while any model is in 'retraining' state
+  useEffect(() => {
+    const hasRetraining = models.some(m => m.status === 'retraining') || retrainingId !== null;
+    if (!hasRetraining) return;
+
+    const interval = setInterval(() => {
+      loadModels(true);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [models, retrainingId]);
 
   const handleRetrain = async (modelId: string) => {
     setRetrainingId(modelId);
     try {
-      await requestRetraining(modelId);
+      // Set status to retraining immediately for immediate UI response
       setModels(prev => prev.map(model => {
         if (model.modelId === modelId) {
           return {
             ...model,
-            status: 'active',
-            metricValue: Number((model.metricThreshold + 0.05 + Math.random() * 0.04).toFixed(3)),
-            driftStatus: 'low',
-            driftValue: Number((0.01 + Math.random() * 0.03).toFixed(3)),
-            lastRetrained: 'Just now'
+            status: 'retraining'
           };
         }
         return model;
       }));
+
+      const res = await requestRetraining(modelId);
       const modelName = models.find(m => m.modelId === modelId)?.name || 'Model';
-      setSuccessToast(`${modelName} retrained successfully!`);
+      const msg = (res as any)?.message || `Retraining job queued for ${modelName}`;
+      
+      toast.info(msg);
+      setSuccessToast(msg);
       setTimeout(() => setSuccessToast(null), 4000);
     } catch (err) {
       toast.error('Failed to trigger model retraining. Please try again.');
+      // Revert status on error
+      loadModels(true);
     } finally {
       setRetrainingId(null);
     }
@@ -121,97 +109,137 @@ export default function AILifecyclePanel() {
         </div>
       )}
 
+      {/* Loading Spinner State */}
+      {loading && models.length === 0 && (
+        <div className="bg-white rounded-2xl border border-[#E8EEF2] p-12 text-center shadow-sm flex flex-col items-center justify-center">
+          <Loader2 className="w-8 h-8 text-[#2D9596] animate-spin mb-3" />
+          <p className="text-sm font-bold text-[#0A1128]">Loading Live Model Governance Metrics...</p>
+          <p className="text-xs text-[#5A6B7C] mt-1">Connecting to ML inference pipeline on VM2</p>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && models.length === 0 && (
+        <div className="bg-white rounded-2xl border border-[#E8EEF2] p-12 text-center shadow-sm">
+          <Brain className="w-10 h-10 text-[#5A6B7C]/40 mx-auto mb-3" />
+          <h4 className="text-base font-bold text-[#0A1128]">No AI Models Registered</h4>
+          <p className="text-xs text-[#5A6B7C] mt-1">No active machine learning models returned by the server.</p>
+        </div>
+      )}
+
       {/* Grid Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {models.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
         {models.map(model => {
-          const isModelRetraining = retrainingId === model.modelId;
-          const isOutofSpec = model.metricValue < model.metricThreshold;
+          const isModelRetraining = retrainingId === model.modelId || model.status === 'retraining';
+          const isOutofSpec = (model.metricValue < model.metricThreshold) || model.status === 'needs_retraining';
           
           return (
             <div 
               key={model.modelId}
-              className={`bg-white rounded-2xl border p-6 transition-all duration-300 shadow-sm relative overflow-hidden flex flex-col justify-between h-[280px] ${
-                isOutofSpec && model.status !== 'retraining'
-                  ? 'border-[#E76F51]/40 shadow-md shadow-[#E76F51]/5 ring-1 ring-[#E76F51]/10' 
-                  : 'border-[#E8EEF2] hover:border-[#2D9596]/30'
+              className={`bg-white rounded-3xl border p-6 sm:p-7 transition-all duration-300 shadow-sm relative overflow-hidden flex flex-col justify-between ${
+                isOutofSpec && !isModelRetraining
+                  ? 'border-[#E76F51]/40 shadow-lg shadow-[#E76F51]/5 ring-1 ring-[#E76F51]/20' 
+                  : isModelRetraining
+                  ? 'border-[#F4A261]/40 shadow-lg shadow-[#F4A261]/5 ring-1 ring-[#F4A261]/20'
+                  : 'border-[#E8EEF2] hover:border-[#2D9596]/40 hover:shadow-md'
               }`}
             >
               {/* Pulsating background for out-of-spec */}
-              {isOutofSpec && model.status !== 'retraining' && (
-                <div className="absolute top-0 right-0 w-24 h-24 bg-[#E76F51]/5 rounded-full blur-2xl pointer-events-none" />
+              {isOutofSpec && !isModelRetraining && (
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#E76F51]/5 rounded-full blur-3xl pointer-events-none" />
+              )}
+              {isModelRetraining && (
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#F4A261]/5 rounded-full blur-3xl pointer-events-none" />
               )}
 
-              {/* Card Title block */}
+              {/* Card Header & Title block */}
               <div>
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex gap-3">
-                    <div className={`p-2 rounded-xl ${isOutofSpec ? 'bg-[#E76F51]/10 text-[#E76F51]' : 'bg-[#2D9596]/10 text-[#2D9596]'}`}>
-                      <Cpu className="w-5 h-5" />
+                <div className="flex justify-between items-start mb-5 gap-4">
+                  <div className="flex gap-3.5 items-start">
+                    <div className={`p-3 rounded-2xl shrink-0 ${isModelRetraining ? 'bg-[#F4A261]/10 text-[#F4A261]' : isOutofSpec ? 'bg-[#E76F51]/10 text-[#E76F51]' : 'bg-[#2D9596]/10 text-[#2D9596]'}`}>
+                      <Cpu className="w-6 h-6" />
                     </div>
                     <div>
-                      <h4 className="text-[#0A1128] font-bold text-sm leading-snug">{model.name}</h4>
-                      <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-wider mt-0.5">Model ID: {model.modelId}</p>
+                      <h4 className="text-[#0A1128] font-bold text-base sm:text-lg leading-snug">
+                        {model.name}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] text-[#5A6B7C] uppercase font-bold tracking-wider">
+                          Model ID:
+                        </span>
+                        <code className="bg-[#FAFAFA] border border-[#E8EEF2] px-2 py-0.5 rounded text-[10px] font-mono text-[#0A1128] font-semibold">
+                          {model.modelId}
+                        </code>
+                      </div>
                     </div>
                   </div>
                   
                   {/* Status Badges */}
-                  {isModelRetraining ? (
-                    <span className="flex items-center gap-1 text-[9px] font-bold text-[#F4A261] bg-[#F4A261]/10 px-2 py-0.5 rounded-full border border-[#F4A261]/30 uppercase tracking-widest">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Training
-                    </span>
-                  ) : isOutofSpec ? (
-                    <span className="flex items-center gap-1 text-[9px] font-bold text-[#E76F51] bg-[#E76F51]/10 px-2 py-0.5 rounded-full border border-[#E76F51]/30 uppercase tracking-widest animate-pulse">
-                      <AlertTriangle className="w-2.5 h-2.5" /> Retrain Required
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-[9px] font-bold text-[#6A994E] bg-[#6A994E]/10 px-2 py-0.5 rounded-full border border-[#6A994E]/30 uppercase tracking-widest">
-                      <CheckCircle2 className="w-2.5 h-2.5" /> Active
-                    </span>
-                  )}
+                  <div className="shrink-0">
+                    {isModelRetraining ? (
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 px-3 py-1 rounded-full border border-[#F4A261]/30 uppercase tracking-widest animate-pulse">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Training...
+                      </span>
+                    ) : isOutofSpec ? (
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#E76F51] bg-[#E76F51]/10 px-3 py-1 rounded-full border border-[#E76F51]/30 uppercase tracking-widest animate-pulse">
+                        <AlertTriangle className="w-3 h-3" /> Retrain Required
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#6A994E] bg-[#6A994E]/10 px-3 py-1 rounded-full border border-[#6A994E]/30 uppercase tracking-widest">
+                        <CheckCircle2 className="w-3 h-3" /> Active
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Score and Threshold progress bar */}
-                <div className="space-y-2 mt-4">
-                  <div className="flex justify-between items-end text-xs font-semibold">
-                    <span className="text-[#5A6B7C]">Current {model.metricName}</span>
-                    <span className="text-[#0A1128] font-bold">
-                      {model.metricValue.toFixed(3)} 
-                      <span className="text-[#5A6B7C] font-normal text-[10px] ml-1">
-                        (Thresh: {model.metricThreshold.toFixed(3)})
-                      </span>
+                <div className="bg-[#FAFAFA] border border-[#E8EEF2] rounded-2xl p-4 my-4 space-y-2">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-xs font-bold text-[#5A6B7C] uppercase tracking-wider">
+                      Current {model.metricName}
                     </span>
+                    <div className="text-right">
+                      <span className="text-xl font-black text-[#0A1128]">
+                        {typeof model.metricValue === 'number' ? model.metricValue.toFixed(3) : model.metricValue}
+                      </span>
+                      <span className="text-xs font-semibold text-[#5A6B7C] ml-2">
+                        (Clinical Target: {typeof model.metricThreshold === 'number' ? model.metricThreshold.toFixed(3) : model.metricThreshold})
+                      </span>
+                    </div>
                   </div>
-                  <div className="h-2 bg-[#E8EEF2] rounded-full relative">
+
+                  <div className="h-2.5 bg-[#E8EEF2] rounded-full relative overflow-hidden">
                     {/* Threshold vertical line indicator */}
                     <div 
-                      className="absolute top-0 bottom-0 w-0.5 bg-black/40 z-10"
-                      style={{ left: `${model.metricThreshold * 100}%` }}
-                      title={`Threshold: ${model.metricThreshold}`}
+                      className="absolute top-0 bottom-0 w-1 bg-black/60 z-10"
+                      style={{ left: `${(model.metricThreshold || 0.8) * 100}%` }}
+                      title={`Clinical Target: ${model.metricThreshold}`}
                     />
                     <div 
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isOutofSpec ? 'bg-[#E76F51]' : 'bg-[#6A994E]'
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        isModelRetraining ? 'bg-gradient-to-r from-[#F4A261] to-[#E9C46A]' : isOutofSpec ? 'bg-gradient-to-r from-[#F4A261] to-[#E76F51]' : 'bg-gradient-to-r from-[#2D9596] to-[#6A994E]'
                       }`}
-                      style={{ width: `${model.metricValue * 100}%` }}
+                      style={{ width: `${Math.min((model.metricValue || 0) * 100, 100)}%` }}
                     />
                   </div>
                 </div>
               </div>
 
               {/* Bottom Metadata & CTAs */}
-              <div className="border-t border-[#E8EEF2] pt-4 mt-4 flex items-center justify-between text-[11px] font-bold text-[#5A6B7C]">
-                <div className="flex items-center gap-4">
+              <div className="border-t border-[#E8EEF2] pt-4 mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-4 text-xs font-semibold text-[#5A6B7C]">
                   {/* Drift index status */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-tighter">Drift (PSI)</span>
-                    <span className={`px-2 py-0.5 rounded-md border text-[9px] font-extrabold ${getDriftColor(model.driftStatus)}`}>
-                      {model.driftValue.toFixed(2)} — {model.driftStatus.toUpperCase()}
+                    <span className="text-[10px] uppercase font-extrabold tracking-wider">Drift (PSI):</span>
+                    <span className={`px-2 py-0.5 rounded-md border text-[10px] font-extrabold ${getDriftColor(model.driftStatus)}`}>
+                      {typeof model.driftValue === 'number' ? model.driftValue.toFixed(2) : model.driftValue} — {model.driftStatus?.toUpperCase()}
                     </span>
                   </div>
                   
                   {/* Last Retrained Date */}
                   <div className="flex items-center gap-1 font-medium">
-                    <Calendar className="w-3.5 h-3.5 opacity-55" />
+                    <Calendar className="w-3.5 h-3.5 opacity-60" />
                     <span>{model.lastRetrained}</span>
                   </div>
                 </div>
@@ -220,23 +248,23 @@ export default function AILifecyclePanel() {
                 <button
                   onClick={() => handleRetrain(model.modelId)}
                   disabled={isModelRetraining}
-                  className={`px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 ${
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
                     isModelRetraining
-                      ? 'bg-[#E8EEF2] text-[#5A6B7C] cursor-not-allowed'
+                      ? 'bg-[#F4A261]/20 text-[#F4A261] border border-[#F4A261]/30 cursor-not-allowed'
                       : isOutofSpec
-                      ? 'bg-[#E76F51] hover:bg-[#d45e41] text-white shadow-md shadow-[#E76F51]/20 hover:scale-105 active:scale-95'
-                      : 'bg-[#FAFAFA] hover:bg-[#E8EEF2] text-[#0A1128] border border-[#E8EEF2]'
+                      ? 'bg-[#E76F51] hover:bg-[#d45e41] text-white shadow-md shadow-[#E76F51]/25 hover:scale-[1.02] active:scale-95'
+                      : 'bg-white hover:bg-[#FAFAFA] text-[#0A1128] border-2 border-[#E8EEF2] hover:border-[#2D9596]/40 hover:scale-[1.02] active:scale-95'
                   }`}
                 >
                   {isModelRetraining ? (
                     <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Retraining...
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Training in Progress...
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="w-3 h-3" />
-                      Retrain
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Retrain Model
                     </>
                   )}
                 </button>
@@ -245,6 +273,7 @@ export default function AILifecyclePanel() {
           );
         })}
       </div>
+      )}
 
       {/* Model Health Summary Footer */}
       <div className="bg-[#0A1128] text-white rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm border border-white/5">
@@ -258,7 +287,10 @@ export default function AILifecyclePanel() {
           </div>
         </div>
         <button 
-          onClick={() => toast.info("Re-evaluating model drift metrics... All clear.")}
+          onClick={() => {
+            toast.info("Re-evaluating model drift metrics... All clear.");
+            loadModels(false);
+          }}
           className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
         >
           <TrendingUp className="w-3.5 h-3.5 text-[#2D9596]" /> Force Evaluation Run
