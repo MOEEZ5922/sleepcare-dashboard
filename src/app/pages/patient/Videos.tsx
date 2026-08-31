@@ -161,10 +161,12 @@ export default function PatientVideos() {
     setWatchedMap(prev => ({ ...prev, [video.id]: true }));
     localStorage.setItem(`has-watched-video-${id || '1'}`, 'true');
 
-    const currentSeconds = watchDurationMapRef.current[video.id] || video.watch_duration_seconds || 0;
+    const currentSeconds = Math.round(Number(watchDurationMapRef.current[video.id] || video.watch_duration_seconds || 0));
+    const existingRating = ratingMap[video.id] !== undefined ? ratingMap[video.id] : (video.rating ?? null);
     try {
       await submitVideoInteraction(id || '1', video.id, {
         watched: true,
+        ...(existingRating !== null && existingRating !== undefined ? { rating: existingRating } : {}),
         watch_duration_seconds: currentSeconds
       });
       clearApiCache(`videos-${id || '1'}`);
@@ -178,7 +180,7 @@ export default function PatientVideos() {
     setRatingMap(prev => ({ ...prev, [videoId]: stars }));
     localStorage.setItem(`has-watched-video-${id || '1'}`, 'true');
 
-    const currentSeconds = watchDurationMapRef.current[videoId] || (activeVideo?.id === videoId ? activeVideo?.duration_s || 0 : 0);
+    const currentSeconds = Math.round(Number(watchDurationMapRef.current[videoId] || (activeVideo?.id === videoId ? activeVideo?.duration_s || 0 : 0)));
     try {
       await submitVideoInteraction(id || '1', videoId, {
         watched: true,
@@ -398,11 +400,13 @@ export default function PatientVideos() {
         };
 
         const handleCloseModal = async () => {
-          const finalSec = watchDurationMapRef.current[activeVideo.id] || 0;
-          if (finalSec > 0) {
+          const finalSec = Math.round(Number(watchDurationMapRef.current[activeVideo.id] || 0));
+          const existingRating = ratingMap[activeVideo.id] !== undefined ? ratingMap[activeVideo.id] : (activeVideo.rating ?? null);
+          if (finalSec > 0 || (existingRating !== null && existingRating !== undefined)) {
             try {
               await submitVideoInteraction(id || '1', activeVideo.id, {
                 watched: true,
+                ...(existingRating !== null && existingRating !== undefined ? { rating: existingRating } : {}),
                 watch_duration_seconds: finalSec
               });
               clearApiCache(`videos-${id || '1'}`);
