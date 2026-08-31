@@ -484,14 +484,26 @@ export default function PatientVideos() {
                   src={getFullVideoUrl(mediaUrl || 'https://www.w3schools.com/html/mov_bbb.mp4') + '?cb=' + (activeVideo.id || '1') + '-' + currentClipIndex}
                 >
                   <track
-                    src={currentClip?.vtt_en_url || currentClip?.subtitles_en || activeVideo.vtt_en_url || getSubtitleUrl(mediaUrl, 'en')}
+                    src={
+                      currentClip?.subtitle_en_url ||
+                      currentClip?.vtt_en_url ||
+                      currentClip?.subtitles_en ||
+                      (!isPackage ? activeVideo.vtt_en_url : '') ||
+                      getSubtitleUrl(mediaUrl, 'en')
+                    }
                     kind="subtitles"
                     srcLang="en"
                     label="English"
                     default
                   />
                   <track
-                    src={currentClip?.vtt_fr_url || currentClip?.subtitles_fr || activeVideo.vtt_fr_url || getSubtitleUrl(mediaUrl, 'fr')}
+                    src={
+                      currentClip?.subtitle_fr_url ||
+                      currentClip?.vtt_fr_url ||
+                      currentClip?.subtitles_fr ||
+                      (!isPackage ? activeVideo.vtt_fr_url : '') ||
+                      getSubtitleUrl(mediaUrl, 'fr')
+                    }
                     kind="subtitles"
                     srcLang="fr"
                     label="Français"
