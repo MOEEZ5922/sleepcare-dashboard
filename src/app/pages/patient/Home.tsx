@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Moon, Flame, ChevronRight, Package, FileText, Sparkles, Video, HelpCircle, X, AlertCircle, Play, Signal, Loader2, Star } from 'lucide-react';
+import { Moon, Flame, ChevronRight, Package, FileText, Sparkles, Video, HelpCircle, AlertCircle, Play, Signal, Loader2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useApi, clearApiCache } from '../../hooks/useApi';
 import {
@@ -8,27 +8,12 @@ import {
   fetchSurveys,
   submitSurveyResponse,
   fetchVideos,
-  submitVideoInteraction,
   getFullVideoUrl,
   PatientSummary,
   CpapTrends,
   SurveyResponse
 } from '../../data/api';
-
-function getSubtitleUrl(videoUrl: string | null | undefined, lang: 'en' | 'fr'): string {
-  if (!videoUrl) return '';
-  if (videoUrl.includes('/videos/existing/') || videoUrl.includes('/videos/new/')) {
-    const base = videoUrl.replace(/\/videos\/(existing|new)\//, '/subtitles/');
-    const index = base.lastIndexOf('.');
-    if (index !== -1) {
-      const withoutExt = base.substring(0, index);
-      // Strip any existing language suffix before appending new one
-      const cleanBase = withoutExt.replace(/[._](en|fr)$/, '');
-      return `${cleanBase}.${lang}.vtt`;
-    }
-  }
-  return '';
-}
+import { CoachingVideoModal } from '../../components/CoachingVideoModal';
 
 export default function PatientHome() {
   const { id } = useParams();
@@ -74,31 +59,9 @@ export default function PatientHome() {
   const [surveyResponse, setSurveyResponse] = useState<string | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'video' | null>(null);
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
-  const [currentClipIndex, setCurrentClipIndex] = useState<number>(0);
-  const [ttffMs, setTtffMs] = useState<number | null>(null);
-  const videoClickTimeRef = React.useRef<number>(0);
-  const [ratingMap, setRatingMap] = useState<{ [id: string | number]: number | null }>({});
-  const watchDurationMapRef = React.useRef<{ [id: string | number]: number }>({});
 
-  const handleWatch = async (video: any) => {
-    videoClickTimeRef.current = performance.now();
-    setTtffMs(null);
+  const handleWatch = (video: any) => {
     setActiveVideo(video);
-    setCurrentClipIndex(0);
-
-    const currentSeconds = Math.round(Number(watchDurationMapRef.current[video.id] || video.watch_duration_seconds || 0));
-    const existingRating = ratingMap[video.id] !== undefined ? ratingMap[video.id] : (video.rating ?? null);
-    try {
-      await submitVideoInteraction(id || '1', video.id, {
-        watched: true,
-        ...(existingRating !== null && existingRating !== undefined ? { rating: existingRating } : {}),
-        watch_duration_seconds: currentSeconds
-      });
-      clearApiCache(`videos-${id || '1'}`);
-      refetchVideos();
-    } catch (err) {
-      console.error('Failed to log video watch');
-    }
   };
 
   const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
@@ -191,21 +154,6 @@ export default function PatientHome() {
     setOnboardingStep(null);
   };
 
-  const handleRating = async (videoId: string | number, stars: number) => {
-    setRatingMap(prev => ({ ...prev, [videoId]: stars }));
-    const currentSeconds = Math.round(Number(watchDurationMapRef.current[videoId] || (activeVideo?.id === videoId ? activeVideo?.duration_s || 0 : 0)));
-    try {
-      await submitVideoInteraction(id || '1', videoId, {
-        watched: true,
-        rating: stars,
-        watch_duration_seconds: currentSeconds
-      });
-      clearApiCache(`videos-${id || '1'}`);
-      refetchVideos();
-    } catch (err) {
-      console.error('Failed to log video rating');
-    }
-  };
 
 
 
@@ -629,163 +577,17 @@ export default function PatientHome() {
         </div>
       )}
 
-      {/* Premium Video Player Modal */}
-      {activeVideo && (() => {
-        const isPackage = activeVideo.videoType === 'package' && activeVideo.parsedClips?.length > 0;
-        const currentClip = isPackage
-          ? activeVideo.parsedClips[currentClipIndex] || activeVideo.parsedClips[0]
-          : activeVideo;
-        const mediaUrl = currentClip?.url || currentClip?.video_url || activeVideo.url || activeVideo.video_url;
-
-        const handleEnded = () => {
-          if (isPackage && currentClipIndex < activeVideo.parsedClips.length - 1) {
-            setCurrentClipIndex(prev => prev + 1);
-          }
-        };
-
-        const handleCloseModal = async () => {
-          const finalSec = Math.round(Number(watchDurationMapRef.current[activeVideo.id] || 0));
-          const existingRating = ratingMap[activeVideo.id] !== undefined ? ratingMap[activeVideo.id] : (activeVideo.rating ?? null);
-          if (finalSec > 0 || (existingRating !== null && existingRating !== undefined)) {
-            try {
-              await submitVideoInteraction(id || '1', activeVideo.id, {
-                watched: true,
-                ...(existingRating !== null && existingRating !== undefined ? { rating: existingRating } : {}),
-                watch_duration_seconds: finalSec
-              });
-              clearApiCache(`videos-${id || '1'}`);
-              refetchVideos();
-            } catch (e) {}
-          }
-          setActiveVideo(null);
-        };
-
-        return (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#0A1128]/85 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300 flex flex-col">
-
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block">
-                      {activeVideo.category || 'Video'} {isPackage ? `• PART ${currentClipIndex + 1} OF ${activeVideo.parsedClips.length}` : ''}
-                    </span>
-                    {ttffMs !== null && (
-                      <span className="bg-[#2D9596]/10 border border-[#2D9596]/30 text-[#2D9596] text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#2D9596] animate-ping" />
-                        KPI • {ttffMs} ms
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">
-                    {activeVideo.title || 'Comfort Tip'} {isPackage && currentClip?.title ? `— ${currentClip.title}` : ''}
-                  </h3>
-                </div>
-                <button
-                  onClick={handleCloseModal}
-                  className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Video Canvas */}
-              <div className="relative bg-black aspect-video flex items-center justify-center">
-                {/* On-Demand Quality KPI Badge */}
-                {ttffMs !== null && (
-                  <div className="absolute top-3 left-3 z-20 bg-black/80 backdrop-blur-md border border-[#2D9596]/50 text-white text-[10px] font-mono font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-in fade-in duration-300 pointer-events-none">
-                    <span className="w-2 h-2 rounded-full bg-[#2D9596] animate-ping" />
-                    <span>KPI • On-Demand TTFF: <strong className="text-[#2D9596] font-extrabold">{ttffMs} ms</strong></span>
-                  </div>
-                )}
-                <video
-                  key={`${activeVideo.id}-${currentClipIndex}`}
-                  className="w-full h-full"
-                  controls
-                  autoPlay
-                  onPlaying={() => {
-                    if (videoClickTimeRef.current > 0 && ttffMs === null) {
-                      const elapsed = Math.round(performance.now() - videoClickTimeRef.current);
-                      setTtffMs(elapsed);
-                      console.log(`[KPI] Backend -> Mobile Time-to-First-Frame (TTFF): ${elapsed} ms`);
-                    }
-                  }}
-                  onEnded={handleEnded}
-                  onTimeUpdate={(e) => {
-                    const currentTime = Math.round(e.currentTarget.currentTime || 0);
-                    let elapsedSec = currentTime;
-                    if (isPackage && activeVideo.parsedClips?.length > 0) {
-                      const prevClipsDuration = activeVideo.parsedClips
-                        .slice(0, currentClipIndex)
-                        .reduce((acc: number, c: any) => acc + (c.duration_s || 0), 0);
-                      elapsedSec += prevClipsDuration;
-                    }
-                    watchDurationMapRef.current[activeVideo.id] = Math.max(
-                      watchDurationMapRef.current[activeVideo.id] || 0,
-                      elapsedSec
-                    );
-                  }}
-                  crossOrigin="anonymous"
-                  src={getFullVideoUrl(mediaUrl || '') + '?cb=' + (activeVideo.id || '1') + '-' + currentClipIndex}
-                >
-                  <track
-                    src={
-                      currentClip?.subtitle_en_url ||
-                      currentClip?.vtt_en_url ||
-                      currentClip?.subtitles_en ||
-                      (!isPackage ? activeVideo.vtt_en_url : '') ||
-                      getSubtitleUrl(mediaUrl, 'en')
-                    }
-                    kind="subtitles"
-                    srcLang="en"
-                    label="English"
-                    default
-                  />
-                  <track
-                    src={
-                      currentClip?.subtitle_fr_url ||
-                      currentClip?.vtt_fr_url ||
-                      currentClip?.subtitles_fr ||
-                      (!isPackage ? activeVideo.vtt_fr_url : '') ||
-                      getSubtitleUrl(mediaUrl, 'fr')
-                    }
-                    kind="subtitles"
-                    srcLang="fr"
-                    label="Français"
-                  />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-
-              {/* Quick Feedback Action */}
-              <div className="p-5 bg-[#FAFAFA] border-t border-[#E8EEF2] text-center space-y-3">
-                <p className="text-xs font-bold text-[#0A1128]">Was this coaching tip helpful?</p>
-                <div className="flex justify-center gap-1.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => handleRating(activeVideo.id, star)}
-                      className="p-1 hover:scale-110 transition-transform"
-                    >
-                      <Star
-                        className="w-6 h-6 transition-colors"
-                        fill={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : 'none'}
-                        stroke={ratingMap[activeVideo.id] !== null && ratingMap[activeVideo.id]! >= star ? '#F4A261' : '#CBD5E1'}
-                      />
-                    </button>
-                  ))}
-                </div>
-                {ratingMap[activeVideo.id] && (
-                  <p className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider animate-pulse">
-                    ✓ Feedback logged to care portal
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Unified Coaching Video Modal with Distributed Tracing Telemetry */}
+      <CoachingVideoModal
+        isOpen={!!activeVideo}
+        onClose={() => setActiveVideo(null)}
+        video={activeVideo}
+        patientId={id || '1'}
+        onVideoCompleted={() => {
+          clearApiCache(`videos-${id || '1'}`);
+          refetchVideos();
+        }}
+      />
     </div>
   );
 }

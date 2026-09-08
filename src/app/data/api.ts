@@ -1,4 +1,17 @@
 import * as mock from './mockData';
+import type {
+  EventTraceInteractionUpdate,
+  VideoInteractionUpdate,
+  LatencyKPIDashboardResponse,
+  EventTraceItem,
+} from '../types/telemetry';
+
+export type {
+  EventTraceInteractionUpdate,
+  VideoInteractionUpdate,
+  LatencyKPIDashboardResponse,
+  EventTraceItem,
+};
 
 const BASE_URL = import.meta.env.VITE_API_URL || '';
 export const DISABLE_MOCKS = import.meta.env.VITE_DISABLE_MOCKS === 'true';
@@ -826,16 +839,51 @@ export async function createAuthorization(patientId: string, data: {
   });
 }
 
+/** Log mobile/web UI interaction timestamps (t8 / t9 / t10) for an event trace */
+export async function logTraceInteraction(
+  eventId: string,
+  data: EventTraceInteractionUpdate
+): Promise<void> {
+  if (!eventId) return;
+  try {
+    await apiFetchRaw(`/api/telemetry/events/${eventId}/interaction`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  } catch (err) {
+    console.warn('[Telemetry] Non-blocking trace interaction sync skipped:', err);
+  }
+}
+
 /** Patient marks a video as watched and/or rates it */
 export async function submitVideoInteraction(patientId: string, videoId: string | number, data: {
   watched: boolean;
-  rating?: number;
+  rating?: number | null;
   watch_duration_seconds: number;
 }) {
-  return apiFetch(`/api/videos/${videoId}/interaction`, {
-    method: 'POST',
-    body: JSON.stringify({ ...data, timestamp: new Date().toISOString() }),
-  });
+  try {
+    return await apiFetch(`/api/videos/${videoId}/interaction`, {
+      method: 'POST',
+      body: JSON.stringify({
+        watched: data.watched,
+        watch_duration_seconds: Math.round(data.watch_duration_seconds),
+        ...(data.rating != null ? { rating: data.rating } : {}),
+        timestamp: new Date().toISOString(),
+      }),
+    });
+  } catch (err) {
+    console.warn('[Video] Non-blocking video interaction log failed:', err);
+  }
+}
+
+/** Fetch aggregated latency metrics and recent event trace records for Clinician dashboard */
+export async function fetchLatencyKPIDashboard(
+  includeTests: boolean = true,
+  limit: number = 50
+): Promise<LatencyKPIDashboardResponse> {
+  return apiFetch<LatencyKPIDashboardResponse>(
+    `/api/telemetry/reporting/latency-kpis?include_tests=${includeTests}&limit=${limit}`
+  );
 }
 
 /** Patient submits a medical survey */

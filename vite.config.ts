@@ -54,11 +54,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://cpap-backend-v2.onrender.com',
+        target: 'http://159.84.143.151',
         changeOrigin: true,
       },
       '/health': {
-        target: 'https://cpap-backend-v2.onrender.com',
+        target: 'http://159.84.143.151',
         changeOrigin: true,
       }
     }
