@@ -1,131 +1,104 @@
-import React, { useState } from 'react';
-import { Moon, Flame, ChevronRight, Package, FileText, Sparkles, Video, HelpCircle, AlertCircle, Play, Signal, Loader2 } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import { useApi, clearApiCache } from '../../hooks/useApi';
 import {
   fetchPatientSummary,
   fetchCpapTrends,
   fetchSurveys,
-  submitSurveyResponse,
   fetchVideos,
-  getFullVideoUrl,
+  normalizeVideoList,
+  NormalizedCoachingVideo,
   PatientSummary,
   CpapTrends,
-  SurveyResponse
+  SurveyResponse,
+  isLiveResponse,
 } from '../../data/api';
 import { CoachingVideoModal } from '../../components/CoachingVideoModal';
+import { PatientWelcomeCard } from './components/PatientWelcomeCard';
+import { TherapyLeakAlert } from './components/TherapyLeakAlert';
+import { RequiredSurveyCard } from './components/RequiredSurveyCard';
+import { DailyPulseCard } from './components/DailyPulseCard';
+import { SleepProgressRings } from './components/SleepProgressRings';
+import { WeeklySummaryCard } from './components/WeeklySummaryCard';
+import { SleepTipCard } from './components/SleepTipCard';
+import { QuickAccessLinks } from './components/QuickAccessLinks';
+import { OnboardingCheckInModal } from './components/OnboardingCheckInModal';
 
 export default function PatientHome() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const patientId = id || '1';
 
-  const { data: summary, error: summaryError, refetch: refetchSummary } = useApi<PatientSummary>(() => fetchPatientSummary(id || '1'), {
-    dependencies: [id],
-    cacheKey: `patient-summary-${id || '1'}`
-  });
-  const { data: cpapTrends, error: cpapError, refetch: refetchTrends } = useApi<CpapTrends>(() => fetchCpapTrends(id || '1', 7), {
-    dependencies: [id],
-    cacheKey: `cpap-trends-7-${id || '1'}`
-  });
-  const { data: surveyData, error: surveyError, refetch: refetchSurveys } = useApi<SurveyResponse>(() => fetchSurveys(id || '1'), {
-    dependencies: [id],
-    cacheKey: `surveys-${id || '1'}`
-  });
-  const { data: liveVideos, refetch: refetchVideos } = useApi<any[]>(() => fetchVideos(id || '1'), {
-    dependencies: [id],
-    cacheKey: `videos-${id || '1'}`
-  });
+  const { data: summary, refetch: refetchSummary } = useApi<PatientSummary>(
+    () => fetchPatientSummary(patientId),
+    {
+      dependencies: [patientId],
+      cacheKey: `patient-summary-${patientId}`,
+    }
+  );
 
-  // Poll Cloud DB every 3 seconds for real-time edge triggers written by RPi
-  React.useEffect(() => {
+  const { data: cpapTrends, refetch: refetchTrends } = useApi<CpapTrends>(
+    () => fetchCpapTrends(patientId, 7),
+    {
+      dependencies: [patientId],
+      cacheKey: `cpap-trends-7-${patientId}`,
+    }
+  );
+
+  const { data: surveyData, refetch: refetchSurveys } = useApi<SurveyResponse>(
+    () => fetchSurveys(patientId),
+    {
+      dependencies: [patientId],
+      cacheKey: `surveys-${patientId}`,
+    }
+  );
+
+  const { data: liveVideos, refetch: refetchVideos } = useApi<any>(
+    () => fetchVideos(patientId),
+    {
+      dependencies: [patientId],
+      cacheKey: `videos-${patientId}`,
+    }
+  );
+
+  useEffect(() => {
     const interval = setInterval(() => {
       refetchSummary();
       refetchTrends();
       refetchSurveys();
-      refetchVideos(); // added to refresh videos
+      refetchVideos();
     }, 3000);
     return () => clearInterval(interval);
   }, [refetchSummary, refetchTrends, refetchSurveys, refetchVideos]);
 
-  // Set visited dashboard flag in localStorage on mount
-  React.useEffect(() => {
-    localStorage.setItem(`has-visited-dashboard-${id || '1'}`, 'true');
-  }, [id]);
+  useEffect(() => {
+    localStorage.setItem(`has-visited-dashboard-${patientId}`, 'true');
+  }, [patientId]);
 
-  const isLive = !!(summary && (summary as any).__isLive);
-
-  const [showVideoBanner, setShowVideoBanner] = useState(true);
-  const [showMicroSurvey, setShowMicroSurvey] = useState(true);
-  const [surveyResponse, setSurveyResponse] = useState<string | null>(null);
+  const isLive = isLiveResponse(summary);
   const [onboardingStep, setOnboardingStep] = useState<'welcome' | 'video' | null>(null);
-  const [activeVideo, setActiveVideo] = useState<any | null>(null);
+  const [activeVideo, setActiveVideo] = useState<NormalizedCoachingVideo | null>(null);
 
-  const handleWatch = (video: any) => {
-    setActiveVideo(video);
-  };
+  const videos = useMemo(() => normalizeVideoList(liveVideos), [liveVideos]);
 
-  const rawVideos = (liveVideos as any)?.videos || (liveVideos as any)?.patient || (Array.isArray(liveVideos) ? liveVideos : []);
-  const videos = React.useMemo(() => {
-    const list = Array.isArray(rawVideos) ? rawVideos : [];
-    return list.map((v: any) => {
-      let parsedClips: any[] = [];
-      if (v.clips) {
-        if (typeof v.clips === 'string') {
-          try {
-            parsedClips = JSON.parse(v.clips);
-          } catch {
-            parsedClips = [];
-          }
-        } else if (Array.isArray(v.clips)) {
-          parsedClips = v.clips;
-        }
-      }
+  const unwatchedVideos = useMemo(
+    () => videos.filter((v) => !v.watched && v.relevance === 'high'),
+    [videos]
+  );
 
-      const videoType = v.video_type || (parsedClips.length > 0 ? 'package' : 'single');
-
-      let duration_s = v.duration_s;
-      if (videoType === 'package' && parsedClips.length > 0 && (!duration_s || duration_s === 0)) {
-        duration_s = parsedClips.reduce((acc: number, c: any) => acc + (c.duration_s || 0), 0);
-      }
-
-      let duration = v.duration;
-      if (!duration && typeof duration_s === 'number') {
-        const minutes = Math.floor(duration_s / 60);
-        const seconds = duration_s % 60;
-        duration = `${minutes}:${String(seconds).padStart(2, '0')}`;
-      }
-
-      return {
-        ...v,
-        videoType,
-        parsedClips,
-        duration_s,
-        duration: duration || '3:00',
-      };
-    });
-  }, [rawVideos]);
-
-  // Find all unwatched videos assigned to the patient that are high relevance (popup targets)
-  const unwatchedVideos = React.useMemo(() => {
-    return videos.filter((v: any) => !v.watched && v.relevance === 'high');
-  }, [videos]);
-
-  // Identify the newest or highest-relevance unwatched video to display in the pop-up
-  const popupVideo = React.useMemo(() => {
+  const popupVideo = useMemo(() => {
     if (unwatchedVideos.length === 0) return null;
-    return [...unwatchedVideos].sort((a: any, b: any) => {
+    return [...unwatchedVideos].sort((a, b) => {
       const relA = a.relevance === 'high' ? 1 : 0;
       const relB = b.relevance === 'high' ? 1 : 0;
       if (relA !== relB) return relB - relA;
-      return (b.id || 0) - (a.id || 0);
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
     })[0];
   }, [unwatchedVideos]);
 
-  // Show onboarding steps welcome/video only if there is an unwatched video
-  // and the pop-up has not been dismissed for this specific video in the current session
-  React.useEffect(() => {
+  useEffect(() => {
     if (popupVideo) {
-      const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
+      const key = `dismissed-video-popup-${patientId}-${popupVideo.id}`;
       const wasDismissed = sessionStorage.getItem(key);
       if (wasDismissed) {
         setOnboardingStep(null);
@@ -135,456 +108,95 @@ export default function PatientHome() {
     } else {
       setOnboardingStep(null);
     }
-  }, [popupVideo?.id, id]);
+  }, [popupVideo?.id, patientId]);
 
-  const handleGoToDashboard = () => {
+  const handleDismissPopup = () => {
     if (popupVideo) {
-      const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
-      sessionStorage.setItem(key, 'true');
+      sessionStorage.setItem(`dismissed-video-popup-${patientId}-${popupVideo.id}`, 'true');
     }
     setOnboardingStep(null);
   };
 
-  const handleWatchGuide = async () => {
+  const handleWatchGuide = () => {
     if (popupVideo) {
-      const key = `dismissed-video-popup-${id || '1'}-${popupVideo.id}`;
-      sessionStorage.setItem(key, 'true');
-      await handleWatch(popupVideo);
+      sessionStorage.setItem(`dismissed-video-popup-${patientId}-${popupVideo.id}`, 'true');
+      setActiveVideo(popupVideo);
     }
     setOnboardingStep(null);
   };
 
-
-
-
-  // Loading state – wait for API data before selecting a comfort video
-  const isLoadingVideos = !liveVideos;
-
-  // Prioritize high relevance videos and select the newest one (by created_at), falling back to the first video
-  const comfortVideo = React.useMemo(() => {
-    if (videos.length === 0) return null;
-    const highRelevance = videos.filter((v: any) => v.relevance === 'high');
-    if (highRelevance.length > 0) {
-      const sortedHigh = [...highRelevance].sort((a: any, b: any) => {
-        if (a.created_at && b.created_at) {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        }
-        if (a.created_at) return -1;
-        if (b.created_at) return 1;
-        return 0; // fallback to default backend ordering if no timestamps
-      });
-      return sortedHigh[0];
-    }
-    return videos[0];
-  }, [videos]);
-
-  // Derive data from CPAP trends API
   const usageHistory = cpapTrends?.usageHistory || [];
-  const lastNightHours = usageHistory.length > 0 ? usageHistory[usageHistory.length - 1]?.hours || 0 : 0;
-  const percentComplete = Math.min((lastNightHours / 8) * 100, 100);
+  const lastNightHours =
+    usageHistory.length > 0 ? usageHistory[usageHistory.length - 1]?.hours || 0 : 0;
   const weeklyAverage = cpapTrends?.averageHours || 0;
   const streak = cpapTrends?.streak || 0;
 
-  // Derive survey info from API
   const nextSurvey = surveyData?.patient?.next;
   const surveyDueDate = nextSurvey?.dueDate ? new Date(nextSurvey.dueDate) : null;
-  const surveyDaysLeft = surveyDueDate ? Math.max(0, Math.ceil((surveyDueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
-  const surveyName = nextSurvey?.name || 'Health Survey';
-  const surveyQuestions = nextSurvey?.questions || 8;
-  const surveyProgress = 0; // Will come from a future API field
+  const surveyDaysLeft = surveyDueDate
+    ? Math.max(0, Math.ceil((surveyDueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   return (
-    <div className="p-6 space-y-8 max-w-2xl mx-auto pb-32">
-      {/* Senior-Friendly Patient Welcome & Story */}
-      <div className="bg-white rounded-3xl p-8 border-2 border-[#E8EEF2] shadow-sm mb-4 relative overflow-hidden">
-        {/* Soft decorative accent */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#2D9596]/5 rounded-full blur-3xl" />
+    <div className="patient-page">
+      <PatientWelcomeCard patientName={summary?.name} isLive={isLive} />
 
-        <div className="relative z-10">
-          <div className="flex justify-between items-start mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#0A1128] leading-tight">
-              Hello, {summary?.name?.split(' ')[0] || 'Friend'}. <br className="hidden sm:block" /> We are so glad you are here.
-            </h1>
-            {isLive && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-lg shrink-0">
-                <Signal className="w-4 h-4 text-[#6A994E]" />
-                <span className="text-xs font-bold text-[#6A994E] uppercase tracking-wider">Connected</span>
-              </div>
-            )}
-          </div>
-          <div className="space-y-5 text-[#0A1128] leading-relaxed text-lg sm:text-xl max-w-3xl">
-            <p>
-              Getting used to a CPAP machine takes time. It is a new habit for your body.
-            </p>
-            <p>
-              You might feel frustrated on some nights, and that is completely normal. Remember, every single day you try, you are taking a brave step to protect your health.
-            </p>
-            <div className="bg-[#FAFAFA] p-5 rounded-2xl border-2 border-[#E8EEF2] mt-6">
-              <p className="font-bold text-[#2D9596] mb-2">A Guided Way</p>
-              <p>
-                We made this app to be simple. Think of it as your personal guide. We will help you adjust your mask and get comfortable, step-by-step, until you get a good night's sleep.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2-Minute Objective: Action Center */}
       <div className="space-y-4">
-        {/* Persistent AI Trigger (Dynamic based on leak and presence of unwatched RPi video) */}
         {cpapTrends && cpapTrends.percentileLeak > 20 && popupVideo && (
-          <div className="bg-gradient-to-br from-[#0A1128] to-[#1E293B] text-white rounded-[2rem] p-8 shadow-2xl relative overflow-hidden border border-white/10 animate-in zoom-in-95 duration-500">
-            <div className="flex items-start gap-6">
-              <div
-                onClick={() => { if (popupVideo) handleWatch(popupVideo); }}
-                className="w-16 h-16 bg-[#F4A261]/20 rounded-[1.25rem] flex items-center justify-center flex-shrink-0 relative overflow-hidden group cursor-pointer shadow-lg"
-              >
-                <video
-                  src={getFullVideoUrl(popupVideo?.url || popupVideo?.video_url) + '#t=1'}
-                  preload="metadata"
-                  muted
-                  playsInline
-                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-all scale-110 group-hover:scale-100"
-                />
-                <div className="absolute inset-0 bg-[#F4A261]/20 group-hover:bg-transparent transition-all" />
-                <Play className="w-8 h-8 text-white relative z-10 drop-shadow-md" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#F4A261] animate-pulse" />
-                  <span className="text-[#F4A261] font-bold text-xs uppercase tracking-widest">Comfort & Fit Guide</span>
-                </div>
-                <h3 className="text-xl font-bold mb-4 leading-tight">Your mask had a tiny leak of {cpapTrends.percentileLeak} L/min last night. Let's optimize it for deeper comfort in 60s!</h3>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { if (popupVideo) handleWatch(popupVideo); }}
-                    disabled={!popupVideo}
-                    className={`bg-[#2D9596] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#247c7d] transition-all shadow-lg active:scale-95 text-xs ${popupVideo ? '' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-                  >
-                    View Comfort Tip (1 min)
-                  </button>
-                  <button onClick={() => navigate(`/patient/${id}/help`)} className="text-white/60 text-xs hover:text-white transition-colors">
-                    Check Mask Fit →
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <TherapyLeakAlert
+            percentileLeak={cpapTrends.percentileLeak}
+            video={popupVideo}
+            onWatchVideo={setActiveVideo}
+            onCheckFit={() => navigate(`/patient/${patientId}/help`)}
+          />
         )}
 
-        {/* Persistent Survey Reminder */}
-        <div className="bg-gradient-to-br from-[#6A994E] to-[#2D9596] rounded-[2rem] p-8 text-white shadow-xl">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <div className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest inline-block mb-2">Required Survey</div>
-              <h2 className="text-2xl font-bold italic">"How is your sleep tonight?"</h2>
-            </div>
-            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center shadow-inner">
-              <FileText className="w-7 h-7" />
-            </div>
-          </div>
-          <div className="mb-6">
-            <p className="text-white/90 leading-relaxed mb-3">
-              Your clinical team needs the {surveyName} survey to calibrate your therapy. <br />
-              <span className="font-bold">Due in {surveyDaysLeft} days.</span>
-            </p>
-            <div className="flex items-center justify-between text-xs font-semibold text-white/80 mb-1">
-              <span>Progress</span>
-              <span>0/{surveyQuestions} Questions</span>
-            </div>
-            <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-white h-full rounded-full transition-all duration-1000" style={{ width: `${surveyProgress}%` }} />
-            </div>
-          </div>
-          <button
-            onClick={() => navigate(`/patient/${id}/surveys`)}
-            className="flex items-center justify-center gap-3 w-full bg-white text-[#2D9596] py-5 rounded-2xl font-bold hover:bg-[#f0f9f9] transition-all shadow-xl active:scale-98"
-          >
-            Finish Survey
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        </div>
+        <RequiredSurveyCard
+          surveyName={nextSurvey?.name || 'Health Survey'}
+          daysLeft={surveyDaysLeft}
+          questionsCount={nextSurvey?.questions || 8}
+          onOpenSurvey={() => navigate(`/patient/${patientId}/surveys`)}
+        />
       </div>
 
-      {/* 1-Tap Micro-Check (State of the Art Micro-UX) */}
-      <div className="bg-white rounded-[2rem] p-8 shadow-sm border-2 border-[#E8EEF2] relative group hover:border-[#2D9596]/30 transition-all">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 bg-[#2D9596]/10 rounded-[1.25rem] flex items-center justify-center group-hover:rotate-12 transition-transform">
-            <Sparkles className="w-6 h-6 text-[#2D9596]" />
-          </div>
-          <div>
-            <h3 className="text-[#0A1128] font-bold text-lg">Daily Pulse</h3>
-            <p className="text-sm text-[#414D5B]">Did you feel rested this morning?</p>
-          </div>
-        </div>
+      <DailyPulseCard patientId={patientId} />
 
-        <div className="flex gap-3">
-          {['Good 👍', 'Okay 😐', 'Bad 👎'].map((rating) => (
-            <button
-              key={rating}
-              onClick={async () => {
-                setSurveyResponse(rating);
-                try {
-                  await submitSurveyResponse(id || '1', 'daily-pulse', {
-                    answers: [{ question_id: 'restful_feeling', value: rating }]
-                  });
-                } catch (e) {
-                  console.error('Failed to submit pulse');
-                }
-                setTimeout(() => setShowMicroSurvey(false), 1500);
-              }}
-              className={`flex-1 py-4 rounded-xl border-2 transition-all font-bold text-sm ${surveyResponse === rating
-                  ? 'border-[#2D9596] bg-[#2D9596]/10 text-[#2D9596]'
-                  : 'border-[#E8EEF2] text-[#414D5B] hover:border-[#2D9596]/50 shadow-sm'
-                }`}
-            >
-              {rating}
-            </button>
-          ))}
-        </div>
-        {surveyResponse && (
-          <p className="text-center text-sm text-[#6A994E] font-bold mt-4 animate-pulse">
-            Thanks! Your care team has been updated.
-          </p>
-        )}
-      </div>
+      <SleepProgressRings lastNightHours={lastNightHours} streak={streak} />
 
-      {/* Sleep Progress Rings */}
-      <div className="bg-white rounded-3xl p-8 shadow-sm">
-        <h3 className="text-xl text-[#0A1128] mb-6">Last Night's Progress</h3>
+      <WeeklySummaryCard
+        weeklyAverage={weeklyAverage}
+        daysUsed={Math.min(usageHistory.length, 7)}
+      />
 
-        <div className="grid grid-cols-2 gap-8">
-          {/* Hours Ring */}
-          <div className="text-center">
-            <div className="relative w-36 h-36 mx-auto mb-4">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="72"
-                  cy="72"
-                  r="64"
-                  stroke="#E8EEF2"
-                  strokeWidth="10"
-                  fill="none"
-                />
-                <circle
-                  cx="72"
-                  cy="72"
-                  r="64"
-                  stroke="url(#sleepGradient)"
-                  strokeWidth="10"
-                  fill="none"
-                  strokeDasharray={`${percentComplete * 4.02} 402`}
-                  strokeLinecap="round"
-                />
-                <defs>
-                  <linearGradient id="sleepGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#6A994E" />
-                    <stop offset="100%" stopColor="#2D9596" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <Moon className="w-6 h-6 text-[#2D9596] mb-1" />
-                <p className="text-3xl font-bold text-[#0A1128]">
-                  {lastNightHours.toFixed(1)}
-                </p>
-                <p className="text-xs text-[#5A6B7C]">hours</p>
-              </div>
-            </div>
-            <p className="text-sm text-[#5A6B7C]">Sleep with Therapy</p>
-            <p className="text-lg font-semibold text-[#6A994E] mt-1">
-              {lastNightHours >= 6 ? 'Excellent!' : lastNightHours >= 4 ? 'Good Job!' : 'Keep Going!'}
-            </p>
-          </div>
+      <SleepTipCard />
 
-          {/* Streak Ring */}
-          <div className="text-center">
-            <div className="relative w-36 h-36 mx-auto mb-4">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="72"
-                  cy="72"
-                  r="64"
-                  stroke="#E8EEF2"
-                  strokeWidth="10"
-                  fill="none"
-                />
-                <circle
-                  cx="72"
-                  cy="72"
-                  r="64"
-                  stroke="#F4A261"
-                  strokeWidth="10"
-                  fill="none"
-                  strokeDasharray={`${Math.min((streak / 7) * 100, 100) * 4.02} 402`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <Flame className="w-6 h-6 text-[#F4A261] mb-1" />
-                <p className="text-3xl font-bold text-[#0A1128]">
-                  {streak}
-                </p>
-                <p className="text-xs text-[#5A6B7C]">days</p>
-              </div>
-            </div>
-            <p className="text-sm text-[#5A6B7C]">Current Streak</p>
-            <p className="text-lg font-semibold text-[#F4A261] mt-1">
-              {streak >= 7 ? '🔥 On Fire!' : 'Building Momentum!'}
-            </p>
-          </div>
-        </div>
-      </div>
+      <QuickAccessLinks
+        onGoToVideos={() => navigate(`/patient/${patientId}/videos`)}
+        onGoToHelp={() => navigate(`/patient/${patientId}/help`)}
+      />
 
-      {/* Weekly Summary */}
-      <div className="bg-gradient-to-br from-[#2D9596] to-[#1a7a7b] rounded-3xl p-8 text-white shadow-lg">
-        <div className="flex items-center gap-3 mb-4">
-          <Sparkles className="w-6 h-6" />
-          <h3 className="text-xl font-bold">This Week's Summary</h3>
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-white/90">Average Hours</span>
-            <span className="text-2xl font-bold">{weeklyAverage} hrs</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-white/90">Days Used</span>
-            <span className="text-2xl font-bold">{Math.min(usageHistory.length, 7)}/7</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-white/90">Consistency</span>
-            <span className="text-2xl font-bold">
-              {weeklyAverage >= 6 ? '⭐⭐⭐' : weeklyAverage >= 4 ? '⭐⭐' : '⭐'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Motivational Card */}
-      <div className="bg-gradient-to-br from-[#F4A261] to-[#e39350] rounded-3xl p-8 text-white shadow-lg">
-        <h3 className="text-xl font-bold mb-3">💡 Sleep Better Tip</h3>
-        <p className="text-white/95 text-lg leading-relaxed">
-          "Try wearing your mask for 30 minutes before bed while reading or watching TV.
-          This helps your body get comfortable with the therapy before sleep."
+      <div className="bg-light-blue/30 rounded-3xl p-6 border border-light-blue/60 text-center space-y-2">
+        <p className="text-xs text-slate-muted font-semibold leading-relaxed">
+          🔒 <span className="font-bold text-blue-gray">Your Sleep Care is Private:</span> SleepCare uses clinical-grade, HIPAA-compliant encryption. Your medical team actively reviews your CPAP comfort statistics to support your health.
         </p>
       </div>
 
-      {/* Quick Access Buttons */}
-      <div className="grid grid-cols-2 gap-4">
-        <button
-          onClick={() => navigate(`/patient/${id}/videos`)}
-          className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2] hover:shadow-md transition-all text-center"
-        >
-          <Video className="w-8 h-8 text-[#2D9596] mx-auto mb-2" />
-          <p className="text-sm font-medium text-[#0A1128]">Comfort Tips</p>
-        </button>
-        <button
-          onClick={() => navigate(`/patient/${id}/help`)}
-          className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2] hover:shadow-md transition-all text-center"
-        >
-          <HelpCircle className="w-8 h-8 text-[#F4A261] mx-auto mb-2" />
-          <p className="text-sm font-medium text-[#0A1128]">Get Help</p>
-        </button>
-      </div>
+      <OnboardingCheckInModal
+        step={onboardingStep}
+        patientName={summary?.name}
+        popupVideo={popupVideo}
+        onNextStep={() => setOnboardingStep('video')}
+        onWatchGuide={handleWatchGuide}
+        onGoToDashboard={handleDismissPopup}
+      />
 
-      {/* Reassuring Clinical Trust Footer */}
-      <div className="bg-[#E8EEF2]/30 rounded-3xl p-6 border border-[#E8EEF2]/60 text-center space-y-2">
-        <p className="text-xs text-[#5A6B7C] font-semibold leading-relaxed">
-          🔒 <span className="font-bold text-[#414D5B]">Your Sleep Care is Private:</span> SleepCare uses clinical-grade, HIPAA-compliant encryption. Your medical team actively reviews your CPAP comfort statistics to support your health.
-        </p>
-      </div>
-
-      {/* Guided Onboarding Step 1: Encouragement Buffer */}
-      {onboardingStep === 'welcome' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/70 backdrop-blur-md animate-in fade-in duration-500">
-          <div className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-500 relative overflow-hidden text-center">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#2D9596]/20 to-[#6A994E]/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="w-12 h-12 text-[#2D9596]" />
-            </div>
-            <h2 className="text-3xl font-bold text-[#0A1128] mb-4">You're doing great!</h2>
-            <p className="text-[#414D5B] text-lg leading-relaxed mb-8 px-2">
-              Adjusting to CPAP therapy takes time, and every night you try is a huge step forward.
-              We are here to guide you to a perfect night's rest. Let's check today's tip!
-            </p>
-            <button
-              onClick={() => setOnboardingStep('video')}
-              className="w-full bg-[#0A1128] text-white font-bold py-4 rounded-2xl text-lg hover:bg-[#1E293B] shadow-xl hover:scale-[1.02] transition-all"
-            >
-              Show My Daily Tip
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Guided Onboarding Step 2: Reassuring Care Check-In Modal */}
-      {onboardingStep === 'video' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1128]/70 backdrop-blur-md">
-          <div className="bg-white rounded-[2.25rem] p-8 max-w-sm w-full shadow-2xl border border-[#E8EEF2] animate-in slide-in-from-bottom-8 duration-500 relative overflow-hidden">
-            {/* Top decorative clinical seal */}
-            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#2D9596] to-[#6A994E]" />
-
-            <div className="flex items-center gap-4 mb-5">
-              <div className="w-12 h-12 bg-[#6A994E]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-6 h-6 text-[#6A994E]" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-[#0A1128]">Daily Care Check-In</h3>
-                <p className="text-xs text-[#5A6B7C] font-semibold">Supporting your sleep journey</p>
-              </div>
-            </div>
-
-            <p className="text-sm text-[#414D5B] mb-5 leading-relaxed">
-              Hello <span className="font-bold text-[#0A1128]">{summary?.name || 'there'}</span>! Your SleepCare portal is fully connected.
-            </p>
-
-            <div
-              onClick={handleWatchGuide}
-              className="relative w-full h-36 bg-gray-100 rounded-2xl mb-5 overflow-hidden group cursor-pointer shadow-sm border border-[#E8EEF2]"
-            >
-              <video
-                src={getFullVideoUrl((popupVideo?.videoType === 'package' && popupVideo?.parsedClips?.length > 0 ? popupVideo.parsedClips[0].url : popupVideo?.url) || popupVideo?.video_url) + '#t=1'}
-                preload="metadata"
-                muted
-                playsInline
-                className="w-full h-full object-cover opacity-90 group-hover:scale-102 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-[#0A1128]/10 group-hover:bg-[#0A1128]/5 transition-colors flex items-center justify-center">
-                <div className="w-12 h-12 bg-white/95 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform">
-                  <Play className="w-5 h-5 text-[#2D9596] ml-1" />
-                </div>
-              </div>
-            </div>
-
-            <p className="text-xs text-[#5A6B7C] mb-6 leading-relaxed bg-[#FAFAFA] p-3.5 rounded-xl border border-[#E8EEF2]">
-              🛡️ <span className="font-bold text-[#0A1128]">Clinical Tip:</span> To help you sleep deeper tonight, your care team prepared a custom guide: <span className="font-semibold text-[#0A1128]">"{popupVideo?.title || 'Comfort Guide'}"</span> ({popupVideo?.duration || '1:00'}).
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleWatchGuide}
-                className="w-full bg-[#2D9596] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#2D9596]/15 hover:bg-[#247c7d] transition-all hover:shadow-xl hover:scale-[1.01]"
-              >
-                Watch Guide ({popupVideo?.duration || '1:00'})
-              </button>
-              <button
-                onClick={handleGoToDashboard}
-                className="w-full bg-[#FAFAFA] text-[#5A6B7C] font-semibold py-3.5 rounded-xl border border-[#E8EEF2] hover:bg-[#E8EEF2]/50 transition-colors"
-              >
-                Go to Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Unified Coaching Video Modal with Distributed Tracing Telemetry */}
       <CoachingVideoModal
-        isOpen={!!activeVideo}
+        isOpen={Boolean(activeVideo)}
         onClose={() => setActiveVideo(null)}
         video={activeVideo}
-        patientId={id || '1'}
+        patientId={patientId}
         onVideoCompleted={() => {
-          clearApiCache(`videos-${id || '1'}`);
+          clearApiCache(`videos-${patientId}`);
           refetchVideos();
         }}
       />

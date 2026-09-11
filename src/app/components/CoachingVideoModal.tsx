@@ -1,12 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Star, Sparkles, CheckCircle2 } from 'lucide-react';
-import { getFullVideoUrl } from '../data/api';
+import { useState, useRef, useEffect } from 'react';
+import { X, Star, CheckCircle2 } from 'lucide-react';
+import { getFullVideoUrl, NormalizedCoachingVideo } from '../data/api';
 import { useVideoTelemetry } from '../hooks/useVideoTelemetry';
 
 export interface CoachingVideoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  video: any | null;
+  video: NormalizedCoachingVideo | null;
   patientId?: string;
   onVideoCompleted?: () => void;
 }
@@ -28,13 +28,13 @@ export function getSubtitleUrl(videoUrl: string | null | undefined, lang: 'en' |
   return '';
 }
 
-export const CoachingVideoModal: React.FC<CoachingVideoModalProps> = ({
+export function CoachingVideoModal({
   isOpen,
   onClose,
   video,
   patientId = '1',
   onVideoCompleted,
-}) => {
+}: CoachingVideoModalProps) {
   const [currentClipIndex, setCurrentClipIndex] = useState<number>(0);
   const [ttffMs, setTtffMs] = useState<number | null>(null);
   const [rating, setRating] = useState<number | null>(null);
@@ -107,45 +107,49 @@ export const CoachingVideoModal: React.FC<CoachingVideoModalProps> = ({
     onClose();
   };
 
+  const displayCategory = isPackage
+    ? `${video.category || 'Clinical Coaching'} • PART ${currentClipIndex + 1} OF ${video.parsedClips.length}`
+    : video.category || 'Clinical Coaching';
+
+  const displayTitle = isPackage && currentClip?.title
+    ? `${video.title || 'Coaching Video'} — ${currentClip.title}`
+    : video.title || 'Coaching Video';
+
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#0A1128]/85 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-300">
-        
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-5 border-b border-[#E8EEF2]">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-navy/85 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl border border-light-blue animate-in zoom-in-95 duration-300">
+        <div className="flex items-center justify-between p-5 border-b border-light-blue">
           <div className="min-w-0 pr-4">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-extrabold text-[#2D9596] uppercase tracking-wider block truncate">
-                {video.category || 'Clinical Coaching'} {isPackage ? `• PART ${currentClipIndex + 1} OF ${video.parsedClips.length}` : ''}
+              <span className="text-[10px] font-extrabold text-teal uppercase tracking-wider block truncate">
+                {displayCategory}
               </span>
               {ttffMs !== null && (
-                <span className="bg-[#2D9596]/10 border border-[#2D9596]/30 text-[#2D9596] text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 animate-in fade-in">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#2D9596] animate-ping" />
+                <span className="bg-teal/10 border border-teal/30 text-teal text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0 animate-in fade-in">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal animate-ping" />
                   {ttffMs} ms TTFF
                 </span>
               )}
             </div>
-            <h3 className="text-base font-bold text-[#0A1128] line-clamp-1">
-              {video.title || 'Coaching Video'} {isPackage && currentClip?.title ? `— ${currentClip.title}` : ''}
+            <h3 className="text-base font-bold text-navy line-clamp-1">
+              {displayTitle}
             </h3>
           </div>
           <button
             type="button"
             onClick={handleModalClose}
             aria-label="Close modal"
-            className="w-8 h-8 rounded-full bg-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:bg-gray-200 transition-colors shrink-0"
+            className="w-8 h-8 rounded-full bg-light-blue flex items-center justify-center text-slate-muted hover:bg-gray-200 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Video Canvas */}
         <div className="relative bg-black aspect-video flex items-center justify-center">
-          {/* On-Demand Quality KPI Badge */}
           {ttffMs !== null && (
-            <div className="absolute top-3 left-3 z-20 bg-black/80 backdrop-blur-md border border-[#2D9596]/50 text-white text-[10px] font-mono font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-in fade-in duration-300 pointer-events-none">
-              <span className="w-2 h-2 rounded-full bg-[#2D9596] animate-ping" />
-              <span>KPI • On-Demand TTFF: <strong className="text-[#2D9596] font-extrabold">{ttffMs} ms</strong></span>
+            <div className="absolute top-3 left-3 z-20 bg-black/80 backdrop-blur-md border border-teal/50 text-white text-[10px] font-mono font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-in fade-in duration-300 pointer-events-none">
+              <span className="w-2 h-2 rounded-full bg-teal animate-ping" />
+              <span>KPI • On-Demand TTFF: <strong className="text-teal font-extrabold">{ttffMs} ms</strong></span>
             </div>
           )}
 
@@ -158,10 +162,10 @@ export const CoachingVideoModal: React.FC<CoachingVideoModalProps> = ({
             crossOrigin="anonymous"
             onPlay={handlePlay}
             onPlaying={() => {
+              // Record time-to-first-frame (TTFF) once per play session
               if (clickTimeRef.current > 0 && ttffMs === null) {
                 const elapsed = Math.round(performance.now() - clickTimeRef.current);
                 setTtffMs(elapsed);
-                console.log(`[KPI] Backend -> Mobile Time-to-First-Frame (TTFF): ${elapsed} ms`);
               }
             }}
             onEnded={handleVideoEnded}
@@ -171,7 +175,7 @@ export const CoachingVideoModal: React.FC<CoachingVideoModalProps> = ({
               if (isPackage && video.parsedClips?.length > 0) {
                 const prevClipsDuration = video.parsedClips
                   .slice(0, currentClipIndex)
-                  .reduce((acc: number, c: any) => acc + (c.duration_s || 0), 0);
+                  .reduce((acc: number, c: { duration_s?: number }) => acc + (c.duration_s || 0), 0);
                 elapsedSec += prevClipsDuration;
               }
               watchSecondsRef.current = Math.max(watchSecondsRef.current, elapsedSec);
@@ -207,9 +211,8 @@ export const CoachingVideoModal: React.FC<CoachingVideoModalProps> = ({
           </video>
         </div>
 
-        {/* Feedback & Star Rating Section */}
-        <div className="p-5 bg-[#FAFAFA] border-t border-[#E8EEF2] text-center space-y-3">
-          <p className="text-xs font-bold text-[#0A1128] uppercase tracking-wider">
+        <div className="p-5 bg-background border-t border-light-blue text-center space-y-3">
+          <p className="text-xs font-bold text-navy uppercase tracking-wider">
             How helpful was this coaching tip?
           </p>
           <div className="flex items-center justify-center gap-2">
@@ -222,14 +225,14 @@ export const CoachingVideoModal: React.FC<CoachingVideoModalProps> = ({
               >
                 <Star
                   className="w-6 h-6 transition-colors"
-                  fill={rating !== null && rating >= star ? '#F4A261' : 'none'}
-                  stroke={rating !== null && rating >= star ? '#F4A261' : '#CBD5E1'}
+                  fill={rating !== null && rating >= star ? 'var(--color-amber)' : 'none'}
+                  stroke={rating !== null && rating >= star ? 'var(--color-amber)' : 'var(--color-light-blue)'}
                 />
               </button>
             ))}
           </div>
           {rating !== null && (
-            <p className="text-xs text-[#6A994E] font-bold flex items-center justify-center gap-1 animate-in fade-in">
+            <p className="text-xs text-sage font-bold flex items-center justify-center gap-1 animate-in fade-in">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Thank you for your feedback!
             </p>

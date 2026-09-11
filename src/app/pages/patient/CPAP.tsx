@@ -2,7 +2,18 @@ import { useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Moon, Flame, Signal, Loader2, AlertTriangle, Activity, Wind } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchCpapTrends } from '../../data/api';
+import { fetchCpapTrends, isLiveResponse } from '../../data/api';
+
+/**
+ * Recharts and inline SVG require raw CSS color strings — they cannot consume
+ * Tailwind classes or CSS custom properties. These constants mirror theme.css.
+ */
+const CHART_COLORS = {
+  teal: '#2D9596',
+  sage: '#6A994E',
+  lightBlue: '#E8EEF2',
+} as const;
+
 
 export default function PatientCPAP() {
   const { id } = useParams();
@@ -12,24 +23,24 @@ export default function PatientCPAP() {
     localStorage.setItem(`has-visited-sleep-${id || '1'}`, 'true');
   }, [id]);
 
-  const { data: cpapData, isLoading, error } = useApi(() => fetchCpapTrends(id || '1', 7), {
+  const { data: cpapData, isLoading } = useApi(() => fetchCpapTrends(id || '1', 7), {
     dependencies: [id],
     cacheKey: `cpap-trends-7-${id || '1'}`
   });
 
-  const isLive = !!(cpapData && (cpapData as any).__isLive);
+  const isLive = isLiveResponse(cpapData);
 
   if (isLoading && !cpapData) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 text-[#2D9596] animate-spin" />
+        <Loader2 className="w-8 h-8 text-teal animate-spin" />
       </div>
     );
   }
 
   if (!cpapData) {
     return (
-      <div className="p-6 text-center text-[#5A6B7C]">
+      <div className="p-6 text-center text-slate-muted">
         <p>Unable to load CPAP data. Please try again.</p>
       </div>
     );
@@ -45,19 +56,19 @@ export default function PatientCPAP() {
   return (
     <div className="p-6 space-y-6 max-w-2xl mx-auto pb-32">
       <div className="flex justify-between items-center px-2">
-        <h2 className="text-sm font-bold text-[#414D5B] uppercase tracking-widest">Therapy Trends</h2>
+        <h2 className="text-sm font-bold text-blue-gray uppercase tracking-widest">Therapy Trends</h2>
         {isLive && (
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-[#2D9596]/10 border border-[#2D9596]/20 rounded-md">
-            <Signal className="w-3 h-3 text-[#2D9596]" />
-            <span className="text-[10px] font-bold text-[#2D9596] uppercase tracking-wider">Live</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-teal/10 border border-teal/20 rounded-md">
+            <Signal className="w-3 h-3 text-teal" />
+            <span className="text-[10px] font-bold text-teal uppercase tracking-wider">Live</span>
           </div>
         )}
       </div>
 
       {/* Data Gap Alert */}
       {hasDataGap && (
-        <div className="bg-[#E76F51]/10 border border-[#E76F51]/20 rounded-2xl p-4 flex items-center gap-4 text-[#E76F51]">
-          <div className="bg-[#E76F51] p-2 rounded-lg">
+        <div className="bg-coral/10 border border-coral/20 rounded-2xl p-4 flex items-center gap-4 text-coral">
+          <div className="bg-coral p-2 rounded-lg text-white">
             <AlertTriangle className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -68,15 +79,15 @@ export default function PatientCPAP() {
       )}
 
       {/* Sleep Ring */}
-      <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-[#E8EEF2]">
-        <p className="text-[#5A6B7C] mb-2 font-medium">Last Night</p>
+      <div className="patient-card p-8 text-center">
+        <p className="text-slate-muted mb-2 font-medium">Last Night</p>
         <div className="relative w-48 h-48 mx-auto mb-6">
           <svg className="w-full h-full transform -rotate-90">
             <circle
               cx="96"
               cy="96"
               r="88"
-              stroke="#E8EEF2"
+            stroke={CHART_COLORS.lightBlue}
               strokeWidth="12"
               fill="none"
             />
@@ -93,22 +104,22 @@ export default function PatientCPAP() {
             />
             <defs>
               <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#6A994E" />
-                <stop offset="100%" stopColor="#2D9596" />
+                <stop offset="0%" stopColor={CHART_COLORS.sage} />
+                <stop offset="100%" stopColor={CHART_COLORS.teal} />
               </linearGradient>
             </defs>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <Moon className="w-8 h-8 text-[#2D9596] mb-2" />
-            <p className="text-4xl font-bold text-[#0A1128]">
+            <Moon className="w-8 h-8 text-teal mb-2" />
+            <p className="text-4xl font-bold text-navy">
               {lastNight.toFixed(1)}
             </p>
-            <p className="text-sm text-[#5A6B7C]">hours</p>
+            <p className="text-sm text-slate-muted">hours</p>
           </div>
         </div>
-        <p className="text-lg text-[#0A1128]">
+        <p className="text-lg text-navy">
           {lastNight >= 7 ? 'Excellent sleep!' : lastNight >= 4 ? 'Good progress!' : 'Keep trying!'} You slept{' '}
-          <span className="font-semibold text-[#6A994E]">
+          <span className="font-semibold text-sage">
             {lastNight.toFixed(1)} hours
           </span>{' '}
           with your therapy
@@ -116,7 +127,7 @@ export default function PatientCPAP() {
       </div>
 
       {/* Streak Tracker */}
-      <div className="bg-gradient-to-br from-[#F4A261] to-[#e39350] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+      <div className="bg-gradient-to-br from-amber to-amber/80 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
         <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
         <div className="flex items-center gap-4 relative z-10">
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
@@ -133,8 +144,8 @@ export default function PatientCPAP() {
       </div>
 
       {/* Weekly Progress */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
-        <h3 className="text-lg text-[#0A1128] mb-6 font-semibold">Weekly Usage (Last 7 Days)</h3>
+      <div className="patient-card p-6">
+        <h3 className="text-lg text-navy mb-6 font-semibold">Weekly Usage (Last 7 Days)</h3>
         <div className="space-y-5">
           {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
             const date = new Date(day.date);
@@ -144,12 +155,12 @@ export default function PatientCPAP() {
             return (
               <div key={index}>
                 <div className="flex justify-between text-xs mb-2">
-                  <span className="text-[#5A6B7C] font-bold uppercase tracking-wider">{dayName}</span>
-                  <span className="text-[#0A1128] font-bold">{day.hours.toFixed(1)} hrs</span>
+                  <span className="text-slate-muted font-bold uppercase tracking-wider">{dayName}</span>
+                  <span className="text-navy font-bold">{day.hours.toFixed(1)} hrs</span>
                 </div>
-                <div className="h-2.5 bg-[#E8EEF2] rounded-full overflow-hidden">
+                <div className="h-2.5 bg-light-blue rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#6A994E] to-[#2D9596] rounded-full transition-all duration-700 ease-out"
+                    className="h-full bg-gradient-to-r from-sage to-teal rounded-full transition-all duration-700 ease-out"
                     style={{ width: `${Math.min(progress, 100)}%` }}
                   />
                 </div>
@@ -160,13 +171,13 @@ export default function PatientCPAP() {
       </div>
 
       {/* Encouragement Card */}
-      <div className="bg-[#E8EEF2] rounded-2xl p-6">
-        <h4 className="text-[#0A1128] font-bold mb-2 flex items-center gap-2">
-          <div className="w-6 h-6 bg-[#2D9596]/10 rounded-full flex items-center justify-center text-[#2D9596]">💡</div>
+      <div className="bg-light-blue rounded-2xl p-6">
+        <h4 className="text-navy font-bold mb-2 flex items-center gap-2">
+          <div className="w-6 h-6 bg-teal/10 rounded-full flex items-center justify-center text-teal">💡</div>
           Clinical Insight
         </h4>
-        <p className="text-[#5A6B7C] text-sm leading-relaxed">
-          Your average usage is <span className="font-bold text-[#0A1128]">{cpapData.averageHours?.toFixed(1) || '—'} hours/night</span>.
+        <p className="text-slate-muted text-sm leading-relaxed">
+          Your average usage is <span className="font-bold text-navy">{cpapData.averageHours?.toFixed(1) || '—'} hours/night</span>.
           {(cpapData.averageHours || 0) >= 4
             ? ' You are meeting the clinical adherence threshold of 4+ hours. Keep it up!'
             : ' The clinical threshold is 4+ hours per night. Small increases make a big difference.'}
@@ -174,15 +185,15 @@ export default function PatientCPAP() {
       </div>
 
       {/* Sleep Events (AHI) */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
+      <div className="patient-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Activity className="w-5 h-5 text-[#E76F51]" />
-            <h3 className="font-bold text-[#0A1128]">Sleep Events</h3>
+            <Activity className="w-5 h-5 text-coral" />
+            <h3 className="font-bold text-navy">Sleep Events</h3>
           </div>
-          <span className="text-xs font-bold text-[#E76F51]">Goal: &lt;30 /night</span>
+          <span className="text-xs font-bold text-coral">Goal: &lt;30 /night</span>
         </div>
-        <p className="text-xs text-[#5A6B7C] mb-6">Fewer events mean deeper, more restful sleep.</p>
+        <p className="text-xs text-slate-muted mb-6">Fewer events mean deeper, more restful sleep.</p>
 
         <div className="space-y-4">
           {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
@@ -193,14 +204,14 @@ export default function PatientCPAP() {
 
             return (
               <div key={index} className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#5A6B7C] w-24">{dayName}</span>
-                <div className="flex-1 mx-4 h-1.5 bg-[#E8EEF2] rounded-full overflow-hidden flex items-center">
+                <span className="text-xs font-bold text-slate-muted w-24">{dayName}</span>
+                <div className="flex-1 mx-4 h-1.5 bg-light-blue rounded-full overflow-hidden flex items-center">
                   <div
-                    className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-[#6A994E]' : 'bg-[#E76F51]'}`}
+                    className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-sage' : 'bg-coral'}`}
                     style={{ width: `${Math.max(progress, 2)}%` }}
                   />
                 </div>
-                <span className={`text-xs font-bold w-12 text-right ${isGood ? 'text-[#6A994E]' : 'text-[#E76F51]'}`}>
+                <span className={`text-xs font-bold w-12 text-right ${isGood ? 'text-sage' : 'text-coral'}`}>
                   {day.ahi?.toFixed(1) || '0.0'}
                 </span>
               </div>
@@ -210,14 +221,14 @@ export default function PatientCPAP() {
       </div>
 
       {/* Mask Seal Quality (Leak) */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
+      <div className="patient-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Wind className="w-5 h-5 text-[#F4A261]" />
-            <h3 className="font-bold text-[#0A1128]">Mask Seal Quality</h3>
+            <Wind className="w-5 h-5 text-amber" />
+            <h3 className="font-bold text-navy">Mask Seal Quality</h3>
           </div>
         </div>
-        <p className="text-xs text-[#5A6B7C] mb-6">A steady seal ensures you get the right air pressure.</p>
+        <p className="text-xs text-slate-muted mb-6">A steady seal ensures you get the right air pressure.</p>
 
         <div className="space-y-4">
           {[...usageHistory].slice(-7).reverse().map((day: any, index: number) => {
@@ -232,14 +243,14 @@ export default function PatientCPAP() {
 
             return (
               <div key={index} className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#5A6B7C] w-24">{dayName}</span>
-                <div className="flex-1 mx-4 h-1.5 bg-[#E8EEF2] rounded-full overflow-hidden flex items-center">
+                <span className="text-xs font-bold text-slate-muted w-24">{dayName}</span>
+                <div className="flex-1 mx-4 h-1.5 bg-light-blue rounded-full overflow-hidden flex items-center">
                   <div
-                    className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-[#F4A261]' : 'bg-[#E76F51]'}`}
+                    className={`h-full rounded-full transition-all duration-700 ${isGood ? 'bg-amber' : 'bg-coral'}`}
                     style={{ width: `${Math.max(progress, 2)}%` }}
                   />
                 </div>
-                <span className={`text-xs font-bold w-16 text-right ${isGood ? 'text-[#F4A261]' : 'text-[#E76F51]'}`}>
+                <span className={`text-xs font-bold w-16 text-right ${isGood ? 'text-amber' : 'text-coral'}`}>
                   {leak.toFixed(1)}{unit}
                 </span>
               </div>

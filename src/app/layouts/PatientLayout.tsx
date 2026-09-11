@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useParams, useNavigate } from 'react-router';
-import { Home, Activity, Package, FileText, HelpCircle, Video, Signal, TrendingUp } from 'lucide-react';
+import { Home, Activity, Package, FileText, HelpCircle, Video, TrendingUp } from 'lucide-react';
 import ConnectivityStatus from '../components/ui/ConnectivityStatus';
 import { useApi } from '../hooks/useApi';
 import { fetchPatientSummary } from '../data/api';
@@ -8,7 +8,7 @@ export default function PatientLayout() {
   const location = useLocation();
   const { id } = useParams();
 
-  const { data: summary, error } = useApi(() => fetchPatientSummary(id || '1'), {
+  const { data: summary } = useApi(() => fetchPatientSummary(id || '1'), {
     dependencies: [id],
     cacheKey: `patient-summary-${id || '1'}`
   });
@@ -21,7 +21,6 @@ export default function PatientLayout() {
     navigate('/login');
   };
 
-  const isLive = !!(summary && (summary as any).__isLive);
   const rawName = summary?.name || summary?.patient?.name;
   const patientName = (rawName && rawName !== 'NaN') ? rawName.split(' ')[0] : 'Patient';
 
@@ -36,10 +35,8 @@ export default function PatientLayout() {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-b from-[#FAFAFA] to-[#E8EEF2]">
-      {/* Top Header */}
-      <div className="bg-gradient-to-r from-[#6A994E] to-[#2D9596] px-6 py-6 text-white shadow-md relative overflow-hidden">
-        {/* Decorative background circle */}
+    <div className="h-screen flex flex-col bg-gradient-to-b from-background to-light-blue">
+      <div className="bg-gradient-to-r from-sage to-teal px-6 py-6 text-white shadow-md relative overflow-hidden">
         <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
         
         <div className="relative z-10">
@@ -70,13 +67,11 @@ export default function PatientLayout() {
         </div>
       </div>
 
-      {/* Main Content - Scrollable */}
       <div className="flex-1 overflow-auto pb-24">
         <Outlet />
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E8EEF2] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50 overflow-x-auto scrollbar-none">
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-light-blue shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50 overflow-x-auto scrollbar-none">
         <div className="flex items-center justify-between sm:justify-around w-full max-w-2xl mx-auto px-2 py-1 min-w-max md:min-w-0">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
@@ -88,8 +83,8 @@ export default function PatientLayout() {
                 to={item.href}
                 className={`flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl transition-all flex-1 min-w-[50px] sm:min-w-[80px] ${
                   isActive
-                    ? 'text-[#6A994E] bg-[#6A994E]/5'
-                    : 'text-[#414D5B] hover:text-[#2D9596]'
+                    ? 'text-sage bg-sage/5'
+                    : 'text-blue-gray hover:text-teal'
                 }`}
               >
                 <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isActive ? 'scale-110' : ''} transition-transform`} />

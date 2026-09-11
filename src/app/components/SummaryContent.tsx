@@ -258,7 +258,7 @@ export default function SummaryContent({
   const currentAHI = trends?.currentAHI || summary?.currentAHI || 0;
   const usage = trends?.averageHours || summary?.averageHours || 0;
   const leak = trends?.percentileLeak || summary?.percentileLeak || 0;
-  const leakField = trends?.leakField || summary?.leakField || (summary as any)?.leak_field || 'leaks95';
+  const leakField = trends?.leakField || summary?.leakField || summary?.leak_field || 'leaks95';
   const isLargePct = leakField === 'leaks_large_pct';
   const leakLabel = isLargePct
     ? 'Large Leak (%)'
@@ -270,6 +270,11 @@ export default function SummaryContent({
   const leakUnit = isLargePct ? '%' : 'L/min';
   const interventionsList = Array.isArray(interventionsData) ? interventionsData : (summary?.interventions || []);
 
+  const actionCenterCardBorder = highlightActionCenter
+    ? 'border-[#6A994E] shadow-[0_0_25px_rgba(106,153,78,0.45)] scale-[1.02] ring-4 ring-[#6A994E]/10'
+    : role === 'physician'
+    ? 'border-[#2D9596] shadow-lg'
+    : 'border-[#F4A261] shadow-lg';
 
   return (
     <div className={`space-y-6 ${isCompact ? 'p-0' : 'p-8 max-w-6xl mx-auto'} animate-in fade-in duration-500`}>
@@ -308,7 +313,6 @@ export default function SummaryContent({
       )}
 
       <div className={`grid ${isCompact ? 'grid-cols-1' : 'lg:grid-cols-3'} gap-6`}>
-        {/* Shared Physiological Evidence */}
         <div className={`${isCompact ? 'space-y-4' : 'lg:col-span-2 space-y-6'}`}>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-xl p-4 border border-[#E8EEF2] shadow-sm">
@@ -394,17 +398,11 @@ export default function SummaryContent({
           </div>
         </div>
 
-        {/* Action Centers */}
         {showActions && (
           <div>
             <div
               id="action-center-card"
-              className={`bg-white rounded-2xl border-2 transition-all duration-500 ${highlightActionCenter
-                ? 'border-[#6A994E] shadow-[0_0_25px_rgba(106,153,78,0.45)] scale-[1.02] ring-4 ring-[#6A994E]/10'
-                : role === 'physician'
-                  ? 'border-[#2D9596] shadow-lg'
-                  : 'border-[#F4A261] shadow-lg'
-                } p-6`}
+              className={`bg-white rounded-2xl border-2 transition-all duration-500 p-6 ${actionCenterCardBorder}`}
             >
               {highlightActionCenter && (
                 <div className="mb-4 p-3.5 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-xl animate-in slide-in-from-top duration-300 text-[11px] font-bold text-[#6A994E] flex items-center gap-2">
@@ -431,7 +429,6 @@ export default function SummaryContent({
 
               {role === 'physician' ? (
                 <div className="space-y-6">
-                  {/* Pathway Toggle */}
                   <div className="flex bg-[#FAFAFA] p-1 rounded-xl border border-[#E8EEF2]">
                     <button
                       onClick={() => setActivePathway('app_iah')}

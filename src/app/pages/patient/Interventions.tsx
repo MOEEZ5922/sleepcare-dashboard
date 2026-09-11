@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router';
-import { Package, MapPin, Truck, CheckCircle, Activity, Battery, Smartphone, Watch, Wifi, HeartPulse, Signal, Loader2 } from 'lucide-react';
+import { Package, MapPin, Truck, CheckCircle, Activity, Battery, Signal, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchInterventions, fetchDevices, fetchMaskHistory } from '../../data/api';
+import { fetchInterventions, fetchDevices, fetchMaskHistory, isLiveResponse } from '../../data/api';
 
 export default function PatientInterventions() {
   const { id } = useParams();
@@ -12,12 +12,12 @@ export default function PatientInterventions() {
     localStorage.setItem(`has-visited-equipment-${id || '1'}`, 'true');
   }, [id]);
 
-  const { data: liveInterventions, isLoading: isLoadingInt, error: intError } = useApi(() => fetchInterventions(id || '1'), {
+  const { data: liveInterventions, isLoading: isLoadingInt } = useApi(() => fetchInterventions(id || '1'), {
     dependencies: [id],
     cacheKey: `interventions-${id || '1'}`
   });
 
-  const { data: liveDevices, isLoading: isLoadingDev, error: devError } = useApi(() => fetchDevices(id || '1'), {
+  const { data: liveDevices, isLoading: isLoadingDev } = useApi(() => fetchDevices(id || '1'), {
     dependencies: [id],
     cacheKey: `devices-${id || '1'}`
   });
@@ -27,8 +27,8 @@ export default function PatientInterventions() {
     cacheKey: `mask-history-${id || '1'}`
   });
 
-  const isLive = !!(liveInterventions && (liveInterventions as any).__isLive);
-  const delivery = (liveInterventions as any)?.patient?.upcomingDelivery || (liveInterventions as any)?.upcomingDelivery || null;
+  const isLive = isLiveResponse(liveInterventions);
+  const delivery = (liveInterventions as { patient?: { upcomingDelivery?: any }; upcomingDelivery?: any })?.patient?.upcomingDelivery || (liveInterventions as { upcomingDelivery?: any })?.upcomingDelivery || null;
   const devices = Array.isArray(liveDevices) ? liveDevices : [];
 
   const formatNullValue = (val: any) => {
@@ -52,7 +52,7 @@ export default function PatientInterventions() {
   if ((isLoadingInt || isLoadingDev || isLoadingMasks) && !liveInterventions) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 text-[#2D9596] animate-spin" />
+        <Loader2 className="w-8 h-8 text-teal animate-spin" />
       </div>
     );
   }
@@ -60,26 +60,26 @@ export default function PatientInterventions() {
   return (
     <div className="p-6 space-y-6 max-w-2xl mx-auto pb-32">
       <div className="flex justify-between items-center px-2">
-        <h2 className="text-sm font-bold text-[#414D5B] uppercase tracking-widest">Equipment & Supplies</h2>
+        <h2 className="text-sm font-bold text-blue-gray uppercase tracking-widest">Equipment & Supplies</h2>
         {isLive && (
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-[#2D9596]/10 border border-[#2D9596]/20 rounded-md">
-            <Signal className="w-3 h-3 text-[#2D9596]" />
-            <span className="text-[10px] font-bold text-[#2D9596] uppercase tracking-wider">Live</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-teal/10 border border-teal/20 rounded-md">
+            <Signal className="w-3 h-3 text-teal" />
+            <span className="text-[10px] font-bold text-teal uppercase tracking-wider">Live</span>
           </div>
         )}
       </div>
 
       {/* Delivery Status Card */}
       {delivery ? (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
+      <div className="patient-card p-6">
         <div className="flex items-start gap-4 mb-6">
-          <div className="w-12 h-12 bg-[#2D9596]/10 rounded-full flex items-center justify-center flex-shrink-0">
-            <Package className="w-6 h-6 text-[#2D9596]" />
+          <div className="w-12 h-12 bg-teal/10 rounded-full flex items-center justify-center flex-shrink-0">
+            <Package className="w-6 h-6 text-teal" />
           </div>
           <div className="flex-1">
-            <p className="text-sm text-[#5A6B7C] mb-1">{delivery.status}</p>
-            <p className="text-xl font-semibold text-[#0A1128] mb-1">{delivery.item}</p>
-            <div className="flex items-center gap-2 text-sm text-[#2D9596]">
+            <p className="text-sm text-slate-muted mb-1">{delivery.status}</p>
+            <p className="text-xl font-semibold text-navy mb-1">{delivery.item}</p>
+            <div className="flex items-center gap-2 text-sm text-teal">
               <MapPin className="w-4 h-4" />
               <span>Arriving {new Date(delivery.estimatedArrival).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             </div>
@@ -98,8 +98,8 @@ export default function PatientInterventions() {
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                       isCompleted
-                        ? 'bg-[#6A994E] text-white'
-                        : 'bg-[#E8EEF2] text-[#5A6B7C]'
+                        ? 'bg-sage text-white'
+                        : 'bg-light-blue text-slate-muted'
                     }`}
                   >
                     {isCompleted ? (
@@ -113,7 +113,7 @@ export default function PatientInterventions() {
                   <div className="flex-1">
                     <p
                       className={`font-medium ${
-                        isCompleted ? 'text-[#0A1128]' : 'text-[#5A6B7C]'
+                        isCompleted ? 'text-navy' : 'text-slate-muted'
                       }`}
                     >
                       {step.label}
@@ -123,7 +123,7 @@ export default function PatientInterventions() {
                 {!isLast && (
                   <div
                     className={`absolute left-5 top-10 bottom-0 w-0.5 h-6 ${
-                      isCompleted ? 'bg-[#6A994E]' : 'bg-[#E8EEF2]'
+                      isCompleted ? 'bg-sage' : 'bg-light-blue'
                     }`}
                   />
                 )}
@@ -133,37 +133,37 @@ export default function PatientInterventions() {
         </div>
       </div>
       ) : (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2] text-center">
-        <Package className="w-10 h-10 text-[#E8EEF2] mx-auto mb-3" />
-        <p className="text-[#5A6B7C] text-sm">No pending deliveries for this patient.</p>
+      <div className="patient-card p-6 text-center">
+        <Package className="w-10 h-10 text-light-blue mx-auto mb-3" />
+        <p className="text-slate-muted text-sm">No pending deliveries for this patient.</p>
       </div>
       )}
 
       {/* Mask Delivery History */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
-        <h3 className="text-[#0A1128] font-semibold mb-2 flex items-center gap-2">
-          <Package className="w-5 h-5 text-[#2D9596]" />
+      <div className="patient-card p-6">
+        <h3 className="text-navy font-semibold mb-2 flex items-center gap-2">
+          <Package className="w-5 h-5 text-teal" />
           Mask Delivery History
         </h3>
-        <p className="text-sm text-[#5A6B7C] mb-6">
+        <p className="text-sm text-slate-muted mb-6">
           Historical log of all CPAP mask replacement shipments dispatched to this profile.
         </p>
 
         {maskHistory?.masks && maskHistory.masks.length > 0 ? (
-          <div className="overflow-x-auto border border-[#E8EEF2] rounded-xl">
+          <div className="overflow-x-auto border border-light-blue rounded-xl">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#FAFAFA] border-b border-[#E8EEF2]">
-                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Sequence</th>
-                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Delivery Date</th>
-                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Mask Type</th>
-                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Manufacturer</th>
-                  <th className="p-3 text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Description</th>
+                <tr className="bg-background border-b border-light-blue">
+                  <th className="p-3 text-[10px] font-bold text-slate-muted uppercase tracking-widest">Sequence</th>
+                  <th className="p-3 text-[10px] font-bold text-slate-muted uppercase tracking-widest">Delivery Date</th>
+                  <th className="p-3 text-[10px] font-bold text-slate-muted uppercase tracking-widest">Mask Type</th>
+                  <th className="p-3 text-[10px] font-bold text-slate-muted uppercase tracking-widest">Manufacturer</th>
+                  <th className="p-3 text-[10px] font-bold text-slate-muted uppercase tracking-widest">Description</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E8EEF2]">
+              <tbody className="divide-y divide-light-blue">
                 {maskHistory.masks.map((mask: any, idx: number) => (
-                  <tr key={idx} className="hover:bg-[#FAFAFA]/50 transition-colors text-xs text-[#0A1128]">
+                  <tr key={idx} className="hover:bg-background/50 transition-colors text-xs text-navy">
                     <td className="p-3 font-semibold">
                       {formatNullValue(mask.delivery_sequence)}
                     </td>
@@ -176,7 +176,7 @@ export default function PatientInterventions() {
                     <td className="p-3">
                       {formatNullValue(mask.mask_manufacturer)}
                     </td>
-                    <td className="p-3 text-[#5A6B7C] italic">
+                    <td className="p-3 text-slate-muted italic">
                       {formatNullValue(mask.mask_description)}
                     </td>
                   </tr>
@@ -185,34 +185,34 @@ export default function PatientInterventions() {
             </table>
           </div>
         ) : (
-          <div className="bg-[#FAFAFA] rounded-xl p-6 text-center border border-[#E8EEF2]">
-            <p className="text-[#5A6B7C] text-xs">No historical mask deliveries recorded.</p>
+          <div className="bg-background rounded-xl p-6 text-center border border-light-blue">
+            <p className="text-slate-muted text-xs">No historical mask deliveries recorded.</p>
           </div>
         )}
       </div>
 
       {/* Biomarker Wearables */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border-2 border-[#E8EEF2]">
-        <h3 className="text-[#0A1128] font-semibold mb-2 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-[#E76F51]" />
+      <div className="patient-card p-6 border-2 border-light-blue">
+        <h3 className="text-navy font-semibold mb-2 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-coral" />
           Connected Clinical Sensors
         </h3>
-        <p className="text-sm text-[#5A6B7C] mb-6">
+        <p className="text-sm text-slate-muted mb-6">
           Your biomarker devices securely transmit physiological data to your care team to ensure therapy success.
         </p>
         
         <div className="space-y-3">
           {devices.length > 0 ? (
             devices.map((device: any, idx: number) => (
-              <div key={device.id || idx} className="flex items-center justify-between bg-[#FAFAFA] border border-[#E8EEF2] p-4 rounded-xl hover:border-[#2D9596]/30 transition-colors">
+              <div key={device.id || idx} className="flex items-center justify-between bg-background border border-light-blue p-4 rounded-xl hover:border-teal/30 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-[#2D9596]/10 rounded-lg flex items-center justify-center text-[#2D9596]">
+                  <div className="w-10 h-10 bg-teal/10 rounded-lg flex items-center justify-center text-teal">
                     <Activity className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-semibold text-[#0A1128] text-sm">{device.name || 'Unnamed Sensor'}</p>
-                    <div className="flex items-center gap-2 text-[10px] text-[#5A6B7C] mt-0.5">
-                      <span className="flex items-center gap-1 text-[#6A994E]"><CheckCircle className="w-3 h-3" /> {device.status || 'Connected'}</span>
+                    <p className="font-semibold text-navy text-sm">{device.name || 'Unnamed Sensor'}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-muted mt-0.5">
+                      <span className="flex items-center gap-1 text-sage"><CheckCircle className="w-3 h-3" /> {device.status || 'Connected'}</span>
                       <span>•</span>
                       <span>{device.category || device.type || 'Biomarker Sensor'}</span>
                     </div>
@@ -220,15 +220,15 @@ export default function PatientInterventions() {
                 </div>
                 <div className="text-right">
                   <div className="flex items-center gap-1 justify-end">
-                    <Battery className="w-4 h-4 text-[#6A994E]" />
-                    <span className="text-sm font-bold text-[#0A1128]">{device.battery || '—'}</span>
+                    <Battery className="w-4 h-4 text-sage" />
+                    <span className="text-sm font-bold text-navy">{device.battery || '—'}</span>
                   </div>
-                  <p className="text-[10px] text-[#5A6B7C] mt-0.5">{device.last_sync_human || device.lastSync ? `Synced ${device.last_sync_human || device.lastSync}` : '—'}</p>
+                  <p className="text-[10px] text-slate-muted mt-0.5">{device.last_sync_human || device.lastSync ? `Synced ${device.last_sync_human || device.lastSync}` : '—'}</p>
                 </div>
               </div>
             ))
           ) : (
-            <div className="bg-[#FAFAFA] border border-[#E8EEF2] p-6 rounded-xl text-center text-[#5A6B7C]">
+            <div className="bg-background border border-light-blue p-6 rounded-xl text-center text-slate-muted">
               <Activity className="w-8 h-8 opacity-20 mx-auto mb-2" />
               <p className="text-xs font-semibold">No connected biomarker sensors assigned to your profile.</p>
             </div>
@@ -237,34 +237,34 @@ export default function PatientInterventions() {
       </div>
 
       {/* Why You're Getting This */}
-      <div className="bg-gradient-to-br from-[#2D9596]/10 to-[#2D9596]/5 rounded-2xl p-6">
-        <h3 className="text-lg text-[#0A1128] mb-3">Why You're Getting This</h3>
-        <p className="text-[#5A6B7C] mb-4">
+      <div className="bg-gradient-to-br from-teal/10 to-teal/5 rounded-2xl p-6">
+        <h3 className="text-lg text-navy mb-3 font-semibold">Why You're Getting This</h3>
+        <p className="text-slate-muted mb-4">
           Your current mask has been in use for over 60 days. Regular mask replacements ensure:
         </p>
-        <ul className="space-y-2 text-sm text-[#5A6B7C]">
+        <ul className="space-y-2 text-sm text-slate-muted">
           <li className="flex items-start gap-2">
-            <span className="text-[#2D9596]">✓</span>
+            <span className="text-teal font-bold">✓</span>
             <span>Better seal and less air leakage</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-[#2D9596]">✓</span>
+            <span className="text-teal font-bold">✓</span>
             <span>More comfortable fit</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-[#2D9596]">✓</span>
+            <span className="text-teal font-bold">✓</span>
             <span>More effective therapy</span>
           </li>
         </ul>
       </div>
 
       {/* Contact Card */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
-        <h3 className="text-lg text-[#0A1128] mb-4">Need Help?</h3>
-        <p className="text-sm text-[#5A6B7C] mb-4">
+      <div className="patient-card p-6">
+        <h3 className="text-lg text-navy mb-4 font-semibold">Need Help?</h3>
+        <p className="text-sm text-slate-muted mb-4">
           Questions about your delivery or need to make changes?
         </p>
-        <button className="w-full bg-[#2D9596] text-white px-6 py-3 rounded-xl hover:bg-[#247a7a] transition-colors font-medium">
+        <button className="w-full bg-teal text-white px-6 py-3 rounded-xl hover:bg-teal/90 transition-colors font-medium">
           Contact My Technician
         </button>
       </div>

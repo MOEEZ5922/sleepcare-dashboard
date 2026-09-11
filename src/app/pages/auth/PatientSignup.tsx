@@ -88,17 +88,17 @@ export default function PatientSignup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#003867] via-[#002244] to-[#018EC6] flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-navy via-navy/90 to-teal flex items-center justify-center p-6 relative overflow-hidden">
       {/* Decorative ambient background spots */}
-      <div className="absolute -left-20 -bottom-20 w-96 h-96 bg-[#018EC6]/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -right-20 -top-20 w-96 h-96 bg-[#018EC6]/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -left-20 -bottom-20 w-96 h-96 bg-teal/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -right-20 -top-20 w-96 h-96 bg-teal/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8 border border-white/10 relative z-10 animate-[fadeIn_0.5s_ease-out]">
+      <div className="w-full max-w-lg bg-card rounded-3xl shadow-2xl p-8 border border-white/10 relative z-10 animate-[fadeIn_0.5s_ease-out]">
 
         {/* Back Button */}
         <button
           onClick={() => navigate('/login')}
-          className="absolute left-6 top-6 text-[#5A6B7C] hover:text-[#003867] transition-colors flex items-center gap-1.5 text-xs font-bold"
+          className="absolute left-6 top-6 text-slate-muted hover:text-navy transition-colors flex items-center gap-1.5 text-xs font-bold"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Login
         </button>
@@ -106,15 +106,15 @@ export default function PatientSignup() {
         {/* Logo and Header */}
         <div className="text-center mt-6 mb-6">
           <img src={lindeLogoImg} alt="Linde Logo" className="h-10 mx-auto mb-4 object-contain" />
-          <h2 className="text-xl font-black text-[#003867] uppercase tracking-wider">Create Account</h2>
-          <p className="text-xs text-[#5A6B7C] mt-1 font-semibold">Register your SleepCare patient portal</p>
+          <h2 className="text-xl font-black text-navy uppercase tracking-wider">Create Account</h2>
+          <p className="text-xs text-slate-muted mt-1 font-semibold">Register your SleepCare patient portal</p>
         </div>
 
         {/* Important Identity Warning Banner */}
-        <div className="bg-[#F4A261]/10 border border-[#F4A261]/30 rounded-2xl p-4 mb-5 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-[#E76F51] shrink-0 mt-0.5" />
-          <div className="text-xs text-[#0A1128] leading-relaxed">
-            <span className="font-extrabold text-[#E76F51] block uppercase tracking-wider mb-0.5 text-[10px]">
+        <div className="bg-amber/10 border border-amber/30 rounded-2xl p-4 mb-5 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-coral shrink-0 mt-0.5" />
+          <div className="text-xs text-navy leading-relaxed">
+            <span className="font-extrabold text-coral block uppercase tracking-wider mb-0.5 text-[10px]">
               Important Medical Record Notice
             </span>
             The name you enter will be permanently recorded and linked to your medical file. Please verify its accuracy before submitting.
@@ -123,13 +123,12 @@ export default function PatientSignup() {
 
         {/* Messages */}
         {errorMsg && (
-          <div className="bg-[#E76F51]/10 border-l-4 border-[#E76F51] text-[#E76F51] p-3 rounded-lg text-xs font-bold mb-5 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div>{errorMsg}</div>
+          <div className="bg-coral/10 border-l-4 border-coral text-coral p-3 rounded-lg text-xs font-bold mb-5 flex items-center gap-1.5">
+            <AlertCircle className="w-4 h-4 shrink-0" /> {errorMsg}
           </div>
         )}
         {successMsg && (
-          <div className="bg-[#6A994E]/10 border-l-4 border-[#6A994E] text-[#6A994E] p-3 rounded-lg text-xs font-bold mb-5 animate-pulse flex items-center gap-1.5">
+          <div className="bg-sage/10 border-l-4 border-sage text-sage p-3 rounded-lg text-xs font-bold mb-5 animate-pulse flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 shrink-0" /> {successMsg}
           </div>
         )}
@@ -138,9 +137,9 @@ export default function PatientSignup() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-1.5">First Name</label>
+              <label className="text-[10px] text-slate-muted uppercase font-black tracking-widest block mb-1.5">First Name</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-muted">
                   <User className="w-4 h-4" />
                 </span>
                 <input
@@ -148,16 +147,16 @@ export default function PatientSignup() {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="e.g. Jean"
-                  className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                  className="w-full bg-background border-2 border-light-blue rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-navy focus:outline-none focus:border-teal transition-colors"
                   disabled={loading}
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-1.5">Last Name</label>
+              <label className="text-[10px] text-slate-muted uppercase font-black tracking-widest block mb-1.5">Last Name</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-muted">
                   <User className="w-4 h-4" />
                 </span>
                 <input
@@ -165,7 +164,7 @@ export default function PatientSignup() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="e.g. Dupont"
-                  className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                  className="w-full bg-background border-2 border-light-blue rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-navy focus:outline-none focus:border-teal transition-colors"
                   disabled={loading}
                 />
               </div>
@@ -173,9 +172,9 @@ export default function PatientSignup() {
           </div>
 
           <div>
-            <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-1.5">Patient ID / User ID</label>
+            <label className="text-[10px] text-slate-muted uppercase font-black tracking-widest block mb-1.5">Patient ID / User ID</label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-muted">
                 <User className="w-4 h-4" />
               </span>
               <input
@@ -183,16 +182,16 @@ export default function PatientSignup() {
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="e.g. 190723"
-                className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                className="w-full bg-background border-2 border-light-blue rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold text-navy focus:outline-none focus:border-teal transition-colors"
                 disabled={loading}
               />
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-2">Password</label>
+            <label className="text-[10px] text-slate-muted uppercase font-black tracking-widest block mb-2">Password</label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-muted">
                 <Lock className="w-4 h-4" />
               </span>
               <input
@@ -200,16 +199,16 @@ export default function PatientSignup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Choose a password"
-                className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-3 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                className="w-full bg-background border-2 border-light-blue rounded-xl py-3 pl-10 pr-4 text-sm font-bold text-navy focus:outline-none focus:border-teal transition-colors"
                 disabled={loading}
               />
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] text-[#5A6B7C] uppercase font-black tracking-widest block mb-2">Confirm Password</label>
+            <label className="text-[10px] text-slate-muted uppercase font-black tracking-widest block mb-2">Confirm Password</label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[#5A6B7C]">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-muted">
                 <Lock className="w-4 h-4" />
               </span>
               <input
@@ -217,7 +216,7 @@ export default function PatientSignup() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat password"
-                className="w-full bg-[#FAFAFA] border-2 border-[#E8EEF2] rounded-xl py-3 pl-10 pr-4 text-sm font-bold text-[#0A1128] focus:outline-none focus:border-[#018EC6] transition-colors"
+                className="w-full bg-background border-2 border-light-blue rounded-xl py-3 pl-10 pr-4 text-sm font-bold text-navy focus:outline-none focus:border-teal transition-colors"
                 disabled={loading}
               />
             </div>
@@ -226,7 +225,7 @@ export default function PatientSignup() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-[#003867] hover:bg-[#002b50] text-white rounded-xl font-bold text-sm shadow-lg shadow-[#003867]/25 transition-all flex items-center justify-center gap-2 active:scale-98"
+            className="w-full py-4 bg-navy hover:bg-navy/90 text-white rounded-xl font-bold text-sm shadow-lg shadow-navy/25 transition-all flex items-center justify-center gap-2 active:scale-98"
           >
             {loading ? (
               <>
@@ -238,12 +237,12 @@ export default function PatientSignup() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-xs font-semibold text-[#5A6B7C]">
+        <div className="mt-6 text-center text-xs font-semibold text-slate-muted">
           Already have an account?{' '}
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="text-[#018EC6] hover:underline font-bold"
+            className="text-teal hover:underline font-bold"
           >
             Sign In
           </button>
@@ -253,36 +252,36 @@ export default function PatientSignup() {
 
       {/* Name Already Exists Error Modal */}
       {showNameExistsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0A1128]/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-[#E8EEF2] animate-in zoom-in-95 duration-200 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-light-blue animate-in zoom-in-95 duration-200 relative">
             <button
               onClick={() => setShowNameExistsModal(false)}
-              className="absolute right-5 top-5 w-8 h-8 rounded-full bg-[#FAFAFA] border border-[#E8EEF2] flex items-center justify-center text-[#5A6B7C] hover:text-[#0A1128] transition-colors"
+              className="absolute right-5 top-5 w-8 h-8 rounded-full bg-background border border-light-blue flex items-center justify-center text-slate-muted hover:text-navy transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="w-12 h-12 rounded-2xl bg-[#E76F51]/10 flex items-center justify-center mb-4 text-[#E76F51]">
+            <div className="w-12 h-12 rounded-2xl bg-coral/10 flex items-center justify-center mb-4 text-coral">
               <AlertTriangle className="w-6 h-6" />
             </div>
 
-            <h3 className="text-lg font-bold text-[#0A1128] mb-2">
+            <h3 className="text-lg font-bold text-navy mb-2">
               Identity Match Required
             </h3>
 
-            <p className="text-xs sm:text-sm text-[#414D5B] leading-relaxed mb-4">
+            <p className="text-xs sm:text-sm text-blue-gray leading-relaxed mb-4">
               A name is already registered for this patient in our database. Please enter your name <strong>EXACTLY</strong> as recorded in the Linde database to maintain consistency with your medical record.
             </p>
 
             {nameExistsDetail && (
-              <div className="bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-3 text-xs font-mono text-[#5A6B7C] mb-6 break-words">
+              <div className="bg-background border border-light-blue rounded-xl p-3 text-xs font-mono text-slate-muted mb-6 break-words">
                 {nameExistsDetail}
               </div>
             )}
 
             <button
               onClick={() => setShowNameExistsModal(false)}
-              className="w-full py-3.5 bg-[#003867] hover:bg-[#002b50] text-white rounded-xl font-bold text-sm shadow-md transition-all"
+              className="w-full py-3.5 bg-navy hover:bg-navy/90 text-white rounded-xl font-bold text-sm shadow-md transition-all"
             >
               I Understand, Let Me Re-enter
             </button>

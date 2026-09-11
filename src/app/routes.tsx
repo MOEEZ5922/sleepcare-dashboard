@@ -22,8 +22,6 @@ import UniversalReporting from "./pages/shared/UniversalReporting";
 import TechnicianHome from "./pages/technician/Home";
 import TechnicianSummary from "./pages/technician/Summary";
 import TechnicianCPAP from "./pages/technician/CPAP";
-
-
 import TechnicianHelp from "./pages/technician/Help";
 import TechnicianInventory from "./pages/technician/Inventory";
 import TechnicianDevices from "./pages/technician/Devices";
@@ -96,10 +94,12 @@ export const router = createBrowserRouter([
       { path: "home", Component: PatientHome },
       { path: "cpap", Component: PatientCPAP },
       { path: "interventions", Component: PatientInterventions },
+      { path: "equipment", element: <Navigate to="interventions" replace /> },
       { path: "surveys", Component: PatientSurveys },
       { path: "videos", Component: PatientVideos },
       { path: "help", Component: PatientHelp },
       { path: "reporting", Component: PatientReporting },
+      { path: "progress", element: <Navigate to="reporting" replace /> },
     ],
   },
   {

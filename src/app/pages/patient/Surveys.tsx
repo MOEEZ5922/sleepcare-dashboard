@@ -2,7 +2,7 @@ import { useParams } from 'react-router';
 import { FileText, Clock, CheckCircle, ChevronRight, ChevronLeft, Signal, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useApi, clearApiCache } from '../../hooks/useApi';
-import { fetchSurveys, submitSurveyResponse, SurveyResponse } from '../../data/api';
+import { fetchSurveys, submitSurveyResponse, SurveyResponse, isLiveResponse } from '../../data/api';
 
 const surveyQuestions = [
   {
@@ -63,12 +63,12 @@ export default function PatientSurveys() {
     localStorage.setItem(`has-visited-surveys-${id || '1'}`, 'true');
   }, [id]);
 
-  const { data: liveSurveys, isLoading, error } = useApi<SurveyResponse>(() => fetchSurveys(id || '1'), {
+  const { data: liveSurveys, isLoading } = useApi<SurveyResponse>(() => fetchSurveys(id || '1'), {
     dependencies: [id],
     cacheKey: `surveys-${id || '1'}`
   });
 
-  const isLive = !!(liveSurveys && (liveSurveys as any).__isLive);
+  const isLive = isLiveResponse(liveSurveys);
   const nextSurvey = liveSurveys?.patient?.next || { 
     name: 'Health Survey', 
     dueDate: new Date().toISOString(), 
@@ -129,15 +129,15 @@ export default function PatientSurveys() {
     return (
       <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-6 max-w-2xl mx-auto pb-32">
         <div className="text-center w-full">
-          <div className="w-24 h-24 bg-gradient-to-br from-[#6A994E] to-[#2D9596] rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+          <div className="w-24 h-24 bg-gradient-to-br from-sage to-teal rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
             <CheckCircle className="w-12 h-12 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-[#0A1128] mb-4">All Done! 🎉</h2>
-          <p className="text-lg text-[#5A6B7C] mb-6">
+          <h2 className="text-3xl font-bold text-navy mb-4">All Done! 🎉</h2>
+          <p className="text-lg text-slate-muted mb-6">
             Thank you for completing your check-in. Your care team has been notified.
           </p>
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <p className="text-sm text-[#5A6B7C]">
+          <div className="patient-card p-6">
+            <p className="text-sm text-slate-muted">
               We'll review your responses and reach out if we have any suggestions to improve your therapy.
             </p>
           </div>
@@ -152,12 +152,12 @@ export default function PatientSurveys() {
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-[#5A6B7C]">Question {currentQuestion + 1} of {surveyQuestions.length}</span>
-            <span className="text-sm font-medium text-[#2D9596]">{Math.round(progress)}%</span>
+            <span className="text-sm text-slate-muted">Question {currentQuestion + 1} of {surveyQuestions.length}</span>
+            <span className="text-sm font-medium text-teal">{Math.round(progress)}%</span>
           </div>
-          <div className="h-2 bg-[#E8EEF2] rounded-full overflow-hidden">
+          <div className="h-2 bg-light-blue rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#6A994E] to-[#2D9596] transition-all duration-300"
+              className="h-full bg-gradient-to-r from-sage to-teal transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -165,8 +165,8 @@ export default function PatientSurveys() {
 
         {/* Question Card */}
         <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full">
-          <div className="bg-white rounded-3xl p-8 shadow-lg mb-6 flex-1 flex flex-col justify-center">
-            <h2 className="text-2xl text-[#0A1128] mb-8 leading-relaxed">
+          <div className="bg-card rounded-3xl p-8 shadow-lg mb-6 flex-1 flex flex-col justify-center border border-light-blue">
+            <h2 className="text-2xl text-navy mb-8 leading-relaxed font-semibold">
               {currentQ.question}
             </h2>
 
@@ -177,7 +177,7 @@ export default function PatientSurveys() {
                   onChange={(e) => handleAnswer(e.target.value)}
                   placeholder={currentQ.placeholder}
                   rows={6}
-                  className="w-full px-6 py-4 border-2 border-[#E8EEF2] rounded-2xl focus:outline-none focus:border-[#2D9596] text-lg resize-none"
+                  className="w-full px-6 py-4 border-2 border-light-blue rounded-2xl focus:outline-none focus:border-teal text-lg resize-none"
                 />
               ) : (
                 currentQ.options?.map((option, index) => (
@@ -186,21 +186,21 @@ export default function PatientSurveys() {
                     onClick={() => handleAnswer(option)}
                     className={`w-full p-6 rounded-2xl border-2 transition-all text-left text-lg ${
                       answers[currentQuestion] === option
-                        ? 'border-[#2D9596] bg-[#2D9596]/5 shadow-md'
-                        : 'border-[#E8EEF2] hover:border-[#2D9596]/50 hover:bg-[#FAFAFA]'
+                        ? 'border-teal bg-teal/5 shadow-md'
+                        : 'border-light-blue hover:border-teal/50 hover:bg-background'
                     }`}
                   >
                     <div className="flex items-center gap-4">
                       <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                         answers[currentQuestion] === option
-                          ? 'border-[#2D9596] bg-[#2D9596]'
-                          : 'border-[#5A6B7C]'
+                          ? 'border-teal bg-teal'
+                          : 'border-slate-muted'
                       }`}>
                         {answers[currentQuestion] === option && (
                           <div className="w-3 h-3 bg-white rounded-full" />
                         )}
                       </div>
-                      <span className="text-[#0A1128]">{option}</span>
+                      <span className="text-navy font-medium">{option}</span>
                     </div>
                   </button>
                 ))
@@ -213,7 +213,7 @@ export default function PatientSurveys() {
             {currentQuestion > 0 && (
               <button
                 onClick={handleBack}
-                className="flex items-center gap-2 px-6 py-4 bg-white border-2 border-[#E8EEF2] text-[#5A6B7C] rounded-2xl hover:border-[#2D9596] hover:text-[#2D9596] transition-all font-medium"
+                className="flex items-center gap-2 px-6 py-4 bg-card border-2 border-light-blue text-slate-muted rounded-2xl hover:border-teal hover:text-teal transition-all font-medium"
               >
                 <ChevronLeft className="w-5 h-5" />
                 Back
@@ -222,7 +222,7 @@ export default function PatientSurveys() {
             <button
               onClick={handleNext}
               disabled={!answers[currentQuestion] && currentQ.type !== 'text'}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-[#6A994E] to-[#2D9596] text-white rounded-2xl hover:shadow-lg transition-all font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-sage to-teal text-white rounded-2xl hover:shadow-lg transition-all font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {currentQuestion < surveyQuestions.length - 1 ? 'Next' : 'Complete'}
               <ChevronRight className="w-5 h-5" />
@@ -236,17 +236,17 @@ export default function PatientSurveys() {
   return (
     <div className="p-6 space-y-6 max-w-2xl mx-auto pb-32">
       <div className="flex justify-between items-center px-2">
-        <h2 className="text-sm font-bold text-[#414D5B] uppercase tracking-widest">Medical Check-ins</h2>
+        <h2 className="text-sm font-bold text-blue-gray uppercase tracking-widest">Medical Check-ins</h2>
         {isLive && (
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-md">
-            <Signal className="w-3 h-3 text-[#6A994E]" />
-            <span className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider">Live</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-sage/10 border border-sage/20 rounded-md">
+            <Signal className="w-3 h-3 text-sage" />
+            <span className="text-[10px] font-bold text-sage uppercase tracking-wider">Live</span>
           </div>
         )}
       </div>
 
       {/* Next Check-In */}
-      <div className="bg-gradient-to-br from-[#6A994E] to-[#4a7a35] rounded-3xl p-8 text-white shadow-lg">
+      <div className="bg-gradient-to-br from-sage to-sage/80 rounded-3xl p-8 text-white shadow-lg">
         <div className="flex items-start gap-4 mb-4">
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
             <FileText className="w-6 h-6" />
@@ -277,9 +277,9 @@ export default function PatientSurveys() {
                   ].map((step, idx) => (
                     <div key={idx} className="relative z-10 flex flex-col items-center">
                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                         step.status === 'done' ? 'bg-white border-white text-[#6A994E]' :
-                         step.status === 'active' ? 'bg-[#F4A261] border-[#F4A261] text-white animate-pulse' :
-                         'bg-[#6A994E] border-white/30 text-white/30'
+                         step.status === 'done' ? 'bg-white border-white text-sage' :
+                         step.status === 'active' ? 'bg-amber border-amber text-white animate-pulse' :
+                         'bg-sage border-white/30 text-white/30'
                        }`}>
                           {step.status === 'done' ? <CheckCircle className="w-3.5 h-3.5" /> : <span className="text-[10px] font-bold">{idx + 1}</span>}
                        </div>
@@ -296,22 +296,22 @@ export default function PatientSurveys() {
         </div>
         <button 
           onClick={() => setInSurvey(true)}
-          className="w-full bg-white text-[#6A994E] px-6 py-4 rounded-xl hover:bg-white/90 transition-colors font-semibold text-lg shadow-md"
+          className="w-full bg-white text-sage px-6 py-4 rounded-xl hover:bg-white/90 transition-colors font-semibold text-lg shadow-md"
         >
           Start Check-In (5 min)
         </button>
       </div>
 
       {/* History */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8EEF2]">
-        <h3 className="text-lg text-[#0A1128] mb-4">Completed Check-Ins</h3>
+      <div className="patient-card p-6">
+        <h3 className="text-lg text-navy mb-4 font-semibold">Completed Check-Ins</h3>
         <div className="space-y-3">
           {history.map((item: any, index: number) => (
-            <div key={index} className="flex items-center gap-3 pb-3 border-b border-[#E8EEF2] last:border-0">
-              <CheckCircle className="w-5 h-5 text-[#6A994E] flex-shrink-0" />
+            <div key={index} className="flex items-center gap-3 pb-3 border-b border-light-blue last:border-0">
+              <CheckCircle className="w-5 h-5 text-sage flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-[#0A1128] font-medium text-sm">{item.name}</p>
-                <p className="text-xs text-[#5A6B7C]">
+                <p className="text-navy font-medium text-sm">{item.name}</p>
+                <p className="text-xs text-slate-muted">
                   {new Date(item.completed).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
@@ -320,7 +320,7 @@ export default function PatientSurveys() {
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xs font-bold text-[#6A994E] bg-[#6A994E]/10 px-2 py-1 rounded">Score: {item.score}</span>
+                <span className="text-xs font-bold text-sage bg-sage/10 px-2 py-1 rounded">Score: {item.score}</span>
               </div>
             </div>
           ))}

@@ -49,6 +49,10 @@ export default function RecommendationBanner({
   onReject,
   onUndo
 }: RecommendationBannerProps) {
+  const rejectButtonClass = showRejectMenu
+    ? 'bg-coral/20 border-coral/50 text-coral'
+    : 'bg-transparent border-coral/30 text-coral hover:bg-coral/10';
+
   return (
     <div className="bg-navy text-white rounded-2xl p-6 shadow-xl border-l-8 border-coral relative overflow-hidden">
       {gateStatus === 'accepted' && <div className="absolute inset-0 bg-sage/10 pointer-events-none" />}
@@ -113,7 +117,6 @@ export default function RecommendationBanner({
         </div>
       </div>
 
-      {/* Clinician Gate Action Area */}
       {gateStatus === 'pending' && (
         <div className="pt-6 border-t border-white/10">
           <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-3">
@@ -134,13 +137,12 @@ export default function RecommendationBanner({
             </button>
             <button
               onClick={() => setShowRejectMenu(!showRejectMenu)}
-              className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 border ${showRejectMenu ? 'bg-coral/20 border-coral/50 text-coral' : 'bg-transparent border-coral/30 text-coral hover:bg-coral/10'}`}
+              className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 border ${rejectButtonClass}`}
             >
               <XCircle className="w-4 h-4" /> Reject
             </button>
           </div>
 
-          {/* Reject Reason Input Area */}
           {showRejectMenu && (
             <div className="mt-4 p-4 bg-black/30 rounded-xl border border-coral/30 animate-in fade-in slide-in-from-top-2">
               <label className="text-[10px] font-bold text-coral uppercase tracking-widest mb-2 block">Required: Reject Reason Code</label>
@@ -169,7 +171,6 @@ export default function RecommendationBanner({
         </div>
       )}
 
-      {/* Post-Action View */}
       {gateStatus !== 'pending' && (
         <div className="mt-2 pt-4 border-t border-white/10 flex items-center justify-between">
           <p className="text-xs text-white/50">

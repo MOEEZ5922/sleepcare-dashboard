@@ -26,9 +26,9 @@ export default function ConnectivityStatus() {
 
   if (status === 'checking') {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#E8EEF2]/50 rounded-lg">
-        <Loader2 className="w-3 h-3 text-[#5A6B7C] animate-spin" />
-        <span className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-wider">Syncing...</span>
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-light-blue/50 rounded-lg">
+        <Loader2 className="w-3 h-3 text-slate-muted animate-spin" />
+        <span className="text-[10px] font-bold text-slate-muted uppercase tracking-wider">Syncing...</span>
       </div>
     );
   }
@@ -36,8 +36,8 @@ export default function ConnectivityStatus() {
   return (
     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${
       status === 'live' 
-        ? 'bg-[#6A994E]/10 border-[#6A994E]/20 text-[#6A994E]' 
-        : 'bg-[#E76F51]/10 border-[#E76F51]/20 text-[#E76F51]'
+        ? 'bg-sage/10 border-sage/20 text-sage' 
+        : 'bg-coral/10 border-coral/20 text-coral'
     }`}>
       {status === 'live' ? <Signal className="w-3 h-3" /> : <SignalLow className="w-3 h-3" />}
       <span className="text-[10px] font-bold uppercase tracking-wider">

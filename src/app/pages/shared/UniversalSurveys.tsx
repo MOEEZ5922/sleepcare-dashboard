@@ -3,7 +3,7 @@ import { useLocation, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { AlertCircle, ChevronDown, CalendarDays, MessageSquare, ShieldAlert, UserCircle, CheckCircle, ClipboardList, Plus, Signal, BarChart3, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchSurveys, submitMonitoringLog } from '../../data/api';
+import { fetchSurveys, submitMonitoringLog, isLiveResponse } from '../../data/api';
 import { surveyData, technicianQueue } from '../../data/mockData';
 
 type SurveyType = 'PSQI' | 'ISI' | 'ESS' | 'FSS' | 'SF-36' | 'BDI';
@@ -166,12 +166,12 @@ export default function UniversalSurveys() {
    const location = useLocation();
    const isTechnician = location.pathname.includes('/technician');
 
-   const { data: liveSurveys, error, refetch } = useApi(() => fetchSurveys(id || '1'), {
+   const { data: liveSurveys, refetch } = useApi(() => fetchSurveys(id || '1'), {
       dependencies: [id],
       cacheKey: `surveys-${id || '1'}`
    });
 
-   const isLive = !!(liveSurveys && (liveSurveys as any).__isLive);
+   const isLive = isLiveResponse(liveSurveys);
 
    const [activeSurvey, setActiveSurvey] = useState<SurveyType>('ESS');
    const [selectedForm, setSelectedForm] = useState('');
@@ -233,20 +233,21 @@ export default function UniversalSurveys() {
       ) || apiSurvey.name;
 
       const meta = surveyMeta[shortKey] || { fullName: apiSurvey.name, defaultThreshold: 0, maxScore: 100, breakdownTemplate: [{ label: 'Assessment', answer: 'Score-based' }], clinicalNoteTemplate: 'Score indicates {risk} level.' };
+      const score = apiSurvey.score ?? 0;
       const threshold = apiSurvey.threshold ?? meta.defaultThreshold;
-      const risk = apiSurvey.risk || (apiSurvey.score > threshold ? 'Elevated' : 'Normal');
-      const action = apiSurvey.score > threshold ? 'Clinical review recommended.' : 'No immediate action required.';
+      const risk = apiSurvey.risk || (score > threshold ? 'Elevated' : 'Normal');
+      const action = score > threshold ? 'Clinical review recommended.' : 'No immediate action required.';
 
       surveyDatabase[shortKey] = {
          name: meta.fullName,
-         date: apiSurvey.dateTaken,
-         score: apiSurvey.score,
+         date: apiSurvey.dateTaken || apiSurvey.date || '—',
+         score: score,
          threshold: threshold,
          maxScore: meta.maxScore,
          risk: risk,
-         isOverdue: apiSurvey.isOverdue,
-         daysOverdue: apiSurvey.daysOverdue,
-         history: apiSurvey.history,
+         isOverdue: Boolean(apiSurvey.isOverdue),
+         daysOverdue: apiSurvey.daysOverdue ?? 0,
+         history: apiSurvey.history || [],
          breakdown: meta.breakdownTemplate,
          clinicalNote: meta.clinicalNoteTemplate.replace('{risk}', risk.toLowerCase()).replace('{action}', action)
       };
@@ -273,17 +274,17 @@ export default function UniversalSurveys() {
    const activeContent = surveyDatabase[activeSurvey] || surveyDatabase['ESS'];
 
    const getRiskColor = (risk: string) => {
-      if (risk === 'High') return 'text-[#E76F51]';
-      if (risk === 'Elevated' || risk === 'Moderate') return 'text-[#F4A261]';
-      if (risk === 'Normal') return 'text-[#6A994E]';
-      return 'text-[#5A6B7C]';
+      if (risk === 'High') return 'text-coral';
+      if (risk === 'Elevated' || risk === 'Moderate') return 'text-amber';
+      if (risk === 'Normal') return 'text-sage';
+      return 'text-slate-muted';
    };
 
    const getRiskBadge = (risk: string) => {
-      if (risk === 'High') return 'bg-[#E76F51]/10 text-[#E76F51] border-[#E76F51]/20';
-      if (risk === 'Elevated' || risk === 'Moderate') return 'bg-[#F4A261]/10 text-[#F4A261] border-[#F4A261]/20';
-      if (risk === 'Normal') return 'bg-[#6A994E]/10 text-[#6A994E] border-[#6A994E]/20';
-      return 'bg-[#E8EEF2]/50 text-[#5A6B7C] border-[#E8EEF2]';
+      if (risk === 'High') return 'bg-coral/10 text-coral border-coral/20';
+      if (risk === 'Elevated' || risk === 'Moderate') return 'bg-amber/10 text-amber border-amber/20';
+      if (risk === 'Normal') return 'bg-sage/10 text-sage border-sage/20';
+      return 'bg-light-blue/50 text-slate-muted border-light-blue';
    };
 
    const scoreHistory = activeContent.history || [];
@@ -301,14 +302,14 @@ export default function UniversalSurveys() {
    );
 
    const technicianLogs = [
-      ...apiTechnicianSurveys.map((t: any) => ({
+      ...apiTechnicianSurveys.map((t: { name?: string; form_type?: string; lastCompleted?: string; date?: string; type?: string; notes?: string }) => ({
          name: t.name || t.form_type || 'Operational Form',
          date: t.lastCompleted || t.date || '2026-03-20',
          type: t.type || 'Operational',
          notes: t.notes || 'Routine check complete. CPAP configuration validated.',
          icon: '🔧'
       })),
-      ...(patientTechQueueItem?.monitoringSurveys || []).map((m: any) => ({
+      ...(patientTechQueueItem?.monitoringSurveys || []).map((m: { question?: string; date?: string; role?: string; answer?: string }) => ({
          name: m.question || 'Technician Review',
          date: m.date || '2026-04-10',
          type: m.role || 'Operational',
@@ -337,24 +338,24 @@ export default function UniversalSurveys() {
       <div className="p-8 max-w-[1400px] mx-auto space-y-8 pb-20">
 
          {/* Role-Specific Action Banner */}
-         <div className={`p-6 rounded-2xl border-2 flex items-center justify-between shadow-sm ${isTechnician ? 'bg-[#F4A261]/5 border-[#F4A261]/30' : 'bg-[#6A994E]/5 border-[#6A994E]/30'}`}>
+         <div className={`p-6 rounded-2xl border-2 flex items-center justify-between shadow-sm ${isTechnician ? 'bg-amber/5 border-amber/30' : 'bg-sage/5 border-sage/30'}`}>
             <div className="flex items-center gap-4">
-               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isTechnician ? 'bg-[#F4A261] text-white' : 'bg-[#6A994E] text-white'}`}>
+               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isTechnician ? 'bg-amber text-white' : 'bg-sage text-white'}`}>
                   {isTechnician ? <ClipboardList /> : <UserCircle />}
                </div>
                <div>
                   <div className="flex items-center gap-3">
-                     <h2 className="text-xl font-bold text-[#0A1128]">
+                     <h2 className="text-xl font-bold text-navy">
                         {isTechnician ? 'Behavioral Monitoring Desk' : 'Clinical Assessment Review'}
                      </h2>
                      {isLive && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-md">
-                           <Signal className="w-3 h-3 text-[#6A994E]" />
-                           <span className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider">Live</span>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-sage/10 border border-sage/20 rounded-md">
+                           <Signal className="w-3 h-3 text-sage" />
+                           <span className="text-[10px] font-bold text-sage uppercase tracking-wider">Live</span>
                         </div>
                      )}
                   </div>
-                  <p className="text-sm text-[#5A6B7C]">
+                  <p className="text-sm text-slate-muted">
                      {isTechnician ? 'Log visit observations and view patient-reported milestones.' : 'Review standardized medical surveys and technician field notes.'}
                   </p>
                </div>
@@ -368,48 +369,48 @@ export default function UniversalSurveys() {
 
                {/* 1. Overdue Warning & Legacy Indicator */}
                {isOverdue && activeContent.date !== '—' && (
-                  <div className="bg-gradient-to-r from-[#E76F51]/10 to-transparent border-l-4 border-[#E76F51] rounded-r-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-left-2">
+                  <div className="bg-gradient-to-r from-coral/10 to-transparent border-l-4 border-coral rounded-r-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-left-2">
                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-[#E76F51]/20 text-[#E76F51] rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-coral/20 text-coral rounded-full flex items-center justify-center">
                            <AlertTriangle className="w-5 h-5" />
                         </div>
                         <div>
-                           <h3 className="text-sm font-bold text-[#0A1128]">Survey Overdue Warning</h3>
-                           <p className="text-xs text-[#5A6B7C] mt-1">Patient is <span className="font-bold text-[#E76F51]">{daysOverdue} days late</span> submitting the latest {activeSurvey} questionnaire.</p>
+                           <h3 className="text-sm font-bold text-navy">Survey Overdue Warning</h3>
+                           <p className="text-xs text-slate-muted mt-1">Patient is <span className="font-bold text-coral">{daysOverdue} days late</span> submitting the latest {activeSurvey} questionnaire.</p>
                         </div>
                      </div>
-                     <div className="bg-white px-3 py-2 rounded-lg border border-[#E8EEF2] flex items-center gap-2 shadow-sm shrink-0">
-                        <Clock className="w-4 h-4 text-[#5A6B7C]" />
-                        <span className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest">Using previous survey from: <span className="text-[#0A1128]">{activeContent.date}</span></span>
+                     <div className="bg-card px-3 py-2 rounded-lg border border-light-blue flex items-center gap-2 shadow-sm shrink-0">
+                        <Clock className="w-4 h-4 text-slate-muted" />
+                        <span className="text-[10px] font-bold text-slate-muted uppercase tracking-widest">Using previous survey from: <span className="text-navy">{activeContent.date}</span></span>
                      </div>
                   </div>
                )}
 
                {/* 2. AI Survey Synthesis & Insights Card */}
-               <div className="bg-gradient-to-r from-[#0A1128] to-[#1a2744] rounded-2xl border border-[#0A1128] shadow-lg p-8 text-white relative overflow-hidden">
-                  <div className="absolute right-0 top-0 w-32 h-32 bg-[#2D9596]/10 rounded-full blur-3xl pointer-events-none" />
+               <div className="bg-gradient-to-r from-navy to-navy/90 rounded-2xl border border-navy shadow-lg p-8 text-white relative overflow-hidden">
+                  <div className="absolute right-0 top-0 w-32 h-32 bg-teal/10 rounded-full blur-3xl pointer-events-none" />
                   <div className="relative">
                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-[#2D9596]/20 text-[#2D9596] rounded-xl flex items-center justify-center border border-[#2D9596]/30">
+                        <div className="w-10 h-10 bg-teal/20 text-teal rounded-xl flex items-center justify-center border border-teal/30">
                            <MessageSquare className="w-5 h-5" />
                         </div>
                         <div>
                            <h3 className="text-lg font-bold text-white tracking-wide">
                               AI Survey Analysis & Clinical Insights
                            </h3>
-                           <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#2D9596] bg-[#2D9596]/10 px-2 py-0.5 rounded border border-[#2D9596]/20">
+                           <span className="text-[9px] font-extrabold uppercase tracking-widest text-teal bg-teal/10 px-2 py-0.5 rounded border border-teal/20">
                               Automated Synthesis
                            </span>
                         </div>
                      </div>
 
-                     <p className="text-sm text-white/95 leading-relaxed font-medium italic border-l-2 border-[#2D9596] pl-4 my-6">
+                     <p className="text-sm text-white/95 leading-relaxed font-medium italic border-l-2 border-teal pl-4 my-6">
                         "{getAISurveySummary(activeSurvey, activeContent.score, activeContent.risk)}"
                      </p>
 
                      <div className="flex flex-wrap items-center gap-4 text-xs text-white/60 font-semibold pt-4 border-t border-white/10">
                         <span className="flex items-center gap-1.5">
-                           <CheckCircle className="w-4 h-4 text-[#6A994E]" /> Synced to SleepCare EMR
+                           <CheckCircle className="w-4 h-4 text-sage" /> Synced to SleepCare EMR
                         </span>
                         <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
                         <span>Updated: {activeContent.date !== '—' ? activeContent.date : 'Recent'}</span>
@@ -418,81 +419,81 @@ export default function UniversalSurveys() {
                </div>
 
                {/* 3. Score History Card */}
-               <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
+               <div className="bg-card rounded-2xl border border-light-blue shadow-sm p-8">
                   <div className="flex items-center justify-between mb-8">
                      <div>
-                        <h3 className="text-xl font-bold text-[#0A1128] flex items-center gap-2">
-                           <BarChart3 className="w-6 h-6 text-[#2D9596]" /> {activeSurvey} Score History
+                        <h3 className="text-xl font-bold text-navy flex items-center gap-2">
+                           <BarChart3 className="w-6 h-6 text-teal" /> {activeSurvey} Score History
                         </h3>
-                        <p className="text-sm text-[#5A6B7C] mt-1">6-Month Trajectory Analysis</p>
+                        <p className="text-sm text-slate-muted mt-1">6-Month Trajectory Analysis</p>
                      </div>
-                     <div className="flex items-center gap-4 text-xs font-bold text-[#5A6B7C]">
-                        <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#E8EEF2]"></span> Normal</span>
-                        <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#E76F51]"></span> Elevated</span>
+                     <div className="flex items-center gap-4 text-xs font-bold text-slate-muted">
+                        <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-light-blue"></span> Normal</span>
+                        <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-coral"></span> Elevated</span>
                      </div>
                   </div>
 
                   {/* Score History CSS Bar Chart */}
-                  <div className="h-64 flex items-end justify-between gap-2 border-b-2 border-l-2 border-[#E8EEF2] pb-2 pl-2 pr-6 relative">
+                  <div className="h-64 flex items-end justify-between gap-2 border-b-2 border-l-2 border-light-blue pb-2 pl-2 pr-6 relative">
                      {/* Threshold Line */}
-                     <div className="absolute w-full border-t-2 border-dashed border-[#F4A261] left-0 z-0 flex items-center" style={{ bottom: `${(activeContent.threshold / activeContent.maxScore) * 100}%` }}>
-                        <span className="absolute -left-12 text-[10px] font-bold text-[#F4A261]">Thresh {activeContent.threshold}</span>
+                     <div className="absolute w-full border-t-2 border-dashed border-amber left-0 z-0 flex items-center" style={{ bottom: `${(activeContent.threshold / activeContent.maxScore) * 100}%` }}>
+                        <span className="absolute -left-12 text-[10px] font-bold text-amber">Thresh {activeContent.threshold}</span>
                      </div>
 
-                     {scoreHistory.length > 0 ? scoreHistory.map((data: any, idx: number) => {
+                     {scoreHistory.length > 0 ? scoreHistory.map((data: { score: number; month: string }, idx: number) => {
                         const heightPercent = (data.score / activeContent.maxScore) * 100;
                         const isBreach = data.score > activeContent.threshold;
                         return (
                            <div key={idx} className="flex-1 h-full flex flex-col justify-end items-center gap-2 z-10 group">
-                              <span className="text-xs font-bold text-[#0A1128] opacity-0 group-hover:opacity-100 transition-opacity">{data.score}</span>
-                              <div className={`w-full max-w-[40px] rounded-t-md transition-all duration-500 ease-out group-hover:opacity-80 ${isBreach ? 'bg-[#E76F51]' : 'bg-[#2D9596]'}`} style={{ height: `${heightPercent}%` }}></div>
-                              <span className="text-[10px] font-bold text-[#5A6B7C] uppercase absolute -bottom-6">{data.month}</span>
+                              <span className="text-xs font-bold text-navy opacity-0 group-hover:opacity-100 transition-opacity">{data.score}</span>
+                              <div className={`w-full max-w-[40px] rounded-t-md transition-all duration-500 ease-out group-hover:opacity-80 ${isBreach ? 'bg-coral' : 'bg-teal'}`} style={{ height: `${heightPercent}%` }}></div>
+                              <span className="text-[10px] font-bold text-slate-muted uppercase absolute -bottom-6">{data.month}</span>
                            </div>
                         );
                      }) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-[#5A6B7C] text-sm">No historical data available</div>
+                        <div className="absolute inset-0 flex items-center justify-center text-slate-muted text-sm">No historical data available</div>
                      )}
                   </div>
                </div>
 
                {/* 4. Detailed Patient Responses */}
-               <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
+               <div className="bg-card rounded-2xl border border-light-blue shadow-sm p-8">
                   <div className="flex items-center justify-between mb-6">
                      <div>
-                        <h3 className="text-lg font-bold text-[#0A1128] flex items-center gap-2">
-                           <ClipboardList className="w-5 h-5 text-[#2D9596]" /> {activeContent.name} — Itemized Responses
+                        <h3 className="text-lg font-bold text-navy flex items-center gap-2">
+                           <ClipboardList className="w-5 h-5 text-teal" /> {activeContent.name} — Itemized Responses
                         </h3>
-                        <p className="text-sm text-[#5A6B7C] mt-1">Patient-reported questionnaire answers and situational scores</p>
+                        <p className="text-sm text-slate-muted mt-1">Patient-reported questionnaire answers and situational scores</p>
                      </div>
                   </div>
                   <div className="overflow-x-auto">
                      <table className="w-full text-left border-collapse">
                         <thead>
-                           <tr className="border-b border-[#E8EEF2] text-[10px] font-bold text-[#5A6B7C] uppercase tracking-wider">
+                           <tr className="border-b border-light-blue text-[10px] font-bold text-slate-muted uppercase tracking-wider">
                               <th className="pb-3 w-12">#</th>
                               <th className="pb-3">Question Context</th>
                               <th className="pb-3 text-center w-24">Score</th>
                               <th className="pb-3 pl-4">Patient Response</th>
                            </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#E8EEF2]">
+                        <tbody className="divide-y divide-light-blue">
                            {getItemizedResponses().map((item: any, idx: number) => {
                               const getScoreColor = (s: number) => {
-                                 if (s === 3 || s === 4) return 'bg-[#E76F51]/10 text-[#E76F51] border-[#E76F51]/20';
-                                 if (s === 2) return 'bg-[#F4A261]/10 text-[#F4A261] border-[#F4A261]/20';
-                                 if (s === 1) return 'bg-[#2D9596]/10 text-[#2D9596] border-[#2D9596]/20';
-                                 return 'bg-[#5A6B7C]/10 text-[#5A6B7C] border-[#5A6B7C]/20';
+                                 if (s === 3 || s === 4) return 'bg-coral/10 text-coral border-coral/20';
+                                 if (s === 2) return 'bg-amber/10 text-amber border-amber/20';
+                                 if (s === 1) return 'bg-teal/10 text-teal border-teal/20';
+                                 return 'bg-slate-muted/10 text-slate-muted border-slate-muted/20';
                               };
                               return (
-                                 <tr key={idx} className="hover:bg-[#FAFAFA]/50 transition-colors">
-                                    <td className="py-4 font-bold text-sm text-[#5A6B7C]">{item.id}</td>
-                                    <td className="py-4 text-sm font-semibold text-[#0A1128] leading-relaxed">{item.question}</td>
+                                 <tr key={idx} className="hover:bg-background/50 transition-colors">
+                                    <td className="py-4 font-bold text-sm text-slate-muted">{item.id}</td>
+                                    <td className="py-4 text-sm font-semibold text-navy leading-relaxed">{item.question}</td>
                                     <td className="py-4 text-center">
                                        <span className={`px-2.5 py-0.5 rounded-full border text-xs font-bold ${getScoreColor(item.score)}`}>
                                           {item.score}
                                        </span>
                                     </td>
-                                    <td className="py-4 pl-4 text-sm font-bold text-[#0A1128]">{item.answer}</td>
+                                    <td className="py-4 pl-4 text-sm font-bold text-navy">{item.answer}</td>
                                  </tr>
                               );
                            })}
@@ -502,24 +503,24 @@ export default function UniversalSurveys() {
                </div>
 
                {/* 5. Survey Completion Calendar (Heatmap Style) */}
-               <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
-                  <h3 className="text-lg font-bold text-[#0A1128] mb-6 flex items-center gap-2">
-                     <CalendarDays className="w-5 h-5 text-[#6A994E]" /> Cross-Survey Completion Calendar
+               <div className="bg-card rounded-2xl border border-light-blue shadow-sm p-8">
+                  <h3 className="text-lg font-bold text-navy mb-6 flex items-center gap-2">
+                     <CalendarDays className="w-5 h-5 text-sage" /> Cross-Survey Completion Calendar
                   </h3>
                   <div className="grid grid-cols-6 gap-2 mb-2">
-                     {calendarMonths.map(m => <div key={m} className="text-[10px] font-bold text-[#5A6B7C] uppercase text-center">{m}</div>)}
+                     {calendarMonths.map(m => <div key={m} className="text-[10px] font-bold text-slate-muted uppercase text-center">{m}</div>)}
                   </div>
                   <div className="grid grid-cols-6 gap-2">
-                     {(liveSurveys?.calendar || surveyData.calendar).map((weekData: any[], col: number) => (
+                     {(liveSurveys?.calendar || surveyData.calendar).map((weekData, col: number) => (
                         <div key={col} className="grid grid-rows-4 gap-2">
-                           {weekData.map((data: any, row: number) => {
-                              let colorClass = 'bg-[#E8EEF2]/50';
-                              if (data.count === 1) colorClass = 'bg-[#6A994E]/40';
-                              else if (data.count === 2) colorClass = 'bg-[#6A994E]/70';
-                              else if (data.count >= 3) colorClass = 'bg-[#6A994E]';
+                           {weekData.map((data, row: number) => {
+                              let colorClass = 'bg-light-blue/50';
+                              if (data.count === 1) colorClass = 'bg-sage/40';
+                              else if (data.count === 2) colorClass = 'bg-sage/70';
+                              else if (data.count >= 3) colorClass = 'bg-sage';
 
                               const isSelected = data.surveys && data.surveys.includes(activeSurvey);
-                              const highlightClass = isSelected ? 'ring-2 ring-offset-1 ring-[#F4A261] z-10' : '';
+                              const highlightClass = isSelected ? 'ring-2 ring-offset-1 ring-amber z-10' : '';
 
                               const tooltip = data.count > 0
                                  ? `${data.count} survey(s) completed:\n${data.surveys.join(', ')}`
@@ -538,38 +539,38 @@ export default function UniversalSurveys() {
                   </div>
                   <div className="flex items-center justify-between mt-4">
                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-sm ring-2 ring-offset-1 ring-[#F4A261]"></div>
-                        <span className="text-[10px] font-bold text-[#5A6B7C] uppercase">Selected Form Match</span>
+                        <div className="w-3 h-3 rounded-sm ring-2 ring-offset-1 ring-amber"></div>
+                        <span className="text-[10px] font-bold text-slate-muted uppercase">Selected Form Match</span>
                      </div>
                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-[#5A6B7C] uppercase mr-1">Activity Volume</span>
-                        <div className="w-3 h-3 rounded-sm bg-[#E8EEF2]/50" title="0 surveys"></div>
-                        <div className="w-3 h-3 rounded-sm bg-[#6A994E]/40" title="1 survey"></div>
-                        <div className="w-3 h-3 rounded-sm bg-[#6A994E]/70" title="2 surveys"></div>
-                        <div className="w-3 h-3 rounded-sm bg-[#6A994E]" title="3+ surveys"></div>
+                        <span className="text-[10px] font-bold text-slate-muted uppercase mr-1">Activity Volume</span>
+                        <div className="w-3 h-3 rounded-sm bg-light-blue/50" title="0 surveys"></div>
+                        <div className="w-3 h-3 rounded-sm bg-sage/40" title="1 survey"></div>
+                        <div className="w-3 h-3 rounded-sm bg-sage/70" title="2 surveys"></div>
+                        <div className="w-3 h-3 rounded-sm bg-sage" title="3+ surveys"></div>
                      </div>
                   </div>
-                  <p className="text-[10px] text-[#5A6B7C] mt-6 text-center">Patient adherence tracking across all medical survey requirements.</p>
+                  <p className="text-[10px] text-slate-muted mt-6 text-center">Patient adherence tracking across all medical survey requirements.</p>
                </div>
 
                {/* 6. Technician Field Observations & Logs */}
-               <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-8">
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b border-[#E8EEF2] pb-4">
+               <div className="bg-card rounded-2xl border border-light-blue shadow-sm p-8">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b border-light-blue pb-4">
                      <div>
-                        <h3 className="text-lg font-bold text-[#0A1128] flex items-center gap-2">
-                           <CheckCircle className="w-5 h-5 text-[#F4A261]" /> Technician Field Observations & Logs
+                        <h3 className="text-lg font-bold text-navy flex items-center gap-2">
+                           <CheckCircle className="w-5 h-5 text-amber" /> Technician Field Observations & Logs
                         </h3>
-                        <p className="text-sm text-[#5A6B7C] mt-1">Cross-disciplinary tracking and logs registered by field support</p>
+                        <p className="text-sm text-slate-muted mt-1">Cross-disciplinary tracking and logs registered by field support</p>
                      </div>
                      <div className="flex items-center gap-3">
                         {liveSurveys?.visits && liveSurveys.visits.length > 0 && (
-                           <div className="flex bg-[#E8EEF2] p-1 rounded-lg shrink-0">
+                           <div className="flex bg-light-blue p-1 rounded-lg shrink-0">
                               <button
                                  onClick={() => setViewMode('grouped')}
                                  className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
                                     viewMode === 'grouped'
-                                       ? 'bg-white text-[#0A1128] shadow-sm'
-                                       : 'text-[#5A6B7C] hover:text-[#0A1128]'
+                                       ? 'bg-card text-navy shadow-sm'
+                                       : 'text-slate-muted hover:text-navy'
                                  }`}
                               >
                                  Grouped By Visit
@@ -578,15 +579,15 @@ export default function UniversalSurveys() {
                                  onClick={() => setViewMode('itemized')}
                                  className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
                                     viewMode === 'itemized'
-                                       ? 'bg-white text-[#0A1128] shadow-sm'
-                                       : 'text-[#5A6B7C] hover:text-[#0A1128]'
+                                       ? 'bg-card text-navy shadow-sm'
+                                       : 'text-slate-muted hover:text-navy'
                                  }`}
                               >
                                  Itemized ({technicianLogs.length})
                               </button>
                            </div>
                         )}
-                        <span className="text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 px-2.5 py-1 border border-[#F4A261]/20 rounded-lg uppercase shrink-0">
+                        <span className="text-[10px] font-bold text-amber bg-amber/10 px-2.5 py-1 border border-amber/20 rounded-lg uppercase shrink-0">
                            Field Logs ({viewMode === 'grouped' && liveSurveys?.visits ? liveSurveys.visits.length : technicianLogs.length})
                         </span>
                      </div>
@@ -600,14 +601,14 @@ export default function UniversalSurveys() {
                               : 0;
 
                            return (
-                              <div key={vIdx} className="bg-[#FAFAFA] border border-[#E8EEF2] rounded-2xl overflow-hidden shadow-sm hover:border-[#F4A261]/30 transition-all">
+                              <div key={vIdx} className="bg-background border border-light-blue rounded-2xl overflow-hidden shadow-sm hover:border-amber/30 transition-all">
                                  {/* Visit Header */}
-                                 <div className="bg-[#0A1128] text-white p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                                 <div className="bg-navy text-white p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                                     <div>
                                        <div className="flex items-center gap-3">
                                           <span className="text-xl">📋</span>
                                           <h4 className="font-bold text-base">{visit.questionnaire_name}</h4>
-                                          <span className="text-[10px] uppercase font-bold bg-[#F4A261] px-2 py-0.5 rounded text-white tracking-widest shrink-0">
+                                          <span className="text-[10px] uppercase font-bold bg-amber px-2 py-0.5 rounded text-white tracking-widest shrink-0">
                                              ID: {visit.questionnaire_id}
                                           </span>
                                        </div>
@@ -620,7 +621,7 @@ export default function UniversalSurveys() {
                                           <span className="text-[9px] uppercase font-bold text-white/50 tracking-wider block">Completeness</span>
                                           <span className="text-sm font-bold">{visit.completed_answers} / {visit.total_questions} answers</span>
                                        </div>
-                                       <div className="w-12 h-12 rounded-full border-4 border-white/20 flex items-center justify-center font-bold text-xs relative overflow-hidden" style={{ borderColor: pctCompleted >= 80 ? '#6A994E' : '#F4A261' }}>
+                                       <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center font-bold text-xs relative overflow-hidden ${pctCompleted >= 80 ? 'border-sage' : 'border-amber'}`}>
                                           {pctCompleted}%
                                        </div>
                                     </div>
@@ -628,40 +629,40 @@ export default function UniversalSurveys() {
 
                                  {/* Visit Details Table */}
                                  <div className="p-6">
-                                    <h5 className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-4">Questionnaire Responses</h5>
+                                    <h5 className="text-[10px] font-bold text-slate-muted uppercase tracking-widest mb-4">Questionnaire Responses</h5>
                                     <div className="overflow-x-auto">
                                        <table className="w-full text-left border-collapse text-xs">
                                           <thead>
-                                             <tr className="border-b border-[#E8EEF2] text-[#5A6B7C] font-bold uppercase tracking-wider pb-2">
+                                             <tr className="border-b border-light-blue text-slate-muted font-bold uppercase tracking-wider pb-2">
                                                 <th className="pb-2 w-12">ID</th>
                                                 <th className="pb-2">Question Context</th>
                                                 <th className="pb-2 w-32 text-center">Status</th>
                                                 <th className="pb-2 pl-4">Answer Value</th>
                                              </tr>
                                           </thead>
-                                          <tbody className="divide-y divide-[#E8EEF2]">
+                                          <tbody className="divide-y divide-light-blue">
                                              {(visit.answers || []).map((ans: any, aIdx: number) => {
                                                 const isCompleted = ans.completion_status === 'completed';
                                                 return (
-                                                   <tr key={aIdx} className="hover:bg-[#FAFAFA]/50 transition-colors">
-                                                      <td className="py-3 font-semibold text-[#5A6B7C]">{ans.question_id}</td>
-                                                      <td className="py-3 font-bold text-[#0A1128]">{ans.question_text || '—'}</td>
+                                                   <tr key={aIdx} className="hover:bg-background/50 transition-colors">
+                                                      <td className="py-3 font-semibold text-slate-muted">{ans.question_id}</td>
+                                                      <td className="py-3 font-bold text-navy">{ans.question_text || '—'}</td>
                                                       <td className="py-3 text-center">
                                                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
                                                             isCompleted 
-                                                               ? 'bg-[#6A994E]/10 text-[#6A994E] border border-[#6A994E]/20' 
-                                                               : 'bg-[#E76F51]/10 text-[#E76F51] border border-[#E76F51]/20'
+                                                               ? 'bg-sage/10 text-sage border border-sage/20' 
+                                                               : 'bg-coral/10 text-coral border border-coral/20'
                                                          }`}>
                                                             {ans.completion_status}
                                                          </span>
                                                       </td>
                                                       <td className="py-3 pl-4">
                                                          {isCompleted ? (
-                                                            <span className="font-bold text-[#0A1128] bg-white border border-[#E8EEF2] px-2.5 py-1 rounded inline-block shadow-sm">
+                                                            <span className="font-bold text-navy bg-card border border-light-blue px-2.5 py-1 rounded inline-block shadow-sm">
                                                                {ans.answer_value}
                                                             </span>
                                                          ) : (
-                                                            <span className="text-[#5A6B7C] italic opacity-50">—</span>
+                                                            <span className="text-slate-muted italic opacity-50">—</span>
                                                          )}
                                                       </td>
                                                    </tr>
@@ -678,40 +679,40 @@ export default function UniversalSurveys() {
                   ) : technicianLogs.length > 0 ? (
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {technicianLogs.map((log: any, idx: number) => (
-                           <div key={idx} className="bg-[#FAFAFA] border border-[#E8EEF2] p-5 rounded-xl hover:border-[#F4A261]/30 transition-all hover:shadow-sm">
+                           <div key={idx} className="bg-background border border-light-blue p-5 rounded-xl hover:border-amber/30 transition-all hover:shadow-sm">
                               <div className="flex items-center justify-between mb-4">
                                  <div className="flex items-center gap-2">
                                     <span className="text-lg">{log.icon}</span>
-                                    <span className="text-[10px] font-bold text-[#F4A261] bg-[#F4A261]/10 px-2 py-0.5 border border-[#F4A261]/20 rounded uppercase">
+                                    <span className="text-[10px] font-bold text-amber bg-amber/10 px-2 py-0.5 border border-amber/20 rounded uppercase">
                                        {log.type} Check
                                     </span>
                                  </div>
-                                 <span className="text-[9px] font-extrabold uppercase bg-[#E8EEF2] px-2 py-0.5 rounded text-[#5A6B7C]">Synced</span>
+                                 <span className="text-[9px] font-extrabold uppercase bg-light-blue px-2 py-0.5 rounded text-slate-muted">Synced</span>
                               </div>
 
                               <div className="space-y-3 mb-4">
                                  <div>
-                                    <span className="text-[9px] font-extrabold text-[#5A6B7C] uppercase tracking-wider block mb-1">
+                                    <span className="text-[9px] font-extrabold text-slate-muted uppercase tracking-wider block mb-1">
                                        Observation Checklist Question:
                                     </span>
-                                    <p className="text-xs font-bold text-[#0A1128] leading-relaxed">
+                                    <p className="text-xs font-bold text-navy leading-relaxed">
                                        {log.name}
                                     </p>
                                  </div>
 
-                                 <div className="bg-white border border-[#E8EEF2] p-3 rounded-lg">
-                                    <span className="text-[9px] font-extrabold text-[#F4A261] uppercase tracking-wider block mb-1">
+                                 <div className="bg-card border border-light-blue p-3 rounded-lg">
+                                    <span className="text-[9px] font-extrabold text-amber uppercase tracking-wider block mb-1">
                                        Registered Value & Notes:
                                     </span>
-                                    <p className="text-xs text-[#5A6B7C] font-semibold leading-relaxed italic border-l-2 border-[#F4A261]/40 pl-2">
+                                    <p className="text-xs text-slate-muted font-semibold leading-relaxed italic border-l-2 border-amber/40 pl-2">
                                        "{log.notes}"
                                     </p>
                                  </div>
                               </div>
 
-                              <div className="flex items-center justify-between pt-3 border-t border-[#E8EEF2] text-[10px] font-bold text-[#5A6B7C]">
+                              <div className="flex items-center justify-between pt-3 border-t border-light-blue text-[10px] font-bold text-slate-muted">
                                  <span>Logged: {log.date}</span>
-                                 <span className="text-[#6A994E] flex items-center gap-1">
+                                 <span className="text-sage flex items-center gap-1">
                                     <CheckCircle className="w-3 h-3" /> EMR Verified
                                  </span>
                               </div>
@@ -719,7 +720,7 @@ export default function UniversalSurveys() {
                         ))}
                      </div>
                   ) : (
-                     <div className="bg-[#FAFAFA] rounded-xl p-8 border border-dashed border-[#E8EEF2] text-center text-sm text-[#5A6B7C]">
+                     <div className="bg-background rounded-xl p-8 border border-dashed border-light-blue text-center text-sm text-slate-muted">
                         No technician field observations recorded for this patient.
                      </div>
                   )}
@@ -731,57 +732,57 @@ export default function UniversalSurveys() {
             <div className="lg:col-span-1 space-y-6 sticky top-8">
 
                {/* Survey Selector */}
-               <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-6">
-                  <label className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-2 block">
+               <div className="bg-card rounded-2xl border border-light-blue shadow-sm p-6">
+                  <label className="text-[10px] font-bold text-slate-muted uppercase tracking-widest mb-2 block">
                      Clinical Form Selector
                   </label>
                   <div className="relative">
                      <select
                         value={activeSurvey}
                         onChange={(e) => setActiveSurvey(e.target.value as SurveyType)}
-                        className="w-full appearance-none bg-[#FAFAFA] border-2 border-[#E8EEF2] text-[#0A1128] font-bold py-3 px-4 rounded-xl focus:outline-none focus:border-[#2D9596] cursor-pointer transition-all shadow-sm text-sm"
+                        className="w-full appearance-none bg-background border-2 border-light-blue text-navy font-bold py-3 px-4 rounded-xl focus:outline-none focus:border-teal cursor-pointer transition-all shadow-sm text-sm"
                      >
                         {Object.entries(surveyMeta).map(([key, meta]) => (
                            <option key={key} value={key}>{meta.fullName}</option>
                         ))}
                      </select>
-                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#5A6B7C]">
+                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-muted">
                         <ChevronDown className="w-5 h-5" />
                      </div>
                   </div>
                </div>
 
                {/* Active Survey Breakdown Card */}
-               <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300">
-                  <div className={`p-6 border-b border-[#E8EEF2] flex items-center justify-between ${getRiskBadge(activeContent.risk)} border-x-0 border-t-0`}>
+               <div className="bg-card rounded-2xl border border-light-blue shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300">
+                  <div className={`p-6 border-b border-light-blue flex items-center justify-between ${getRiskBadge(activeContent.risk)} border-x-0 border-t-0`}>
                      <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Total Score</p>
                         <h2 className="text-4xl font-black">{activeContent.score}<span className="text-lg opacity-50 font-medium">/{activeContent.maxScore}</span></h2>
                      </div>
                      <div className="text-right">
                         <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Status</p>
-                        <span className="px-3 py-1 bg-white/50 backdrop-blur-sm rounded-lg font-bold text-sm shadow-sm inline-block">{activeContent.risk} Risk</span>
+                        <span className="px-3 py-1 bg-card/50 backdrop-blur-sm rounded-lg font-bold text-sm shadow-sm inline-block">{activeContent.risk} Risk</span>
                      </div>
                   </div>
 
                   <div className="p-6 space-y-6">
                      <div>
-                        <h4 className="text-[10px] font-bold text-[#5A6B7C] uppercase tracking-widest mb-3">Itemized Responses</h4>
+                        <h4 className="text-[10px] font-bold text-slate-muted uppercase tracking-widest mb-3">Itemized Responses</h4>
                         <div className="space-y-2">
                            {activeContent.breakdown.map((item: any, idx: number) => (
-                              <div key={idx} className="bg-[#FAFAFA] border border-[#E8EEF2] p-3 rounded-lg text-sm">
-                                 <span className="block text-[#5A6B7C] font-semibold text-xs mb-1">{item.label}</span>
-                                 <span className="block text-[#0A1128] font-bold">{item.answer}</span>
+                              <div key={idx} className="bg-background border border-light-blue p-3 rounded-lg text-sm">
+                                 <span className="block text-slate-muted font-semibold text-xs mb-1">{item.label}</span>
+                                 <span className="block text-navy font-bold">{item.answer}</span>
                               </div>
                            ))}
                         </div>
                      </div>
 
-                     <div className="bg-[#0A1128]/5 rounded-xl p-4 border-l-4 border-[#0A1128]">
-                        <h4 className="text-[10px] font-bold text-[#0A1128] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                     <div className="bg-navy/5 rounded-xl p-4 border-l-4 border-navy">
+                        <h4 className="text-[10px] font-bold text-navy uppercase tracking-widest mb-2 flex items-center gap-1.5">
                            <ShieldAlert className="w-3 h-3" /> Interpretive Note
                         </h4>
-                        <p className="text-xs text-[#0A1128] leading-relaxed italic">
+                        <p className="text-xs text-navy leading-relaxed italic">
                            "{activeContent.clinicalNote}"
                         </p>
                      </div>
@@ -790,20 +791,20 @@ export default function UniversalSurveys() {
 
                {/* Technician Inline Logging */}
                {isTechnician && (
-                  <div className="bg-white rounded-2xl border border-[#E8EEF2] shadow-sm p-6">
-                     <div className="flex items-center gap-3 mb-4 border-b border-[#E8EEF2] pb-4">
-                        <div className="w-8 h-8 bg-[#F4A261]/10 rounded-lg flex items-center justify-center">
-                           <Plus className="w-4 h-4 text-[#F4A261]" />
+                  <div className="bg-card rounded-2xl border border-light-blue shadow-sm p-6">
+                     <div className="flex items-center gap-3 mb-4 border-b border-light-blue pb-4">
+                        <div className="w-8 h-8 bg-amber/10 rounded-lg flex items-center justify-center">
+                           <Plus className="w-4 h-4 text-amber" />
                         </div>
                         <div>
-                           <h3 className="font-bold text-[#0A1128] text-sm">Log Operational Form</h3>
-                           <p className="text-[10px] text-[#5A6B7C] uppercase font-bold tracking-tighter">Field Sync</p>
+                           <h3 className="font-bold text-navy text-sm">Log Operational Form</h3>
+                           <p className="text-[10px] text-slate-muted uppercase font-bold tracking-tighter">Field Sync</p>
                         </div>
                      </div>
                      <select
                         value={selectedForm}
                         onChange={(e) => setSelectedForm(e.target.value)}
-                        className="w-full bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-3 text-xs font-bold text-[#0A1128] focus:border-[#F4A261] outline-none mb-3"
+                        className="w-full bg-background border border-light-blue rounded-xl p-3 text-xs font-bold text-navy focus:border-amber outline-none mb-3"
                      >
                         <option value="">Select monitoring form...</option>
                         {availableForms.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
@@ -812,12 +813,12 @@ export default function UniversalSurveys() {
                         value={formNote}
                         onChange={(e) => setFormNote(e.target.value)}
                         placeholder="Field observations..."
-                        className="w-full h-20 bg-[#FAFAFA] border border-[#E8EEF2] rounded-xl p-3 text-xs focus:border-[#F4A261] outline-none mb-4 resize-none"
+                        className="w-full h-20 bg-background border border-light-blue rounded-xl p-3 text-xs focus:border-amber outline-none mb-4 resize-none"
                      />
                      <button
                         onClick={handleFormSubmit}
                         disabled={!selectedForm || !formNote || isSubmitting}
-                        className="w-full py-3 bg-[#F4A261] text-white text-sm font-bold rounded-xl shadow-lg shadow-[#F4A261]/20 disabled:opacity-40 active:scale-95 transition-transform flex justify-center items-center gap-2"
+                        className="w-full py-3 bg-amber text-white text-sm font-bold rounded-xl shadow-lg shadow-amber/20 disabled:opacity-40 active:scale-98 transition-transform flex justify-center items-center gap-2"
                      >
                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Log & Sync
                      </button>

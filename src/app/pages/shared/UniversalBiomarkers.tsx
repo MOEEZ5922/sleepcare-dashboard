@@ -20,6 +20,27 @@ import {
 
 type BiomarkerType = 'HRV' | 'SpO2' | 'ODI' | 'RespiratoryRate' | 'SleepEfficiency' | 'DeepSleep' | 'WASO' | 'BP';
 
+/**
+ * Recharts requires raw CSS color strings — it cannot consume Tailwind classes or
+ * CSS custom properties (e.g. var(--color-teal)). These constants mirror the
+ * theme tokens defined in theme.css so the colors stay consistent.
+ */
+const CHART_COLORS = {
+  teal:       '#2D9596',
+  sage:       '#6A994E',
+  amber:      '#F4A261',
+  coral:      '#E76F51',
+  navy:       '#0A1128',
+  violet:     '#8B5CF6',
+  cyan:       '#0891B2',
+  blue:       '#1D4ED8',
+  yellow:     '#F59E0B',
+  red:        '#DC2626',
+  rose:       '#E11D48',
+  slate:      '#5A6B7C',
+  lightBlue:  '#E8EEF2',
+} as const;
+
 /** Human-readable labels for biomarker tags */
 const BIOMARKER_LABELS: Record<BiomarkerType, string> = {
   HRV: 'HRV', SpO2: 'SpO₂', ODI: 'ODI', RespiratoryRate: 'Resp Rate',
@@ -61,21 +82,21 @@ function daysSince(ts: string): number {
 }
 
 function computeStats(data: { day: string; value: number }[], unit: string, thresholds?: { good: number; moderate: number }) {
-  if (!data.length) return { current: '—', avg: '—', trend: 'No Data', trendColor: 'text-[#5A6B7C]' };
+  if (!data.length) return { current: '—', avg: '—', trend: 'No Data', trendColor: 'text-slate-muted' };
   const last = data[data.length - 1].value;
   const avg = +(data.reduce((s, d) => s + d.value, 0) / data.length).toFixed(1);
   let trend = 'Stable';
-  let trendColor = 'text-[#6A994E]';
+  let trendColor = 'text-sage';
   if (thresholds) {
-    if (last > thresholds.moderate) { trend = 'Elevated'; trendColor = 'text-[#E76F51]'; }
-    else if (last > thresholds.good) { trend = 'Moderate'; trendColor = 'text-[#F4A261]'; }
-    else { trend = 'Good'; trendColor = 'text-[#6A994E]'; }
+    if (last > thresholds.moderate) { trend = 'Elevated'; trendColor = 'text-coral'; }
+    else if (last > thresholds.good) { trend = 'Moderate'; trendColor = 'text-amber'; }
+    else { trend = 'Good'; trendColor = 'text-sage'; }
   } else if (data.length >= 7) {
     const recent = data.slice(-7).reduce((s, d) => s + d.value, 0) / 7;
     const older = data.slice(0, 7).reduce((s, d) => s + d.value, 0) / Math.min(7, data.length);
     const pctChange = ((recent - older) / older) * 100;
-    if (pctChange > 10) { trend = 'Trending Up'; trendColor = 'text-[#2D9596]'; }
-    else if (pctChange < -10) { trend = 'Trending Down'; trendColor = 'text-[#E76F51]'; }
+    if (pctChange > 10) { trend = 'Trending Up'; trendColor = 'text-teal'; }
+    else if (pctChange < -10) { trend = 'Trending Down'; trendColor = 'text-coral'; }
   }
   return { current: `${last.toFixed(1)}${unit}`, avg: `${avg}${unit}`, trend, trendColor };
 }
@@ -152,7 +173,7 @@ export default function UniversalBiomarkers() {
         status: hexDev ? normalizeStatus(hexDev.status) : 'unknown',
         lastSync: hexDev?.last_sync_human || (overview?.hexoskin?.last_sync ? `${daysSince(overview.hexoskin.last_sync)}d ago` : '—'),
         icon: Activity,
-        color: '#2D9596',
+        color: CHART_COLORS.teal,
         provides: ['HRV', 'RespiratoryRate'],
       },
       {
@@ -163,7 +184,7 @@ export default function UniversalBiomarkers() {
         status: somDev ? normalizeStatus(somDev.status) : 'unknown',
         lastSync: somDev?.last_sync_human || (overview?.somnoart?.last_night ? `${daysSince(overview.somnoart.last_night)}d ago` : '—'),
         icon: Activity,
-        color: '#8B5CF6',
+        color: CHART_COLORS.violet,
         provides: ['SleepEfficiency', 'DeepSleep', 'WASO'],
       },
       {
@@ -174,7 +195,7 @@ export default function UniversalBiomarkers() {
         status: witWatchSync && daysSince(witWatchSync) < 7 ? 'online' : witWatchSync ? 'offline' : 'unknown',
         lastSync: witWatchSync ? `${daysSince(witWatchSync)}d ago` : '—',
         icon: Heart,
-        color: '#6A994E',
+        color: CHART_COLORS.sage,
         provides: ['SpO2', 'HRV'],
       },
       {
@@ -185,7 +206,7 @@ export default function UniversalBiomarkers() {
         status: masSyncDate && daysSince(masSyncDate) < 14 ? 'online' : masSyncDate ? 'offline' : 'unknown',
         lastSync: masSyncDate ? `${daysSince(masSyncDate)}d ago` : '—',
         icon: Wind,
-        color: '#F4A261',
+        color: CHART_COLORS.amber,
         provides: ['SpO2', 'ODI'],
       },
       {
@@ -196,7 +217,7 @@ export default function UniversalBiomarkers() {
         status: witBpmSync && daysSince(witBpmSync) < 14 ? 'online' : witBpmSync ? 'offline' : 'unknown',
         lastSync: witBpmSync ? `${daysSince(witBpmSync)}d ago` : '—',
         icon: Heart,
-        color: '#E11D48',
+        color: CHART_COLORS.rose,
         provides: ['BP'],
       },
     ];
@@ -273,7 +294,7 @@ export default function UniversalBiomarkers() {
     return {
       HRV: {
         name: 'Heart Rate Variability (HRV RMSSD)',
-        color: '#2D9596',
+        color: CHART_COLORS.teal,
         source: 'Hexoskin · Withings Watch',
         sourceCategory: 'hexoskin',
         data: hrvData,
@@ -282,81 +303,82 @@ export default function UniversalBiomarkers() {
       },
       SpO2: {
         name: 'Blood Oxygen Saturation (SpO₂)',
-        color: '#6A994E',
+        color: CHART_COLORS.sage,
         source: 'Withings Watch · Masimo',
         sourceCategory: 'withings_watch',
         data: spo2Data,
         unit: '%',
         domain: [88, 100],
-        referenceLines: [{ value: 90, label: 'Clinical Threshold', color: '#E76F51' }],
+        referenceLines: [{ value: 90, label: 'Clinical Threshold', color: CHART_COLORS.coral }],
       },
       ODI: {
         name: 'Oxygen Desaturation Index (ODI)',
-        color: '#F4A261',
+        color: CHART_COLORS.amber,
         source: 'Masimo MightySat',
         sourceCategory: 'masimo',
         data: odiData,
         unit: '',
         domain: ['auto', 'auto'],
-        referenceLines: [{ value: 5, label: 'Normal ≤5', color: '#6A994E' }, { value: 15, label: 'Moderate', color: '#F4A261' }],
+        referenceLines: [{ value: 5, label: 'Normal ≤5', color: CHART_COLORS.sage }, { value: 15, label: 'Moderate', color: CHART_COLORS.amber }],
       },
       RespiratoryRate: {
         name: 'Respiratory Rate',
-        color: '#0891B2',
+        color: CHART_COLORS.cyan,
         source: 'Hexoskin · Masimo',
         sourceCategory: 'hexoskin',
         data: respRateData,
         unit: ' bpm',
         domain: ['auto', 'auto'],
-        referenceLines: [{ value: 12, label: 'Low', color: '#F4A261' }, { value: 20, label: 'High', color: '#E76F51' }],
+        referenceLines: [{ value: 12, label: 'Low', color: CHART_COLORS.amber }, { value: 20, label: 'High', color: CHART_COLORS.coral }],
       },
       SleepEfficiency: {
         name: 'Sleep Efficiency',
-        color: '#8B5CF6',
+        color: CHART_COLORS.violet,
         source: 'Somno-Art',
         sourceCategory: 'somnoart',
         data: sleepEffData,
         unit: '%',
         domain: [50, 100],
-        referenceLines: [{ value: 85, label: 'Good ≥85%', color: '#6A994E' }],
+        referenceLines: [{ value: 85, label: 'Good ≥85%', color: CHART_COLORS.sage }],
       },
       DeepSleep: {
         name: 'Deep Sleep Duration (N3)',
-        color: '#1D4ED8',
+        color: CHART_COLORS.blue,
         source: 'Somno-Art',
         sourceCategory: 'somnoart',
         data: deepSleepData,
         unit: ' min',
         domain: ['auto', 'auto'],
+        referenceLines: [{ value: 60, label: 'Target ≥60m', color: CHART_COLORS.sage }],
       },
       WASO: {
         name: 'Wake After Sleep Onset (WASO)',
-        color: '#D97706',
+        color: CHART_COLORS.yellow,
         source: 'Somno-Art',
         sourceCategory: 'somnoart',
         data: wasoData,
         unit: ' min',
         domain: ['auto', 'auto'],
-        referenceLines: [{ value: 30, label: 'Normal ≤30min', color: '#6A994E' }],
+        referenceLines: [{ value: 30, label: 'Target <30m', color: CHART_COLORS.sage }],
       },
       BP: {
         name: 'Blood Pressure (Systolic)',
-        color: '#E11D48',
+        color: CHART_COLORS.red,
         source: 'Withings BPM Core',
-        sourceCategory: 'withings_bpm',
+        sourceCategory: 'withings',
         data: bpData,
         unit: ' mmHg',
-        domain: ['auto', 'auto'],
-        referenceLines: [{ value: 120, label: 'Normal', color: '#6A994E' }, { value: 140, label: 'Elevated', color: '#E76F51' }],
+        domain: [90, 160],
+        referenceLines: [{ value: 120, label: 'Normal ≤120', color: CHART_COLORS.sage }, { value: 130, label: 'Elevated 130', color: CHART_COLORS.amber }],
       },
     };
-  }, [withingsData, masimoData, sleepData, overview]);
+  }, [overview, withingsData, masimoData, sleepData, devices]);
 
   const activeConfig = chartConfigs[activeChart];
   const stats = computeStats(
     activeConfig.data,
     activeConfig.unit,
-    activeChart === 'ODI' ? { good: 5, moderate: 15 } : undefined
+    activeConfig.thresholds
   );
 
   // ─── Quality flag: is the source device degraded? ─────────────────────────
@@ -373,7 +395,7 @@ export default function UniversalBiomarkers() {
   if (isLoading && !overview) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 text-[#F4A261] animate-spin" />
+        <Loader2 className="w-8 h-8 text-amber animate-spin" />
       </div>
     );
   }
@@ -383,12 +405,12 @@ export default function UniversalBiomarkers() {
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-[#2D9596]/10 to-[#8B5CF6]/10 rounded-2xl">
-            <Activity className="w-8 h-8 text-[#2D9596]" />
+          <div className="p-3 bg-teal/10 rounded-2xl">
+            <Activity className="w-8 h-8 text-teal" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#0A1128]">Digital Biomarkers</h1>
-            <p className="text-sm text-[#5A6B7C]">Per-source physiological signal monitoring</p>
+            <h1 className="text-2xl font-bold text-navy">Digital Biomarkers</h1>
+            <p className="text-sm text-slate-muted">Per-source physiological signal monitoring</p>
           </div>
         </div>
       </div>
@@ -398,10 +420,10 @@ export default function UniversalBiomarkers() {
         {sourceDevices.map((device) => {
           const StatusIcon = device.status === 'online' ? Wifi : WifiOff;
           const statusColors: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-            online:       { bg: 'bg-[#6A994E]/5',  text: 'text-[#6A994E]', border: 'border-[#6A994E]/20', dot: 'bg-[#6A994E]' },
-            offline:      { bg: 'bg-[#E76F51]/5',  text: 'text-[#E76F51]', border: 'border-[#E76F51]/20', dot: 'bg-[#E76F51]' },
-            disconnected: { bg: 'bg-[#5A6B7C]/5',  text: 'text-[#5A6B7C]', border: 'border-[#5A6B7C]/20', dot: 'bg-[#5A6B7C]' },
-            unknown:      { bg: 'bg-[#5A6B7C]/5',  text: 'text-[#5A6B7C]', border: 'border-[#5A6B7C]/20', dot: 'bg-[#5A6B7C]' },
+            online:       { bg: 'bg-sage/5',  text: 'text-sage', border: 'border-sage/20', dot: 'bg-sage' },
+            offline:      { bg: 'bg-coral/5',  text: 'text-coral', border: 'border-coral/20', dot: 'bg-coral' },
+            disconnected: { bg: 'bg-slate-muted/5',  text: 'text-slate-muted', border: 'border-slate-muted/20', dot: 'bg-slate-muted' },
+            unknown:      { bg: 'bg-slate-muted/5',  text: 'text-slate-muted', border: 'border-slate-muted/20', dot: 'bg-slate-muted' },
           };
           const sc = statusColors[device.status];
           const isActive = device.provides.includes(activeChart);
@@ -431,10 +453,10 @@ export default function UniversalBiomarkers() {
                 </div>
               </div>
 
-              <p className="text-sm font-semibold text-[#0A1128] truncate">{device.label}</p>
-              <p className="text-[10px] text-[#5A6B7C] mb-1 truncate">{device.sensorType}</p>
+              <p className="text-sm font-semibold text-navy truncate">{device.label}</p>
+              <p className="text-[10px] text-slate-muted mb-1 truncate">{device.sensorType}</p>
 
-              <div className="flex items-center gap-1 text-[11px] text-[#5A6B7C]">
+              <div className="flex items-center gap-1 text-[11px] text-slate-muted">
                 <Clock className="w-3 h-3" />
                 <span>{device.lastSync}</span>
               </div>
@@ -447,7 +469,7 @@ export default function UniversalBiomarkers() {
                     className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
                       b === activeChart
                         ? 'text-white'
-                        : 'bg-[#E8EEF2] text-[#5A6B7C]'
+                        : 'bg-light-blue text-slate-muted'
                     }`}
                     style={b === activeChart ? { backgroundColor: device.color } : {}}
                   >
@@ -461,8 +483,8 @@ export default function UniversalBiomarkers() {
       </div>
 
       {/* ═══ BIOMARKER SELECTOR ═══ */}
-      <div className="bg-white rounded-xl border border-[#E8EEF2] shadow-sm p-5">
-        <label className="block text-xs font-semibold text-[#5A6B7C] uppercase tracking-wider mb-2">
+      <div className="bg-card rounded-xl border border-light-blue shadow-sm p-5">
+        <label className="block text-xs font-semibold text-slate-muted uppercase tracking-wider mb-2">
           Active Biomarker
         </label>
         <div className="flex flex-wrap gap-2">
@@ -476,7 +498,7 @@ export default function UniversalBiomarkers() {
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border ${
                   isActive
                     ? 'text-white shadow-md scale-[1.02]'
-                    : 'bg-white text-[#0A1128] border-[#E8EEF2] hover:border-[#2D9596]/40 hover:bg-[#2D9596]/5'
+                    : 'bg-card text-navy border-light-blue hover:border-teal/40 hover:bg-teal/5'
                 }`}
                 style={isActive ? { backgroundColor: cfg.color, borderColor: cfg.color } : {}}
               >
@@ -488,33 +510,33 @@ export default function UniversalBiomarkers() {
       </div>
 
       {/* ═══ CHART AREA with QUALITY FLAG ═══ */}
-      <div className={`bg-white rounded-xl border border-[#E8EEF2] shadow-sm overflow-hidden transition-all duration-500 ${
-        isSourceDegraded ? 'ring-2 ring-[#E76F51]/30' : ''
+      <div className={`bg-card rounded-xl border border-light-blue shadow-sm overflow-hidden transition-all duration-500 ${
+        isSourceDegraded ? 'ring-2 ring-coral/30' : ''
       }`}>
         {/* Quality flag warning banner */}
         {isSourceDegraded && (
-          <div className="flex items-center gap-3 px-6 py-3 bg-[#E76F51]/10 border-b border-[#E76F51]/20">
-            <WifiOff className="w-4 h-4 text-[#E76F51] flex-shrink-0" />
-            <p className="text-sm text-[#E76F51] font-medium">
+          <div className="flex items-center gap-3 px-6 py-3 bg-coral/10 border-b border-coral/20">
+            <WifiOff className="w-4 h-4 text-coral flex-shrink-0" />
+            <p className="text-sm text-coral font-medium">
               <span className="font-bold">{sourceDevice?.label}</span> is {sourceDevice?.status} — last sync: {sourceDevice?.lastSync}. Data shown may be stale.
             </p>
           </div>
         )}
 
         {/* Chart header */}
-        <div className="bg-[#FAFAFA] p-6 border-b border-[#E8EEF2] flex items-center justify-between">
+        <div className="bg-background p-6 border-b border-light-blue flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: activeConfig.color }} />
-            <h3 className="text-xl font-bold text-[#0A1128]">{activeConfig.name}</h3>
+            <h3 className="text-xl font-bold text-navy">{activeConfig.name}</h3>
           </div>
           <div className="flex items-center gap-2">
             {!isSourceDegraded && (
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-[#6A994E]/10 border border-[#6A994E]/20 rounded-md">
-                <Signal className="w-3 h-3 text-[#6A994E]" />
-                <span className="text-[10px] font-bold text-[#6A994E] uppercase tracking-wider">Live</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-sage/10 border border-sage/20 rounded-md">
+                <Signal className="w-3 h-3 text-sage" />
+                <span className="text-[10px] font-bold text-sage uppercase tracking-wider">Live</span>
               </div>
             )}
-            <div className="px-3 py-1 bg-[#2D9596]/10 text-[#2D9596] text-xs font-bold rounded-full uppercase tracking-widest border border-[#2D9596]/20">
+            <div className="px-3 py-1 bg-teal/10 text-teal text-xs font-bold rounded-full uppercase tracking-widest border border-teal/20">
               {activeConfig.source}
             </div>
           </div>
@@ -522,22 +544,22 @@ export default function UniversalBiomarkers() {
 
         {/* Stats row */}
         <div className="px-6 pt-6">
-          <div className="flex items-center gap-12 bg-[#FAFAFA] p-4 rounded-lg border border-[#E8EEF2] mb-6">
+          <div className="flex items-center gap-12 bg-background p-4 rounded-lg border border-light-blue mb-6">
             <div>
-              <p className="text-xs text-[#5A6B7C] uppercase tracking-wider mb-1">Latest</p>
-              <p className="text-3xl font-bold text-[#0A1128]">{stats.current}</p>
+              <p className="text-xs text-slate-muted uppercase tracking-wider mb-1">Latest</p>
+              <p className="text-3xl font-bold text-navy">{stats.current}</p>
             </div>
             <div>
-              <p className="text-xs text-[#5A6B7C] uppercase tracking-wider mb-1">Average</p>
-              <p className="text-3xl font-bold text-[#0A1128]">{stats.avg}</p>
+              <p className="text-xs text-slate-muted uppercase tracking-wider mb-1">Average</p>
+              <p className="text-3xl font-bold text-navy">{stats.avg}</p>
             </div>
             <div>
-              <p className="text-xs text-[#5A6B7C] uppercase tracking-wider mb-1">Trend</p>
+              <p className="text-xs text-slate-muted uppercase tracking-wider mb-1">Trend</p>
               <p className={`text-lg font-bold uppercase tracking-wider ${stats.trendColor}`}>{stats.trend}</p>
             </div>
             <div>
-              <p className="text-xs text-[#5A6B7C] uppercase tracking-wider mb-1">Data Points</p>
-              <p className="text-lg font-bold text-[#0A1128]">{activeConfig.data.length}</p>
+              <p className="text-xs text-slate-muted uppercase tracking-wider mb-1">Data Points</p>
+              <p className="text-lg font-bold text-navy">{activeConfig.data.length}</p>
             </div>
           </div>
         </div>
@@ -547,24 +569,24 @@ export default function UniversalBiomarkers() {
           isSourceDegraded ? 'opacity-40 grayscale' : ''
         }`}>
           {hasNoData ? (
-            <div className="flex flex-col items-center justify-center h-[350px] text-[#5A6B7C]">
-              <WifiOff className="w-12 h-12 mb-3 text-[#E76F51]/40" />
+            <div className="flex flex-col items-center justify-center h-[350px] text-slate-muted">
+              <WifiOff className="w-12 h-12 mb-3 text-coral/40" />
               <p className="font-semibold">No data available</p>
               <p className="text-sm">Source device has not transmitted readings yet.</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={350}>
               <LineChart data={activeConfig.data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8EEF2" />
-                <XAxis dataKey="day" stroke="#5A6B7C" fontSize={12} />
-                <YAxis domain={activeConfig.domain as any} stroke="#5A6B7C" fontSize={12} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.lightBlue} />
+                <XAxis dataKey="day" stroke={CHART_COLORS.slate} fontSize={12} />
+                <YAxis domain={activeConfig.domain} stroke={CHART_COLORS.slate} fontSize={12} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'white',
-                    border: '1px solid #E8EEF2',
+                    border: `1px solid ${CHART_COLORS.lightBlue}`,
                     borderRadius: '8px',
                     fontWeight: 'bold',
-                    color: '#0A1128',
+                    color: CHART_COLORS.navy,
                   }}
                 />
                 {activeConfig.referenceLines?.map((rl) => (
@@ -582,7 +604,7 @@ export default function UniversalBiomarkers() {
                   stroke={activeConfig.color}
                   strokeWidth={3}
                   dot={{ r: 4, fill: activeConfig.color, strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: '#0A1128' }}
+                  activeDot={{ r: 6, fill: CHART_COLORS.navy }}
                   name={activeConfig.name}
                 />
               </LineChart>
@@ -593,9 +615,9 @@ export default function UniversalBiomarkers() {
         {/* Degraded overlay message */}
         {isSourceDegraded && !hasNoData && (
           <div className="px-6 pb-4 -mt-4">
-            <div className="flex items-center gap-2 p-3 bg-[#E76F51]/5 rounded-lg border border-[#E76F51]/15">
-              <AlertCircle className="w-4 h-4 text-[#E76F51] flex-shrink-0" />
-              <p className="text-xs text-[#E76F51]">
+            <div className="flex items-center gap-2 p-3 bg-coral/5 rounded-lg border border-coral/15">
+              <AlertCircle className="w-4 h-4 text-coral flex-shrink-0" />
+              <p className="text-xs text-coral">
                 Quality flag: Chart is dimmed because the source device is not actively syncing. Values shown reflect the last available readings.
               </p>
             </div>

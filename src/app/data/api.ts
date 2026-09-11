@@ -4,6 +4,8 @@ import type {
   VideoInteractionUpdate,
   LatencyKPIDashboardResponse,
   EventTraceItem,
+  CoachingClip,
+  NormalizedCoachingVideo,
 } from '../types/telemetry';
 
 export type {
@@ -11,6 +13,8 @@ export type {
   VideoInteractionUpdate,
   LatencyKPIDashboardResponse,
   EventTraceItem,
+  CoachingClip,
+  NormalizedCoachingVideo,
 };
 
 const BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -28,6 +32,63 @@ export function getFullVideoUrl(url: string | null | undefined): string {
   return `${videoBase}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
+/** Resolves preview/thumbnail video URL safely for single or multi-clip packages */
+export function getVideoPreviewUrl(video: Partial<NormalizedCoachingVideo> | any | null | undefined): string {
+  if (!video) return getFullVideoUrl(null);
+  const isPackage = video.videoType === 'package' || (Array.isArray(video.parsedClips) && video.parsedClips.length > 0);
+  const firstClipUrl = isPackage && video.parsedClips?.[0] ? (video.parsedClips[0].url || video.parsedClips[0].video_url) : null;
+  const rawUrl = firstClipUrl || video.url || video.video_url;
+  return getFullVideoUrl(rawUrl) + '#t=1';
+}
+
+/** Normalizes a single raw video record from backend into consistent model */
+export function normalizeVideoItem(v: any): NormalizedCoachingVideo {
+  let parsedClips: CoachingClip[] = [];
+  if (v.clips) {
+    if (typeof v.clips === 'string') {
+      try {
+        parsedClips = JSON.parse(v.clips);
+      } catch {
+        parsedClips = [];
+      }
+    } else if (Array.isArray(v.clips)) {
+      parsedClips = v.clips;
+    }
+  }
+
+  const videoType: 'single' | 'package' = v.video_type || (parsedClips.length > 0 ? 'package' : 'single');
+
+  let duration_s = typeof v.duration_s === 'number' ? v.duration_s : 0;
+  if (videoType === 'package' && parsedClips.length > 0 && (!duration_s || duration_s === 0)) {
+    duration_s = parsedClips.reduce((acc: number, c: any) => acc + (c.duration_s || 0), 0);
+  }
+
+  let duration = v.duration;
+  if (!duration && typeof duration_s === 'number') {
+    const minutes = Math.floor(duration_s / 60);
+    const seconds = duration_s % 60;
+    duration = `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  const triggerReason = v.triggerReason || v.trigger_reason || 'General';
+
+  return {
+    ...v,
+    videoType,
+    parsedClips,
+    duration_s,
+    duration: duration || '3:00',
+    triggerReason,
+  };
+}
+
+/** Normalizes an array or API response wrapper of raw videos */
+export function normalizeVideoList(rawVideos: any): NormalizedCoachingVideo[] {
+  const list = (rawVideos as any)?.videos || (rawVideos as any)?.patient || (Array.isArray(rawVideos) ? rawVideos : []);
+  if (!Array.isArray(list)) return [];
+  return list.map(normalizeVideoItem);
+}
+
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 export interface PatientSummary {
   patientId: string;
@@ -38,6 +99,7 @@ export interface PatientSummary {
   averageHours: number;
   percentileLeak: number;
   leakField?: string;
+  leak_field?: string;
   // Demographic/Clinical metadata
   gender?: string;
   dob?: string;
@@ -46,8 +108,9 @@ export interface PatientSummary {
   riskScore?: number;
   address?: string;
   machineSerial?: string;
-  interventions?: any[];
-  patient?: any; // Nested patient object used in some endpoints
+  interventions?: unknown[];
+  /** Some endpoints return a nested patient sub-object; shape varies by endpoint */
+  patient?: unknown;
   phone?: string | null;
   email?: string | null;
   is_lisa_user?: boolean | null;
@@ -81,8 +144,10 @@ export interface WeeklyAnalysis {
 export interface CpapTrends {
   averageHours: number;
   currentAHI: number;
+  currentAhi?: number;
   percentileLeak: number;
   streak: number;
+  complianceScore?: number;
   leakField?: string;
   usageHistory: {
     date: string;
@@ -174,15 +239,114 @@ export interface Device {
 }
 
 
+export interface UrgentPatient {
+  id: string | number;
+  patientName: string;
+  reason: string;
+  riskScore: number;
+  daysActive: number;
+  category: string;
+}
+
+export interface AnnualReviewPatient {
+  id: string | number;
+  patientName: string;
+  riskScore: number;
+  therapyStart: string;
+  status: string;
+  daysUntilDue: number;
+}
+
+export interface SurveyHistoryItem {
+  date: string;
+  name: string;
+  score?: number;
+  status: string;
+}
+
 export interface PhysicianQueue {
-  urgent: any[];
-  annualReviews: any[];
+  urgent: UrgentPatient[];
+  annualReviews: AnnualReviewPatient[];
+}
+
+export interface TechnicianEventPatient {
+  name: string;
+  patientId: string | number;
+  address?: string;
+  phone?: string;
+  maskType?: string;
+}
+
+export interface TechnicianEvent {
+  id: number;
+  type: string;
+  severity: 'high' | 'medium' | 'low' | string;
+  detectedAt: string;
+  patient: TechnicianEventPatient;
+  evidence: string;
+  aiNote?: string;
+  suggestedAction?: string;
+  status: 'pending' | 'dismissed' | 'validated' | string;
+}
+
+export interface TechnicianQueuePatient {
+  id: string | number;
+  patientName: string;
+  dropoutRisk: number;
+  usageHours?: number;
+  usageCategory?: string;
+  postalCode?: string;
+  lastContact?: string;
+  action?: string;
+  behavioralCluster?: string;
+  phase?: string;
+  maskType?: string;
+  lastMaskChange?: string;
+  equipmentNeed?: string[];
+  leakProfile?: { p50: number; p95: number; max: number };
+  assetTracking?: { serial: string; assetTag: string };
+  interventionHistory?: unknown[];
+  monitoringSurveys?: unknown[];
+  biomarkers?: Record<string, unknown>;
+}
+
+export interface InventoryItem {
+  id: number | string;
+  item: string;
+  category: string;
+  stock: number;
+  minStock: number;
+  status: string;
+}
+
+/** Helper to determine if an API response was retrieved from the live backend */
+export function isLiveResponse(data: unknown): boolean {
+  return Boolean(data && typeof data === 'object' && '__isLive' in data && (data as { __isLive?: boolean }).__isLive);
+}
+
+export interface PhysicianSurveyItem {
+  id?: number | string;
+  name: string;
+  dateTaken?: string;
+  date?: string;
+  score: number;
+  threshold?: number;
+  risk?: string;
+  isOverdue?: boolean;
+  daysOverdue?: number;
+  history?: { month: string; score: number }[];
+  status?: string;
+}
+
+export interface SurveyCalendarCell {
+  count: number;
+  surveys: string[];
 }
 
 export interface SurveyResponse {
-  physician?: any[];
-  technician?: any[];
-  calendar?: any[];
+  physician?: PhysicianSurveyItem[];
+  technician?: SurveyHistoryItem[];
+  calendar?: SurveyCalendarCell[][];
   patient: {
     next: {
       name: string;
@@ -190,14 +354,14 @@ export interface SurveyResponse {
       questions: number;
       persistence: { status: string };
     };
-    history: any[];
+    history: SurveyHistoryItem[];
   };
-  visits?: any[];
+  visits?: unknown[];
   totalVisits?: number;
 }
 
 export interface DirectoryResponse {
-  patients: any[];
+  patients: unknown[];
 }
 
 // ─── Helper to ensure ID is in PATxxxx format ────────────────────────────────
@@ -352,7 +516,7 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
     if (endpoint.includes('/technician/events')) return mock.technicianEvents as any;
     if (endpoint.includes('/api/cpap/')) return { usageHistory: [], averageHours: 0, streak: 0, currentAHI: 0, percentileLeak: 0, leakField: 'leaks90', pressureSettings: { min: 4, max: 20, current: 0 } } as any;
     if (endpoint.includes('/withings')) return {
-      readings: mock.biomarkerData.hrv.map((h, i) => ({
+      readings: mock.biomarkerData.hrv.map((h: any, i: number) => ({
         timestamp: new Date(Date.now() - (30 - i) * 86400000).toISOString(),
         heart_rate: 65 + Math.random() * 15,
         hrv_rmssd: h.value,
@@ -363,7 +527,7 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
       total: mock.biomarkerData.hrv.length,
     } as any;
     if (endpoint.includes('/masimo')) return {
-      readings: mock.biomarkerData.odi.map((o, i) => ({
+      readings: mock.biomarkerData.odi.map((o: any, i: number) => ({
         timestamp: new Date(Date.now() - (30 - i) * 86400000).toISOString(),
         spo2: mock.biomarkerData.spo2[i]?.value || 95,
         pulse_rate: 70 + Math.random() * 10,
@@ -373,7 +537,7 @@ async function apiFetchRaw<T>(endpoint: string, options?: RequestInit): Promise<
       total: mock.biomarkerData.odi.length,
     } as any;
     if (endpoint.includes('/sleep')) return {
-      nights: mock.biomarkerData.deepSleep.map((d, i) => ({
+      nights: mock.biomarkerData.deepSleep.map((d: any, i: number) => ({
         night_date: new Date(Date.now() - (30 - i) * 86400000).toISOString().split('T')[0],
         analysis_status: 'Valid',
         tst_min: 380 + Math.random() * 120,
@@ -494,18 +658,18 @@ export async function fetchPhysicianQueue(limit = 20): Promise<PhysicianQueue> {
 }
 
 /** Get the Technician Retention Queue */
-export async function fetchTechnicianQueue(limit = 30): Promise<any[]> {
-  return apiFetch<any[]>(`/api/dashboard/technician/queue?limit=${limit}`);
+export async function fetchTechnicianQueue(limit = 30): Promise<TechnicianQueuePatient[]> {
+  return apiFetch<TechnicianQueuePatient[]>(`/api/dashboard/technician/queue?limit=${limit}`);
 }
 
 /** Get Technician AI-flagged events (Mechanical/Self-Report inbox) */
-export async function fetchTechnicianEvents(limit = 30): Promise<any[]> {
-  return apiFetch<any[]>(`/api/dashboard/technician/events?limit=${limit}`);
+export async function fetchTechnicianEvents(limit = 30): Promise<TechnicianEvent[]> {
+  return apiFetch<TechnicianEvent[]>(`/api/dashboard/technician/events?limit=${limit}`);
 }
 
 /** Get Triage Events (Alias for technician events) */
-export async function fetchTriageEvents(limit = 30): Promise<any[]> {
-  return apiFetch<any[]>(`/api/dashboard/technician/events?limit=${limit}`);
+export async function fetchTriageEvents(limit = 30): Promise<TechnicianEvent[]> {
+  return apiFetch<TechnicianEvent[]>(`/api/dashboard/technician/events?limit=${limit}`);
 }
 
 /** Get CPAP usage trends for a patient */
@@ -743,8 +907,8 @@ export async function fetchAuthorizations(patientId: string): Promise<any[]> {
 }
 
 /** Get general technician inventory (not patient specific) */
-export async function fetchInventory() {
-  return apiFetch(`/api/inventory`);
+export async function fetchInventory(): Promise<InventoryItem[]> {
+  return apiFetch<InventoryItem[]>(`/api/inventory`);
 }
 
 /** Get mask delivery history for a patient */
@@ -1000,8 +1164,8 @@ export async function fetchModels() {
 }
 
 /** Request retraining of a specific ML model */
-export async function requestRetraining(modelId: string) {
-  return apiFetch(`/api/models/${modelId}/retrain`, {
+export async function requestRetraining(modelId: string): Promise<{ status?: string; message?: string }> {
+  return apiFetch<{ status?: string; message?: string }>(`/api/models/${modelId}/retrain`, {
     method: 'POST'
   });
 }

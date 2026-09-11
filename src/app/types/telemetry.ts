@@ -83,3 +83,49 @@ export interface LatencyKPIDashboardResponse {
   active_monitored_patients: number;
   recent_traces: EventTraceItem[];
 }
+
+/**
+ * Individual clip metadata for a multi-clip coaching package
+ */
+export interface CoachingClip {
+  id?: string | number;
+  title: string;
+  url: string;
+  video_url?: string;
+  duration_s: number;
+  subtitles_en?: string;
+  subtitles_fr?: string;
+  subtitle_en_url?: string;
+  subtitle_fr_url?: string;
+  vtt_en_url?: string;
+  vtt_fr_url?: string;
+}
+
+/**
+ * Normalized coaching video data model used across patient portal
+ */
+export interface NormalizedCoachingVideo {
+  id: string | number;
+  title: string;
+  category: string;
+  url?: string;
+  video_url?: string;
+  videoType: 'single' | 'package';
+  parsedClips: CoachingClip[];
+  duration_s: number;
+  duration: string;
+  triggerReason?: string;
+  trigger_reason?: string;
+  relevance?: 'high' | 'medium' | 'low';
+  watched?: boolean;
+  rating?: number | null;
+  event_id?: string | null;
+  eventId?: string | null;
+  created_at?: string | null;
+  vtt_en_url?: string;
+  vtt_fr_url?: string;
+  subtitle_en_url?: string;
+  subtitle_fr_url?: string;
+  subtitles_en?: string;
+  subtitles_fr?: string;
+}

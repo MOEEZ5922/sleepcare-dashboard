@@ -47,6 +47,7 @@
   --sage: #6A994E;
   --coral: #E76F51;
   --blue-gray: #414D5B;
+  --slate-muted: #5A6B7C;
   --light-blue: #E8EEF2;
   --success: #6A994E;
   --warning: #F4A261;
@@ -137,6 +138,7 @@
   --color-sage: var(--sage);
   --color-coral: var(--coral);
   --color-blue-gray: var(--blue-gray);
+  --color-slate-muted: var(--slate-muted);
   --color-light-blue: var(--light-blue);
 }
 
@@ -203,5 +205,14 @@
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
+  }
+}
+
+@layer components {
+  .patient-page {
+    @apply p-6 space-y-8 max-w-2xl mx-auto pb-32;
+  }
+  .patient-card {
+    @apply bg-white rounded-3xl p-6 sm:p-8 border-2 border-light-blue shadow-sm relative overflow-hidden;
   }
 }

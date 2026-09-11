@@ -1,23 +1,29 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import {
-  Sparkles,
-  Smile,
-  ArrowRight,
-  Loader2
-} from 'lucide-react';
+import { Sparkles, Smile, ArrowRight, Loader2 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { fetchPatientSummary, fetchCpapTrends, fetchPatientCohort, PatientCohortMember, calculateComplianceTrajectory, fetchPeerInterventions } from '../../data/api';
+import { fetchPatientSummary, fetchCpapTrends, fetchPatientCohort, calculateComplianceTrajectory, fetchPeerInterventions } from '../../data/api';
+
+/**
+ * Recharts requires raw CSS color strings — it cannot consume Tailwind classes or
+ * CSS custom properties. These constants mirror the tokens in theme.css.
+ */
+const CHART_COLORS = {
+  sage:      '#6A994E',
+  slate:     '#5A6B7C',
+  lightBlue: '#E8EEF2',
+} as const;
+
 
 type RiskTier = 'CRITICAL' | 'HIGH' | 'ELEVATED' | 'STABLE' | 'LOW';
 
 const TIER_CONFIGS: Record<RiskTier, { label: string; bg: string; text: string; patientFriendly: string }> = {
-  CRITICAL: { label: 'Critical', bg: 'bg-[#E76F51]/10', text: 'text-[#E76F51]', patientFriendly: 'Needs Support' },
-  HIGH:     { label: 'High',     bg: 'bg-[#E76F51]/10', text: 'text-[#E76F51]', patientFriendly: 'Needs Support' },
-  ELEVATED: { label: 'Elevated', bg: 'bg-[#F4A261]/10', text: 'text-[#F4A261]', patientFriendly: 'Adjusting' },
-  STABLE:   { label: 'Stable',   bg: 'bg-[#6A994E]/10', text: 'text-[#6A994E]', patientFriendly: 'Steady Sleep' },
-  LOW:      { label: 'Low',      bg: 'bg-[#2D9596]/10', text: 'text-[#2D9596]', patientFriendly: 'Sleep Champion' },
+  CRITICAL: { label: 'Critical', bg: 'bg-coral/10', text: 'text-coral', patientFriendly: 'Needs Support' },
+  HIGH:     { label: 'High',     bg: 'bg-coral/10', text: 'text-coral', patientFriendly: 'Needs Support' },
+  ELEVATED: { label: 'Elevated', bg: 'bg-amber/10', text: 'text-amber', patientFriendly: 'Adjusting' },
+  STABLE:   { label: 'Stable',   bg: 'bg-sage/10', text: 'text-sage', patientFriendly: 'Steady Sleep' },
+  LOW:      { label: 'Low',      bg: 'bg-teal/10', text: 'text-teal', patientFriendly: 'Sleep Champion' },
 };
 
 export default function PatientReporting() {
@@ -33,7 +39,7 @@ export default function PatientReporting() {
     }
   );
 
-  const { data: cpapTrends, isLoading: loadingTrends } = useApi(
+  const { isLoading: loadingTrends } = useApi(
     () => fetchCpapTrends(patientId, 90), {
       dependencies: [patientId],
       cacheKey: `cpap-trends-90-${patientId}`
@@ -66,7 +72,7 @@ export default function PatientReporting() {
   if (isLoading && !summary) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 text-[#6A994E] animate-spin" />
+        <Loader2 className="w-8 h-8 text-sage animate-spin" />
       </div>
     );
   }
@@ -77,39 +83,39 @@ export default function PatientReporting() {
     <div className="p-6 space-y-8 max-w-2xl mx-auto pb-32">
       
       {/* Patient Welcome Header */}
-      <div className="bg-white rounded-3xl p-8 border-2 border-[#E8EEF2] shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#6A994E]/5 rounded-full blur-3xl" />
+      <div className="patient-card p-8 border-2 border-light-blue relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-sage/5 rounded-full blur-3xl" />
         
         <div className="relative z-10 space-y-4">
-          <span className="bg-[#6A994E]/10 border border-[#6A994E]/20 text-[#6A994E] px-3.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">
+          <span className="bg-sage/10 border border-sage/20 text-sage px-3.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">
             My Sleep Path
           </span>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0A1128] leading-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-navy leading-tight">
             Let's look at your sleep progress, {patientName.split(' ')[0]}.
           </h1>
-          <p className="text-[#414D5B] text-base leading-relaxed">
+          <p className="text-blue-gray text-base leading-relaxed">
             When starting CPAP therapy, it is normal to experience setbacks. Below, we compare your progress to other sleepers just like you to show your potential recovery path.
           </p>
         </div>
       </div>
 
       {/* COMPARATIVE PROGRESS CHART */}
-      <div className="bg-white rounded-3xl border-2 border-[#E8EEF2] p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-[#0A1128] mb-1">My Potential Sleep Trajectory</h2>
-        <p className="text-xs text-[#5A6B7C] mb-6">Compare your usage hours to successful sleepers in your peer group</p>
+      <div className="patient-card border-2 border-light-blue p-6">
+        <h2 className="text-xl font-bold text-navy mb-1">My Potential Sleep Trajectory</h2>
+        <p className="text-xs text-slate-muted mb-6">Compare your usage hours to successful sleepers in your peer group</p>
         
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={complianceChartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8EEF2" />
-              <XAxis dataKey="name" stroke="#5A6B7C" fontSize={11} tickLine={false} />
-              <YAxis domain={[20, 100]} stroke="#5A6B7C" fontSize={11} tickFormatter={(v) => `${Math.round(v)}%`} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.lightBlue} />
+              <XAxis dataKey="name" stroke={CHART_COLORS.slate} fontSize={11} tickLine={false} />
+              <YAxis domain={[20, 100]} stroke={CHART_COLORS.slate} fontSize={11} tickFormatter={(v) => `${Math.round(v)}%`} />
               <Tooltip formatter={(v) => `${v}% Compliance`} />
               <Legend />
               <Line
                 type="monotone"
                 dataKey="Cohort Average"
-                stroke="#5A6B7C"
+                stroke={CHART_COLORS.slate}
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={{ r: 4 }}
@@ -118,7 +124,7 @@ export default function PatientReporting() {
               <Line
                 type="monotone"
                 dataKey="My Progress"
-                stroke="#6A994E"
+                stroke={CHART_COLORS.sage}
                 strokeWidth={4}
                 dot={{ r: 6 }}
                 activeDot={{ r: 8 }}
@@ -128,33 +134,33 @@ export default function PatientReporting() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-[#6A994E]/5 border border-[#6A994E]/10 rounded-2xl p-4 mt-6 flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-[#6A994E] mt-0.5 shrink-0" />
-          <p className="text-xs text-[#414D5B] leading-relaxed">
+        <div className="bg-sage/5 border border-sage/10 rounded-2xl p-4 mt-6 flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-sage mt-0.5 shrink-0" />
+          <p className="text-xs text-blue-gray leading-relaxed">
             <strong>Motivation Tip:</strong> Your adherence took a dip at 60 Days. Sleepers who resolved mask leaks at this stage successfully recovered and reached **71% average compliance** by Day 90. You can too!
           </p>
         </div>
       </div>
 
       {/* MOTIVATIONAL PEER TABLE */}
-      <div className="bg-white rounded-3xl border-2 border-[#E8EEF2] p-6 shadow-sm overflow-hidden">
-        <h2 className="text-xl font-bold text-[#0A1128] mb-1">Sleepers Like Me</h2>
-        <p className="text-xs text-[#5A6B7C] mb-6">Anonymized progress of other sleepers starting with the same mask type</p>
+      <div className="patient-card border-2 border-light-blue p-6 overflow-hidden">
+        <h2 className="text-xl font-bold text-navy mb-1">Sleepers Like Me</h2>
+        <p className="text-xs text-slate-muted mb-6">Anonymized progress of other sleepers starting with the same mask type</p>
 
-        <div className="divide-y divide-[#E8EEF2]">
+        <div className="divide-y divide-light-blue">
           {peerCohort.map((p, idx) => {
             const tc = p.riskTier && TIER_CONFIGS[p.riskTier as RiskTier] ? TIER_CONFIGS[p.riskTier as RiskTier] : null;
             return (
               <div key={idx} className="py-4 flex justify-between items-center first:pt-0 last:pb-0">
                 <div>
-                  <p className="text-sm font-bold text-[#0A1128]">{p.id}</p>
-                  <p className="text-[10px] text-[#5A6B7C] font-semibold uppercase">{p.phase} Phase · {p.mask}</p>
+                  <p className="text-sm font-bold text-navy">{p.id}</p>
+                  <p className="text-[10px] text-slate-muted font-semibold uppercase">{p.phase} Phase · {p.mask}</p>
                 </div>
                 <div className="text-right">
                   <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${tc ? `${tc.bg} ${tc.text}` : 'bg-gray-100 text-gray-500'}`}>
-                    {tc ? tc.patientFriendly : 'NaN'}
+                    {tc ? tc.patientFriendly : '—'}
                   </span>
-                  <p className="text-xs font-bold text-[#0A1128] mt-1.5">{p.complianceScore}% sleep nights</p>
+                  <p className="text-xs font-bold text-navy mt-1.5">{p.complianceScore}% sleep nights</p>
                 </div>
               </div>
             );
@@ -163,10 +169,10 @@ export default function PatientReporting() {
       </div>
 
       {/* PROVEN HELPERS CARD */}
-      <div className="bg-[#0A1128] rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-navy rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-2xl" />
         
-        <h2 className="text-xl font-bold mb-1 flex items-center gap-2"><Smile className="w-6 h-6 text-[#F4A261]"/> Proven Solutions That Helped Peers</h2>
+        <h2 className="text-xl font-bold mb-1 flex items-center gap-2"><Smile className="w-6 h-6 text-amber"/> Proven Solutions That Helped Peers</h2>
         <p className="text-xs text-white/60 mb-6">Peer recovery metrics after making quick therapy adjustments</p>
         
         <div className="space-y-4">
@@ -177,7 +183,7 @@ export default function PatientReporting() {
                 <p className="text-[11px] text-white/50">{item.desc}</p>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-[#6A994E] font-extrabold text-sm block">{item.gain}</span>
+                <span className="text-sage font-extrabold text-sm block">{item.gain}</span>
                 <span className="text-[10px] text-white/60 font-semibold">{item.successRate}% Success Rate</span>
               </div>
             </div>
@@ -187,7 +193,7 @@ export default function PatientReporting() {
         <div className="mt-8 flex justify-center">
           <button
             onClick={() => navigate(`/patient/${patientId}/help`)}
-            className="bg-white text-[#0A1128] px-6 py-3 rounded-2xl font-bold text-sm hover:scale-105 transition-all shadow-md flex items-center gap-2"
+            className="bg-white text-navy px-6 py-3 rounded-2xl font-bold text-sm hover:scale-105 transition-all shadow-md flex items-center gap-2"
           >
             Get Help With My Mask <ArrowRight className="w-4 h-4" />
           </button>
