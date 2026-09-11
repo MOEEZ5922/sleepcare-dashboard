@@ -54,11 +54,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://159.84.143.151',
+        target: process.env.VITE_API_URL || 'http://localhost:8000',
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://159.84.143.151',
+        target: process.env.VITE_API_URL || 'http://localhost:8000',
         changeOrigin: true,
       }
     }

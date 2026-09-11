@@ -1,21 +1,26 @@
+# Dependencies
+node_modules/
+
+# Production Build
+dist/
+dist-ssr/
+
+# Environment Configurations
+.env
+.env.local
+.env.*.local
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# Editor & OS Files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,37 +28,20 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Build artifacts
-build_log.txt
-dist.zip
-
-# Documentation (Internal use)
+# Documentation (Internal use & archives)
+archived-docs/
 *.md
 !README.md
+!docs/**
 
-# Temporary or Extracted Files
-/docx1.txt
-/docx2.txt
-/pdf_text.txt
-/extract.cjs
-
-# Coverage
+# Testing & Playwright Artifacts
 coverage/
-
-# Playwright MCP artifacts and screenshots
 .playwright-mcp/
 *.png
+!src/assets/**
 
-# poster
-poster/
-
-artifacts
-report/*
+# Project Research & Presentation Artifacts
+artifacts/
+report/
 kpi/
+poster/
